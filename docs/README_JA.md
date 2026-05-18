@@ -3,6 +3,8 @@
 # 🧠 Karpathy LLM Wiki Plugin for Obsidian
 
 > AI駆動の構造化知識ベース — ノートを自動的にWikiに変換。[Andrej KarpathyのLLM Wiki概念](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)に基づく実装。
+>
+> **Obsidian公式評価93/100** | 8言語ネイティブ対応 | 活発に維持、継続進化
 
 ![Version](https://img.shields.io/github/v/release/green-dalii/obsidian-llm-wiki?style=flat-square) ![Author](https://img.shields.io/badge/author-Greener--Dalii-blue?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) ![Maintenance](https://img.shields.io/badge/maintenance-actively%20maintained-brightgreen?style=flat-square) ![Build Status](https://img.shields.io/github/actions/workflow/status/green-dalii/obsidian-llm-wiki/release.yml?style=flat-square) ![Obsidian Compatibility](https://img.shields.io/badge/obsidian-1.6.6%2B-purple?style=flat-square) ![GitHub Stars](https://img.shields.io/github/stars/green-dalii/obsidian-llm-wiki?style=flat-square) ![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=483699&label=downloads&query=$[karpathywiki].downloads&url=https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugin-stats.json&style=flat-square) ![Languages](https://img.shields.io/badge/languages-8-informational?style=flat-square) ![Providers](https://img.shields.io/badge/providers-8%2B-cyan?style=flat-square)
 
@@ -147,11 +149,13 @@ Settings → **Ingestion Acceleration**:
 - **🔄 5xx Auto Retry** — 全clientsでHTTP 5xx/429エラー時exponential backoff retry（max 2）
 - **📋 Dynamic Model List** — Provider APIからreal-time fetch
 - **🌐 Wiki Output Language** — Interface独立の8言語（English/Chinese/Japanese/Korean/German/French/Spanish/Portuguese）、custom inputサポート
-- **🗣️ Internationalization** — English/Chinese Interface toggle（default English）、全promptsがlanguage settingに従う
+- **🌍 Full UI Internationalization** — プラグインUIが8言語対応（EN/ZH/JA/KO/DE/FR/ES/PT）、269+ UIフィールド完全翻訳、自然なローカル表現
+- **⚡ Rate Limit Guardian** — 並列生成でレート制限発生時自動検出し提案：並列度を下げる、バッチ遅延を増やす、Providerを切り替える
+- **🦙 Web Clipper Compatible** — Obsidian Web Clipperの`Clippings/`フォルダを1クリックで監視リストに追加、Webクリップを自動Wiki化
 
 ### 🏗️ Architecture & Performance
 
-- **⚡ Parallel Page Generation** — Configurable 1–5 concurrent pages、large sourcesで3× speedup、per-page error isolation
+- **⚡ Parallel Page Generation** — Configurable 1–5 concurrent pages、default 3（parallel）、large sourcesで2–3× speedup、per-page error isolation
 - **📚 Iterative Batch Extraction** — Adaptive batch sizing、long documentsのmax_tokens bottleneckを解消
 - **🏛️ Three-Layer Architecture** — `sources/`（read-only）→ `wiki/`（LLM-generated）→ `schema/`（co-evolved config）
 - **🧩 Modular Codebase** — 13 focused modules in `src/`

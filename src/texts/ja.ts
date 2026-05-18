@@ -34,7 +34,7 @@ export const JA_TEXTS = {
     // Provider Configuration
     providerSection: 'LLM プロバイダー設定',
     providerName: 'LLM プロバイダー',
-    providerDesc: '定義済みプロバイダーまたはカスタムOpenAI互換サービスを選択',
+    providerDesc: '定義済みプロバイダーまたはカスタムOpenAI互換サービスを選択。Coding Plan等のバンドルの場合、カスタムOpenAI/Anthropicを選択し、プロバイダーのBase URLとAPI Keyを手動入力',
 
     // API Key
     apiKeyName: 'API Key',

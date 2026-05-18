@@ -34,7 +34,7 @@ export const KO_TEXTS = {
     // Provider Configuration
     providerSection: 'LLM Provider 설정',
     providerName: 'LLM Provider',
-    providerDesc: '사전 정의된 Provider 또는 사용자 정의 OpenAI 호환 서비스 선택',
+    providerDesc: '사전 정의된 Provider 또는 사용자 정의 OpenAI 호환 서비스 선택. Coding Plan 등의 번들 경우, 사용자 정의 OpenAI/Anthropic 선택 후 Provider의 Base URL과 API Key 수동 입력',
 
     // API Key
     apiKeyName: 'API 키',

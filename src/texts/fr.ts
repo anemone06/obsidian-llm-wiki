@@ -34,7 +34,7 @@ export const FR_TEXTS = {
     // Provider Configuration
     providerSection: 'Configuration du fournisseur LLM',
     providerName: 'Fournisseur LLM',
-    providerDesc: 'Sélectionnez un fournisseur prédéfini ou un service compatible OpenAI personnalisé',
+    providerDesc: 'Sélectionnez un fournisseur prédéfini ou un service compatible OpenAI personnalisé. Pour Coding Plan ou bundles similaires: choisissez Custom OpenAI/Anthropic, saisissez manuellement le Base URL et API Key du fournisseur',
 
     // API Key
     apiKeyName: 'Clé API',

@@ -34,7 +34,7 @@ export const ZH_TEXTS = {
     // Provider 设置
     providerSection: 'LLM Provider 配置',
     providerName: 'LLM Provider',
-    providerDesc: '选择预定义提供商或自定义 OpenAI 兼容服务',
+    providerDesc: '选择预定义提供商或自定义 OpenAI 兼容服务。对于 Coding Plan 等套餐，建议选择自定义 OpenAI/Anthropic 并手工填写对应 URL 和 API Key',
 
     // API Key
     apiKeyName: 'API Key',

@@ -3,6 +3,8 @@
 # 🧠 Karpathy LLM Wiki Plugin für Obsidian
 
 > KI-gestützte strukturierte Wissensbasis — wandelt Notizen automatisch in ein Wiki um. Basierend auf [Andrej Karpathys LLM Wiki-Konzept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
+>
+> **Obsidian-offizielle Bewertung 93/100** | Native Unterstützung für 8 Sprachen | Aktiv gepflegt, kontinuierlich weiterentwickelt
 
 ![Version](https://img.shields.io/github/v/release/green-dalii/obsidian-llm-wiki?style=flat-square) ![Author](https://img.shields.io/badge/author-Greener--Dalii-blue?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) ![Maintenance](https://img.shields.io/badge/maintenance-actively%20maintained-brightgreen?style=flat-square) ![Build Status](https://img.shields.io/github/actions/workflow/status/green-dalii/obsidian-llm-wiki/release.yml?style=flat-square) ![Obsidian Compatibility](https://img.shields.io/badge/obsidian-1.6.6%2B-purple?style=flat-square) ![GitHub Stars](https://img.shields.io/github/stars/green-dalii/obsidian-llm-wiki?style=flat-square) ![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=483699&label=downloads&query=$[karpathywiki].downloads&url=https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugin-stats.json&style=flat-square) ![Languages](https://img.shields.io/badge/languages-8-informational?style=flat-square) ![Providers](https://img.shields.io/badge/providers-8%2B-cyan?style=flat-square)
 
@@ -147,11 +149,13 @@ Settings → **Ingestion Acceleration**:
 - **🔄 5xx Auto Retry** — Alle Clients wiederholen bei HTTP 5xx/429-Fehlern mit Exponential Backoff (max. 2)
 - **📋 Dynamic Model List** — Echtzeit-Fetch von Provider-API
 - **🌐 Wiki Output Language** — Interface-unabhängige 8 Sprachen (Englisch/Chinesisch/Japanisch/Koreanisch/Deutsch/Französisch/Spanisch/Portugiesisch), Custom Input unterstützt
-- **🗣️ Internationalization** — Englisch/Chinesisch Interface-Toggle (Standard Englisch), alle Prompts folgen Language Setting
+- **🌍 Fullständige UI-Internationalisierung** — Plugin UI unterstützt 8 Sprachen (EN/ZH/JA/KO/DE/FR/ES/PT), 269+ UI-Felder vollständig übersetzt, natürliche lokale Ausdrücke
+- **⚡ Rate Limit Guardian** — Wenn parallele Generierung Rate Limits auslöst, automatische Erkennung und Empfehlung: Parallelität reduzieren, Batch-Delay erhöhen, Provider wechseln
+- **🦙 Web Clipper Compatible** — Obsidian Web Clipper's `Clippings/`-Ordner mit einem Klick zur Watchlist hinzufügen, Web-Clips automatisch in Wiki übernehmen
 
 ### 🏗️ Architecture & Performance
 
-- **⚡ Parallel Page Generation** — Konfigurierbare 1–5 parallele Pages, 3× Speedup bei großen Sources, per-Page Error Isolation
+- **⚡ Parallel Page Generation** — Konfigurierbare 1–5 parallele Pages, Standard 3 (parallel), 2–3× Speedup bei großen Sources, per-Page Error Isolation
 - **📚 Iterative Batch Extraction** — Adaptive Batch-Sizing, eliminiert max_tokens-Bottleneck bei langen Dokumenten
 - **🏛️ Three-Layer Architecture** — `sources/` (read-only) → `wiki/` (LLM-generated) → `schema/` (co-evolved Config)
 - **🧩 Modular Codebase** — 13 fokussierte Module in `src/`
