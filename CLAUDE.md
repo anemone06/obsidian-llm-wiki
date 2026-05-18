@@ -6,9 +6,33 @@
 
 ---
 
-## Current Phase: Post-v1.8.1 — UX Hardening & Polish
+## Current Phase: v1.8.x — Code Quality Upgrade (B+ → A-)
 
-**v1.8.1 in preparation.** UX hardening release: rate limit detection with user notification, Smart Fix All completion modal, settings panel reorganization, dynamic version badge, README command accuracy fixes across all 8 languages.
+**v1.8.1 released.** Next: technical debt repayment within the 1.8.x cycle — dead code removal, type safety hardening, prompt consolidation, logging standardization. Target: elevate code quality from B+ to A- level without feature changes.
+
+### Quality Upgrade Roadmap (v1.8.x)
+
+#### P0 — Immediate (low cost, high impact)
+- **Remove `analyzeMerge` dead code**: 50-line method in page-factory.ts, zero callers
+- **Extract `createLLMClient` factory**: Eliminate duplicate client-creation logic in `initializeLLMClient` / `testLLMConnection` (11 identical lines)
+- **Consolidate `updateRelatedPage` prompt**: Move hardcoded prompt string into PROMPTS system
+
+#### P1 — Short-term (this week)
+- **Fix `getText` type safety**: Replace `as unknown as Record<string, string>` with `keyof typeof TEXTS.en`
+- **Standardize console logs to English**: 36 Chinese console.debug calls in wiki-engine.ts alone, inconsistent with CLAUDE.md requirement
+- **Optimize `display()` slider performance**: Slider onChange triggers full DOM rebuild, update only desc text
+- **Add CONTRIBUTING.md**: Local build guide, branch strategy, PR conventions
+
+#### P2 — Medium-term (when bandwidth permits)
+- **Split `ingestSource` into stage methods**: Extract ~6 phases as private methods for readability
+- **Add keyword pre-filter to query page selection**: Reduce LLM token cost for page selection on large wikis
+- **Write ADR for key decisions**: max_tokens 8000, Tier 1/2 dedup, 5s cache TTL
+- **Add JSDoc to public interfaces**: EngineContext, LLMClient, PageFactory
+
+### Test Coverage (new in v1.8.1)
+- **53 unit tests** covering slugify, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints
+- Framework: vitest, located in `src/__tests__/`
+- Run: `pnpm test` (CI-ready: `pnpm lint && pnpm test && pnpm build`)
 
 Recently completed (v1.8.1):
 - **Rate limit detection and user notification**: Parallel operations (page generation, alias completion, duplicate detection) now detect HTTP 429 patterns and show actionable suggestions

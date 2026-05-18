@@ -2,13 +2,49 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.8.0 | **Updated:** 2026-05-17
+**Version:** 1.8.1 | **Updated:** 2026-05-19
 
 ---
 
 ## Current Status
 
-### Implemented (v1.8.0) — Full i18n Support + Dynamic Badges
+### Next: v1.8.x — Code Quality Upgrade (B+ → A-)
+
+Following an independent code audit (score: B+), targeted technical debt repayment. Full assessment: 7/10 accuracy confirmed, 2 items already resolved (test coverage, method decomposition in progress).
+
+**P0 — Immediate (low cost, high impact)**
+
+| Action | Effort | Why |
+|--------|--------|-----|
+| Remove `analyzeMerge` dead code (page-factory.ts:536) | 5min | 50-line method, zero callers, maintenance confusion |
+| Extract `createLLMClient(opts)` factory | 20min | `initializeLLMClient` and `testLLMConnection` have 11 identical lines of client-creation branching |
+| Move `updateRelatedPage` prompt into PROMPTS | 15min | Hardcoded inline prompt (line 508-517) bypasses prompt management system |
+
+**P1 — Short-term (this week)**
+
+| Action | Effort | Why |
+|--------|--------|-----|
+| Fix `getText` type safety: `keyof typeof TEXTS.en` | 1h | `as unknown as Record<string, string>` bypasses compile-time key validation |
+| Standardize console logs to English | 1h | 36 Chinese debug calls in wiki-engine.ts alone; CLAUDE.md requires English |
+| Optimize `display()` slider: update desc only | 30min | Current: slider onChange → full DOM rebuild. Fix: `setDynamicTooltip` without `display()` |
+| Add CONTRIBUTING.md | 1h | Local build, branch strategy, PR conventions for new contributors |
+
+**P2 — Medium-term (when bandwidth permits)**
+
+| Action | Effort | Why |
+|--------|--------|-----|
+| Split `ingestSource` into stage methods | 3h | Current ~300-line flow: stage1Analyze → stage2Summary → stage3GeneratePages → etc. |
+| Keyword pre-filter for query page selection | 3h | Reduce LLM token cost before semantic matching on large wikis |
+| Write ADR for key design decisions | 3h | max_tokens 8000, Tier 1/2 dedup, 5s cache TTL, concurrency defaults |
+| JSDoc public interfaces | 4h | EngineContext, LLMClient, PageFactory — current zero documentation |
+
+### Test Coverage Milestone (v1.8.1)
+
+- **53 unit tests** via vitest: slugify (13), parseFrontmatter (9), detectRateLimitFailures (8), formatRateLimitNotice (2), cleanMarkdownResponse (8), enforceFrontmatterConstraints (13)
+- CI-ready: `pnpm lint && pnpm test && pnpm build`
+- Previously: **F (zero tests)** → Now: **B-** (pure functions covered, integration tests pending)
+
+### Implemented (v1.8.1) — UX Hardening
 
 **Internationalization Expansion**
 - Extended plugin UI from 2 languages (English, Chinese) to 8 languages (Japanese, Korean, German, French, Spanish, Portuguese)
@@ -263,8 +299,8 @@ Karpathy: *"I like to do them one at a time, and be involved myself."*
 | **v1.6.2** | 2026-05 | Iterative batch extraction, granularity control, JSON enforcement | Released |
 | **v1.4.0** | 2026-04 | Schema layer, auto-maintenance, ESLint compliance | Released |
 | **v1.0.0** | 2026-04 | Multi-page generation, entity/concept extraction, bidirectional links | Released |
-| **v1.8.0** | TBD | Phase 1 refactoring: constants.ts, utils helpers, lint caching/batching | Planned |
-| **v1.10.0** | TBD | Ingest Wizard, lint per-item review, output diversity | Planned |
+| **v1.8.x** | 2026-05 | Code quality upgrade: dead code removal, type safety, prompt consolidation, logging standardization, CONTRIBUTING.md | In progress |
+| **v1.10.0** | TBD | Ingest Wizard, lint per-item review, query keyword pre-filter | Planned |
 | **v2.0.0** | TBD | Agent mode, multi-modal | Concept |
 
 ---
