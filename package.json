@@ -37,5 +37,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.24.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
   }
 }
