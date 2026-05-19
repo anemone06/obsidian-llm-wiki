@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { slugify, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints } from '../utils';
+import { slugify, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag } from '../utils';
 
 describe('slugify', () => {
   it('returns "untitled" for empty input', () => {
@@ -344,5 +344,173 @@ describe('enforceFrontmatterConstraints', () => {
     const input = '---\ntype: entity\ntags: [invalid_tag]\n---\n\nBody';
     const result = enforceFrontmatterConstraints(input, 'entity');
     expect(result).toContain('tags: [other]');
+  });
+});
+
+describe('parseJsonResponse', () => {
+  it('parses valid JSON directly', async () => {
+    const result = await parseJsonResponse('{"key": "value"}');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('parses JSON wrapped in ```json code fence', async () => {
+    const result = await parseJsonResponse('```json\n{"key": "value"}\n```');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('parses JSON wrapped in ```markdown code fence', async () => {
+    const result = await parseJsonResponse('```markdown\n{"key": "value"}\n```');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('parses JSON wrapped in ``` without language tag', async () => {
+    const result = await parseJsonResponse('```\n{"key": "value"}\n```');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('handles double-brace prefill echo ({{)', async () => {
+    const result = await parseJsonResponse('{{"key": "value"}');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('handles newline-separated loose prefill ({)|n)', async () => {
+    const result = await parseJsonResponse('{\n{"key": "value"}');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('handles missing opening brace (prefill stripped)', async () => {
+    const result = await parseJsonResponse('"key": "value"}');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('extracts valid prefix from content with trailing text', async () => {
+    const result = await parseJsonResponse('{"key": "value"} extra words here');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('extracts braced JSON content from surrounding text', async () => {
+    const result = await parseJsonResponse('Some preamble text {"key": "value"} and more after');
+    expect(result).toEqual({ key: 'value' });
+  });
+
+  it('handles trailing comma in objects', async () => {
+    const result = await parseJsonResponse('{"a": 1, "b": 2,}');
+    expect(result).toEqual({ a: 1, b: 2 });
+  });
+
+  it('handles trailing comma in arrays', async () => {
+    const result = await parseJsonResponse('{"items": [1, 2, 3,]}');
+    expect(result).toEqual({ items: [1, 2, 3] });
+  });
+
+  it('returns null for completely invalid input', async () => {
+    const result = await parseJsonResponse('not json at all');
+    expect(result).toBeNull();
+  });
+
+  it('returns null for empty string', async () => {
+    const result = await parseJsonResponse('');
+    expect(result).toBeNull();
+  });
+
+  it('handles nested objects correctly', async () => {
+    const result = await parseJsonResponse('{"outer": {"inner": [1, 2, 3]}}');
+    expect(result).toEqual({ outer: { inner: [1, 2, 3] } });
+  });
+});
+
+describe('mergeFrontmatter', () => {
+  const today = new Date().toISOString().split('T')[0];
+
+  it('returns body as-is when no frontmatter exists', () => {
+    const input = '# Just content\nNo frontmatter';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.wasMerged).toBe(false);
+    expect(result.frontmatter).toBe('');
+    expect(result.body).toBe(input);
+  });
+
+  it('preserves type and adds source', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain('type: entity');
+    expect(result.frontmatter).toContain('[[sources/test.md]]');
+    expect(result.wasMerged).toBe(true);
+  });
+
+  it('preserves created date', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain('created: 2026-01-01');
+  });
+
+  it('updates updated date to today', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain(`updated: ${today}`);
+  });
+
+  it('merges sources with deduplication', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\nsources: ["[[sources/test]]"]\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test');
+    expect(result.frontmatter).toContain('[[sources/test]]');
+    expect(result.frontmatter).toContain('sources:');
+  });
+
+  it('preserves existing tags', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\ntags: [method, theory]\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain('method');
+    expect(result.frontmatter).toContain('theory');
+  });
+
+  it('preserves existing aliases', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\naliases: ["CoT", "思维链"]\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain('CoT');
+    expect(result.frontmatter).toContain('思维链');
+  });
+
+  it('preserves reviewed flag', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\nreviewed: true\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/test.md');
+    expect(result.frontmatter).toContain('reviewed: true');
+  });
+
+  it('normalizes wiki-link format in sources', () => {
+    const input = '---\ntype: entity\ncreated: 2026-01-01\nupdated: 2026-01-01\nsources: ["[[sources/old]]"]\n---\n\nBody';
+    const result = mergeFrontmatter(input, 'sources/new');
+    expect(result.frontmatter).toContain('[[sources/old]]');
+    expect(result.frontmatter).toContain('[[sources/new]]');
+  });
+});
+
+describe('preserveFrontmatterReviewTag', () => {
+  it('returns newContent as-is when original is not reviewed', () => {
+    const orig = '---\ntype: entity\n---\n\nBody';
+    const newC = '---\ntype: entity\n---\n\nUpdated body';
+    expect(preserveFrontmatterReviewTag(orig, newC)).toBe(newC);
+  });
+
+  it('injects reviewed: true when original has reviewed flag but new lacks it', () => {
+    const orig = '---\ntype: entity\nreviewed: true\n---\n\nBody';
+    const newC = '---\ntype: entity\n---\n\nUpdated body';
+    const result = preserveFrontmatterReviewTag(orig, newC);
+    expect(result).toContain('reviewed: true');
+    expect(result).toContain('Updated body');
+  });
+
+  it('does not duplicate reviewed when new already has it', () => {
+    const orig = '---\ntype: entity\nreviewed: true\n---\n\nBody';
+    const newC = '---\ntype: entity\nreviewed: true\n---\n\nUpdated body';
+    const result = preserveFrontmatterReviewTag(orig, newC);
+    // Should only appear once
+    expect(result.match(/reviewed: true/g)?.length).toBe(1);
+  });
+
+  it('returns newContent as-is when it has no frontmatter', () => {
+    const orig = '---\ntype: entity\nreviewed: true\n---\n\nBody';
+    const newC = '# Just markdown\nNo frontmatter';
+    expect(preserveFrontmatterReviewTag(orig, newC)).toBe(newC);
   });
 });

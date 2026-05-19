@@ -81,6 +81,10 @@ export const JA_TEXTS = {
     saveSettingsName: '設定を保存',
     saveSettingsDesc: '現在の設定を保存します',
     saveButton: '設定を保存',
+    testConnectionSuccessful: '接続成功',
+    testConnectionFailed: '接続失敗',
+    testConnectionProvider: 'プロバイダー：',
+    errorUnknown: '不明なエラー',
     savedNotice: '設定を保存しました！',
 
     // Wiki Folder

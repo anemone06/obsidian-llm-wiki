@@ -81,6 +81,10 @@ export const FR_TEXTS = {
     saveSettingsName: 'Enregistrer les paramètres',
     saveSettingsDesc: 'Enregistrer la configuration actuelle',
     saveButton: 'Enregistrer',
+    testConnectionSuccessful: 'Connexion réussie',
+    testConnectionFailed: 'Connexion échouée',
+    testConnectionProvider: 'Fournisseur : ',
+    errorUnknown: 'Erreur inconnue',
     savedNotice: 'Paramètres enregistrés !',
 
     // Wiki Folder

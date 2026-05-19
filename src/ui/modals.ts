@@ -213,16 +213,16 @@ export class LintReportModal extends Modal {
 
 export class IngestReportModal extends Modal {
   private report: IngestReport;
-  private language: 'en' | 'zh';
+  private language: string;
 
-  constructor(app: App, report: IngestReport, language: 'en' | 'zh' = 'en') {
+  constructor(app: App, report: IngestReport, language: string = 'en') {
     super(app);
     this.report = report;
     this.language = language;
   }
 
   private t(key: string): string {
-    const texts = TEXTS[this.language];
+    const texts = TEXTS[this.language as keyof typeof TEXTS] || TEXTS.en;
     return (texts as unknown as Record<string, string>)[key] || (TEXTS.en as unknown as Record<string, string>)[key] || key;
   }
 

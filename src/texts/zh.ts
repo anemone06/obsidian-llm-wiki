@@ -81,6 +81,10 @@ export const ZH_TEXTS = {
     saveSettingsName: '保存设置',
     saveSettingsDesc: '保存当前配置',
     saveButton: '保存设置',
+    testConnectionSuccessful: '连接成功',
+    testConnectionFailed: '连接失败',
+    testConnectionProvider: '提供商：',
+    errorUnknown: '未知错误',
     savedNotice: '设置已保存！',
 
     // Wiki 文件夹
@@ -322,6 +326,8 @@ export const ZH_TEXTS = {
     lintContradictionAutoFixed: '（本次自动修复 {count} 个）',
     lintDeadLinkAffectedByDup: ' （⚠️ 涉及重复页面）',
     lintOrphanIsDuplicate: ' （⚠️ 重复页面）',
+    lintNoIssuesFound: '未检测到重复、断链、空洞或孤立页面。',
+    lintContradictionOpen: '未解决的矛盾：{count} 个',
     lintContradictionItem: '- [{status}] [[{page}]] — {claim}',
     lintContradictionStatusDetected: '待处理',
     lintContradictionStatusPendingFix: '待修复',

@@ -8,38 +8,39 @@
 
 ## Current Status
 
-### Next: v1.8.x — Code Quality Upgrade (B+ → A-)
+### Next: v1.9.x — Second Quality Round (Post-B+ Audits)
 
-Following an independent code audit (score: B+), targeted technical debt repayment. Full assessment: 7/10 accuracy confirmed, 2 items already resolved (test coverage, method decomposition in progress).
+Two independent audits confirmed B+. New plan addressing consensus issues.
 
-**P0 — Immediate (low cost, high impact)**
-
-| Action | Effort | Why |
-|--------|--------|-----|
-| Remove `analyzeMerge` dead code (page-factory.ts:536) | 5min | 50-line method, zero callers, maintenance confusion |
-| Extract `createLLMClient(opts)` factory | 20min | `initializeLLMClient` and `testLLMConnection` have 11 identical lines of client-creation branching |
-| Move `updateRelatedPage` prompt into PROMPTS | 15min | Hardcoded inline prompt (line 508-517) bypasses prompt management system |
-
-**P1 — Short-term (this week)**
+**P0 — Immediate (in progress)**
 
 | Action | Effort | Why |
 |--------|--------|-----|
-| Fix `getText` type safety: `keyof typeof TEXTS.en` | 1h | `as unknown as Record<string, string>` bypasses compile-time key validation |
-| Standardize console logs to English | 1h | 36 Chinese debug calls in wiki-engine.ts alone; CLAUDE.md requires English |
-| Optimize `display()` slider: update desc only | 30min | Current: slider onChange → full DOM rebuild. Fix: `setDynamicTooltip` without `display()` |
-| Add CONTRIBUTING.md | 1h | Local build, branch strategy, PR conventions for new contributors |
+| Fix `renderComponent` memory leak (query-engine.ts) | 1 line | Component created on wrong property name, never freed |
+| Fix `lintFixer` encapsulation (wiki-engine.ts) | 2 lines | Private property accessed externally |
+| `testLLMConnection` hardcoded Chinese → TEXTS | 10 lines | User-visible, violates i18n |
+| LLM outputs plain text for non-existing related entities → `[[wiki-link]]` | prompt change | `text` not `[[]]`, Lint misses dead links |
+| Ensure `tsc --noEmit` passes | — | Fix source + vitest/vite type errors |
 
-**P2 — Medium-term (when bandwidth permits)**
+**P1 — Short-term**
 
 | Action | Effort | Why |
 |--------|--------|-----|
-| Python Zen design principles (CLAUDE.md) | — | Simple > Complex; Flat > Nested; Sparse > Dense; solve when it hurts |
-| Key design decisions (CLAUDE.md) | 30min | Tier 1/2 dedup, Promise.allSettled isolation, pollution defense, LLM semantic selection |
-| EngineContext interface comments (types.ts) | 15min | Grouping by core/integration; document function-as-accessor pattern |
-| ~~Split `ingestSource` into stage methods~~ | — | Rejected: 300 lines sequential with clear comments is more readable than 6 micro-methods |
-| ~~Keyword pre-filter for query~~ | — | Rejected: introduces false negatives; correct fix for large wikis is index sharding, not BM25 |
+| PageFactory entity/concept 8-pair method unification | 4h | 16 near-identical methods, highest maintenance debt |
+| LLM client retry extraction (`withRetry`) | 2h | Retry/truncation duplicated across 3 clients |
+| `createMessageStream` language type fix | 1h | Interface vs implementation mismatch |
 
-### Test Coverage Milestone (v1.8.1)
+**P2 — Medium-term**
+
+| Action | Effort | Why |
+|--------|--------|-----|
+| `parseJsonResponse` unit tests | 2h | Auditors' #1 test priority |
+| `mergeFrontmatter` unit tests | 1h | Pure function, test-friendly |
+| `slugify` debug log reduction (8→2) | 30min | High-frequency noise |
+
+**Not doing** (per Python Zen): cache bypass, serial index reads, 760-line method split, YAML parser replacement
+
+### Test Coverage Milestone (v1.9.0)
 
 - **53 unit tests** via vitest: slugify (13), parseFrontmatter (9), detectRateLimitFailures (8), formatRateLimitNotice (2), cleanMarkdownResponse (8), enforceFrontmatterConstraints (13)
 - CI-ready: `pnpm lint && pnpm test && pnpm build`

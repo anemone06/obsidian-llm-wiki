@@ -421,36 +421,38 @@ export default class LLMWikiPlugin extends Plugin {
   // ==================== Connection Test ====================
 
   async testLLMConnection(): Promise<{ success: boolean; message: string }> {
+    const t = TEXTS[this.settings.language] || TEXTS.en;
+
     const isOllama = this.settings.provider === 'ollama';
     if (!isOllama && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
-      return { success: false, message: 'API Key 未配置' };
+      return { success: false, message: t.errorNoApiKey || 'API Key is not configured' };
     }
 
     try {
       const testClient = createLLMClient(this.settings);
-      const providerConfig = PREDEFINED_PROVIDERS[this.settings.provider];
 
       const testResponse = await testClient.createMessage({
         model: this.settings.model,
         max_tokens: 100,
         messages: [{
           role: 'user',
-          content: '测试连接，请回复"连接成功"'
+          content: 'Test connection. Please reply "Connection successful".'
         }]
       });
 
       console.debug('Test response:', testResponse);
+      const providerName = (PREDEFINED_PROVIDERS[this.settings.provider]?.nameEn || this.settings.provider);
 
       return {
         success: true,
-        message: `✅ 连接成功！提供商: ${providerConfig?.name || this.settings.provider}`
+        message: `✅ ${t.testConnectionSuccessful || 'Connection successful'}${t.testConnectionProvider ? ': ' : ''}${providerName}`
       };
     } catch (error) {
       console.error('Connection test failed:', error);
       const errorMsg = error instanceof Error ? error.message : String(error);
       return {
         success: false,
-        message: `❌ 连接失败: ${errorMsg || '未知错误'}`
+        message: `❌ ${t.testConnectionFailed || 'Connection failed'}: ${errorMsg || t.errorUnknown || 'Unknown error'}`
       };
     }
   }

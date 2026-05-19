@@ -81,6 +81,10 @@ export const DE_TEXTS = {
     saveSettingsName: 'Einstellungen speichern',
     saveSettingsDesc: 'Aktuelle Konfiguration speichern',
     saveButton: 'Einstellungen speichern',
+    testConnectionSuccessful: 'Verbindung erfolgreich',
+    testConnectionFailed: 'Verbindung fehlgeschlagen',
+    testConnectionProvider: 'Anbieter: ',
+    errorUnknown: 'Unbekannter Fehler',
     savedNotice: 'Einstellungen gespeichert!',
 
     // Wiki Folder

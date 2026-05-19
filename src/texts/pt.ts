@@ -81,6 +81,10 @@ export const PT_TEXTS = {
     saveSettingsName: 'Salvar configurações',
     saveSettingsDesc: 'Salvar a configuração atual',
     saveButton: 'Salvar configurações',
+    testConnectionSuccessful: 'Conexão bem-sucedida',
+    testConnectionFailed: 'Conexão falhou',
+    testConnectionProvider: 'Provedor: ',
+    errorUnknown: 'Erro desconhecido',
     savedNotice: 'Configurações salvas!',
 
     // Wiki Folder

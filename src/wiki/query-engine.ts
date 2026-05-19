@@ -131,7 +131,7 @@ export class QueryModal extends Modal {
     this.inputArea = null as unknown as HTMLTextAreaElement;
     this.sendBtn = null as unknown as HTMLButtonElement;
     this.historyCountDisplay = null as unknown as HTMLElement;
-    this.renderComponent = new Component();
+    this.activeRenderComponent = new Component();
     this.pendingInput = '';
   }
 
@@ -352,7 +352,7 @@ export class QueryModal extends Modal {
 
     if (this.aborted) {
       statusIndicator.remove();
-      this.finishGeneration(texts);
+      this.finishGeneration(texts as unknown as Record<string, string>);
       return;
     }
 
@@ -397,7 +397,7 @@ export class QueryModal extends Modal {
         } catch (streamErr) {
           if (this.aborted) {
             cleanupTimer();
-            this.finishGeneration(texts);
+            this.finishGeneration(texts as unknown as Record<string, string>);
             return;
           }
           console.warn('Streaming query failed, falling back to non-streaming:', streamErr);
@@ -415,7 +415,7 @@ export class QueryModal extends Modal {
               });
               if (this.aborted) {
                 cleanupTimer();
-                this.finishGeneration(texts);
+                this.finishGeneration(texts as unknown as Record<string, string>);
                 return;
               }
               this.renderMarkdownContent(fullResponse, contentDiv);
@@ -428,7 +428,7 @@ export class QueryModal extends Modal {
                 cls: 'llm-wiki-query-error'
               });
               cleanupTimer();
-              this.finishGeneration(texts);
+              this.finishGeneration(texts as unknown as Record<string, string>);
               return;
             }
           } else {
@@ -438,7 +438,7 @@ export class QueryModal extends Modal {
               cls: 'llm-wiki-query-error'
             });
             cleanupTimer();
-            this.finishGeneration(texts);
+            this.finishGeneration(texts as unknown as Record<string, string>);
             return;
           }
           cleanupTimer();
@@ -465,7 +465,7 @@ export class QueryModal extends Modal {
 
         if (this.aborted) {
           cleanupTimer();
-          this.finishGeneration(texts);
+          this.finishGeneration(texts as unknown as Record<string, string>);
           return;
         }
 
@@ -498,7 +498,7 @@ export class QueryModal extends Modal {
       messageDiv.removeClass('llm-wiki-query-response-live');
     }
 
-    this.finishGeneration(texts);
+    this.finishGeneration(texts as unknown as Record<string, string>);
   }
 
   stopGeneration() {
@@ -506,7 +506,7 @@ export class QueryModal extends Modal {
     this.pendingInput = this.inputArea.value;
   }
 
-  private finishGeneration(texts: typeof TEXTS['en']) {
+  private finishGeneration(texts: Record<string, string>) {
     this.isStreaming = false;
     this.currentResponseDiv = null;
     this.sendBtn.setText(`${texts.queryModalSendButton} (${Platform.isMacOS ? 'Cmd' : 'Ctrl'}+Enter)`);

@@ -534,7 +534,7 @@ export async function runLintWiki(ctx: LintContext): Promise<void> {
           for (const pp of pollutedPages) {
             fixNotice.setMessage(`Fixing polluted page ${fixed + 1}/${pollutedPages.length}: ${pp.title} → ${pp.cleanTitle}`);
             try {
-              const result = await ctx.wikiEngine.lintFixer.fixPollutedPage(pp.path, pp.cleanTitle);
+              const result = await ctx.wikiEngine.fixPollutedPage(pp.path, pp.cleanTitle);
               console.debug(`[Pollution Fix] ${result}`);
               fixed++;
             } catch (e) {
@@ -648,7 +648,7 @@ export async function runLintWiki(ctx: LintContext): Promise<void> {
           if (pollutedPages.length > 0) {
             for (const pp of pollutedPages) {
               try {
-                const result = await ctx.wikiEngine.lintFixer.fixPollutedPage(pp.path, pp.cleanTitle);
+                const result = await ctx.wikiEngine.fixPollutedPage(pp.path, pp.cleanTitle);
                 console.debug(`[Pollution Fix] ${result}`);
                 pollutedFixed++;
               } catch (e) {

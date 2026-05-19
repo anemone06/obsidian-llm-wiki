@@ -137,7 +137,7 @@ export class AnthropicCompatibleClient implements LLMClient {
     max_tokens: number;
     system?: string;
     messages: Array<{ role: 'user' | 'assistant'; content: string }>;
-    language: 'en' | 'zh';
+    language: 'en' | 'zh' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt';
     onChunk: (chunk: string) => void;
   }): Promise<string> {
     const messages = params.system ? params.messages : [
@@ -343,7 +343,7 @@ export class AnthropicClient implements LLMClient {
     max_tokens: number;
     system?: string;
     messages: Array<{role: 'user' | 'assistant'; content: string}>;
-    language: 'en' | 'zh';
+    language: 'en' | 'zh' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt';
     onChunk: (chunk: string) => void;
   }): Promise<string> {
     const messagesWithLanguageHint = params.system
@@ -505,7 +505,7 @@ export class OpenAICompatibleClient implements LLMClient {
     max_tokens: number;
     system?: string;
     messages: Array<{role: 'user' | 'assistant'; content: string}>;
-    language: 'en' | 'zh';
+    language: 'en' | 'zh' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt';
     onChunk: (chunk: string) => void;
   }): Promise<string> {
     const messages = params.system

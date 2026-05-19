@@ -4,18 +4,31 @@
 
 ---
 
-## Current Phase: Post-v1.9.0 — Pollution Defense & Quality Upgrade Complete
+## Current Phase: v1.9.x — Second Quality Upgrade Round
 
-**v1.9.0 in preparation.** Four-layer pollution defense system, lint report enhancements, long source ingestion notice, code quality upgrade (B+ → A-).
+Two independent audits both confirmed B+ rating. Next: P0 bug fixes, encapsulation, i18n, and tsc compliance.
 
-### Recently Completed (v1.9.0)
-- **4-layer pollution defense**: Write-gate regex (L1), index purification (L2), stub sanitization (L3), detection & repair (L4)
-- **Lint report**: Missing aliases listed per-page, polluted pages section with clean name suggestions, "Fix polluted pages" button
-- **Long source notice**: Files >1000 lines trigger persistent Notice during ingestion
-- **Quality upgrade**: Dead code removal, type safety (`keyof typeof TEXTS.en`), console log English standardization, slider partial refresh, CONTRIBUTING.md, Python Zen principles, Key Design Decisions
+### P0 — Immediate (in progress)
+- Fix `renderComponent` → `activeRenderComponent` memory leak in QueryModal
+- Fix `lintFixer` encapsulation (access via public method, not private property)
+- Fix `testLLMConnection` hardcoded Chinese strings → TEXTS system
+- Fix related entity/concept page generation: LLM must output `[[wiki-link]]` even for non-existent pages (currently outputs plain text → Lint misses dead links)
+- Ensure `tsc --noEmit` passes
 
-### Recently Completed (v1.8.1)
-- Rate limit detection, Smart Fix All modal, settings reorganization, dynamic badges, persistent fix notices, README command accuracy, single-value aliases crash fix, 53 unit tests
+### P1 — Short-term
+- PageFactory entity/concept method unification (8 pairs → generic)
+- LLM client retry extraction (shared `withRetry`)
+- `createMessageStream` language type consistency
+
+### P2 — Medium-term
+- `parseJsonResponse` + `mergeFrontmatter` unit tests
+- `slugify` debug log reduction (8→2)
+- Residual Chinese comment cleanup
+
+### Already Evaluated (not doing)
+- `getExistingWikiPages` cache bypass → Solve when it hurts
+- `runLintWiki` 760-line method → Flat > Nested
+- Custom YAML parser → Correct choice for Obsidian plugin constraints
 
 ---
 
@@ -26,9 +39,8 @@ src/
 ├── main.ts                         # Plugin entry point
 ├── types.ts                        # Shared types + EngineContext
 ├── utils.ts                        # Utilities (slugify, parseJson, etc.)
-├── prompts.ts                      # LLM prompt templates (barrel)
 ├── texts.ts                        # i18n texts (barrel, 8 languages)
-├── llm-client.ts                   # LLM clients (Anthropic, OpenAI-compatible)
+├── llm-client.ts                   # LLM clients
 ├── wiki/                           # Wiki engine
 │   ├── wiki-engine.ts              # Orchestrator
 │   ├── query-engine.ts             # Conversational query
@@ -37,18 +49,15 @@ src/
 │   ├── conversation-ingest.ts      # Chat → wiki knowledge
 │   ├── lint-fixes.ts               # Fix logic
 │   ├── lint-controller.ts          # Lint orchestration
-│   ├── lint/
-│   │   ├── duplicate-detection.ts  # Candidate generation
-│   │   └── fix-runners.ts          # Batch fix execution
+│   ├── lint/                       # Lint sub-modules
 │   ├── contradictions.ts           # Contradiction detection
-│   └── system-prompts.ts           # Language directive + labels
-├── schema/
-│   ├── schema-manager.ts           # Schema CRUD
-│   └── auto-maintain.ts            # File watcher + periodic lint
+│   ├── system-prompts.ts           # Language directive + labels
+│   └── prompts/                    # LLM prompt templates
+├── schema/                         # Schema co-evolution
 ├── ui/
 │   ├── settings.ts                 # Settings panel
 │   └── modals.ts                   # Lint/Ingest/Query modals
-└── __tests__/                      # Unit tests
+└── __tests__/                      # Unit tests (vitest, 53 tests)
 ```
 
 ---
@@ -56,13 +65,11 @@ src/
 ## ⚠️ Git Safety Protocol
 
 - **NEVER commit or push without explicit user permission.** Non-negotiable.
-- Commit only after user says "commit" / "提交". Push only after "push" / "推送".
-- Re-confirm before each commit — a prior approval does not carry forward.
 
 ## 📦 Development Workflow
 
-1. `pnpm lint` + `pnpm build` pass (0 errors, 0 warnings)
-2. Update relevant docs (README/ROADMAP/CHANGELOG) and memory
+1. `pnpm lint && pnpm test && pnpm build` pass
+2. Update relevant docs and memory
 3. Present change summary for user review
 4. Commit only after user approval
 5. Push only after user approval
@@ -73,77 +80,41 @@ src/
 
 - **Knowledge compounds** — query results flow back into wiki
 - **Human-in-the-loop** — LLM suggests, user decides
-- **Three-layer architecture** — Sources (read-only) → Wiki (LLM-generated) → Schema (co-evolved)
+- **Three-layer architecture** — Sources → Wiki → Schema
 - **Incremental accumulation** — wiki is persistent, not one-shot
 
 ## 🎯 Python Zen Design Principles
 
-When evaluating complexity, ask:
-
-- **Simple > Complex.** If a 3-line comment explains it, don't introduce a formal ADR. If a linear sequence is readable, don't split it into micro-methods.
-- **Flat > Nested.** 300 lines of sequential code with clear stage comments is easier to follow than 6 private methods jumping back and forth.
-- **Sparse > Dense.** JSDoc on every function is noise when TypeScript already defines the types. Document the connections between modules, not the signatures.
-- **Practicality > Purity.** A pragmatic design decision documented in CLAUDE.md beats an unread ADR directory. A keyword filter that introduces false negatives is worse than "no filter, LLM does it."
-- **Solve when it hurts.** Don't optimize for 500-page wikis with 50 pages. Don't add caching before measuring. Don't split methods until they're actually hard to debug.
-- **Explicit > Implicit.** `ctx.getClient()` (function) returns the latest client after settings changes. `ctx.llmClient` (property) would return a stale snapshot. The function type IS the documentation.
+- **Simple > Complex** — comment not framework
+- **Flat > Nested** — linear code beats micro-methods
+- **Solve when it hurts** — don't optimize before measuring
+- **Explicit > Implicit** — function types ARE documentation
 
 ## 🔑 Key Design Decisions
 
-**Tier 1/2 duplicate detection.** Tier 1 (crossLang, abbreviation, bigram ≥ 0.6) always verified by LLM — these are high-precision signals. Tier 2 (bigram 0.4–0.6, sharedLinks ≥ 0.4) fills remaining token budget. This two-tier design ensures cross-language duplicates are caught (Tier 1) without blowing the API budget (Tier 2 acts as overflow).
-
-**`Promise.allSettled` error isolation.** Every parallel page generation batch uses `allSettled`, not `all`. One entity failing (e.g., malformed name) does not crash the entire ingestion. Failed pages retry individually with exponential backoff. The system degrades gracefully — partial success is the norm, not an exception.
-
-**Pollution defense at the write gate.** `createOrUpdateFile` runs a centralized regex that strips duplicated folder prefixes (`[[entities/X|entities/X]]` → `[[entities/X|X]]`) from ALL LLM-generated content before writing. This is architectural defense: validate at the single write exit rather than trusting every upstream caller to be clean.
-
-**LLM semantic page selection over keyword search.** Query uses LLM to match user questions to wiki pages semantically — "attention mechanism" finds "Transformer" even without word overlap. This is Karpathy's core insight: the LLM understands meaning, not just tokens. Keyword pre-filtering would introduce false negatives and undermine this. When the wiki grows beyond context window limits, the correct fix is index sharding, not BM25.
+- **Tier 1/2 duplicate detection**: Tier 1 always verified (high-precision), Tier 2 fills token budget
+- **`Promise.allSettled` error isolation**: One failure doesn't crash the batch
+- **Pollution defense at write gate**: Centralized regex catches ALL sources
+- **LLM semantic page selection**: Meaning-based matching, not keyword
 
 ---
 
 ## 🌍 Internationalization
 
-- **UI**: 8 languages (EN/ZH/JA/KO/DE/FR/ES/PT), 269+ fields fully translated
-- **Wiki output**: 8 languages independent of UI, with custom input option
-- **Docs**: README in all 8 languages
-- **Code**: English comments only, minimal (WHY not WHAT)
+- **UI**: 8 languages, 269+ fields
+- **Wiki output**: 8 languages + custom input
+- **Code**: English only, minimal comments
 
 ## 📋 Git Commit Standards
 
-- **Language**: English only, conventional commits format
-- **Types**: `feat:` `fix:` `docs:` `refactor:` `test:` `chore:` `perf:` `style:`
-- **Example**: `fix: resolve single-value aliases crash in parseFrontmatter`
-
----
-
-## 🎯 Code Quality
-
-- No `any` — use `unknown` with type guards
-- `?.` / `??` for null safety
-- PascalCase classes, camelCase functions, UPPER_SNAKE_CASE constants
-- `console.debug/warn/error` only (no `console.log`)
-- `new Notice('', 0)` for persistent, `new Notice(msg, 8000)` for auto-dismiss
-
-## 🔧 Obsidian Plugin Compliance
-
-15 eslint-plugin-obsidianmd rules enforced via `pnpm lint --max-warnings=0`.
-Key rules: sentence case UI text, no floating promises, no `console.log`,
-no `any`, no hardcoded `.obsidian` paths, tag NO `v` prefix, use `Setting().setHeading()`.
-
----
-
-## 📦 Version Management
-
-- **Format**: `MAJOR.MINOR.PATCH` (semver)
-- **Update**: `manifest.json` + `package.json` + `versions.json`
-- **Tag**: NO `v` prefix → `1.8.1` ✅, `v1.8.1` ❌
-- **Release**: Tag push triggers `.github/workflows/release.yml` → draft release on GitHub
+English, conventional commits. `feat:` `fix:` `docs:` `refactor:` `test:` `chore:`
 
 ## ✅ Pre-Commit Checklist
 
-- `pnpm lint` (0 errors), `pnpm test` (all pass), `pnpm build` (clean)
-- Version numbers synced across 3 files (if version bump)
-- CHANGELOG/README updated (if features changed)
-- Commit message English, conventional format
+- `pnpm lint` (0 errors), `pnpm test` (all pass), `pnpm build` (clean), `npx tsc --noEmit` (0 errors)
+
+- `pnpm lint` (0 errors), `pnpm test` (all pass), `pnpm build` (clean), `tsc --noEmit` (0 errors)
 
 ---
 
-**Maintainer:** Greener-Dalii | **Repository:** [green-dalii/obsidian-llm-wiki](https://github.com/green-dalii/obsidian-llm-wiki)
+**Maintainer:** Greener-Dalii | **Repository:** green-dalii/obsidian-llm-wiki

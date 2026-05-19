@@ -119,6 +119,11 @@ export class WikiEngine {
     this.onDone = cb;
   }
 
+  // Proxy for lint-controller to access LintFixer methods without exposing the class
+  async fixPollutedPage(oldPath: string, newBasename: string): Promise<string> {
+    return this.lintFixer.fixPollutedPage(oldPath, newBasename);
+  }
+
   private get client(): LLMClient {
     const c = this.getLLMClient();
     if (!c) throw new Error('LLM Client not initialized');

@@ -81,6 +81,10 @@ export const KO_TEXTS = {
     saveSettingsName: '설정 저장',
     saveSettingsDesc: '현재 설정을 저장합니다',
     saveButton: '설정 저장',
+    testConnectionSuccessful: '연결 성공',
+    testConnectionFailed: '연결 실패',
+    testConnectionProvider: 'Provider: ',
+    errorUnknown: '알 수 없는 오류',
     savedNotice: '설정이 저장되었습니다!',
 
     // Wiki Folder

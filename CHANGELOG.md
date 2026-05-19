@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-05-19
+
+### Fixed
+- **`renderComponent` memory leak in QueryModal**: Component was created on undeclared property `renderComponent` instead of declared `activeRenderComponent`, leaving it dangling without cleanup
+- **`lintFixer` encapsulation**: `lint-controller.ts` was accessing private `lintFixer` property on WikiEngine; added public proxy method `fixPollutedPage()`
+- **`createMessageStream` language type**: 3 client implementations accepted only `'en' | 'zh'` while interface defined all 8 languages
+- **Missing i18n keys in zh.ts**: `lintNoIssuesFound` and `lintContradictionOpen` were missing from Chinese translations, causing TypeScript compilation errors
+- **Batch delay default**: Changed from 300ms to 500ms to reduce rate-limit risk on default settings
+
+### Added
+- **91 unit tests** across 2 test files: added `parseJsonResponse` (14), `mergeFrontmatter` (9), `preserveFrontmatterReviewTag` (4), `isPageEmpty` (5), `detectPollutedPages` (6). Core prompt-generation LLM instruction: related entities/concepts now always output as `[[wiki-link]]` even for non-existent pages (so Lint can detect dead links)
+- **`tsc --noEmit` passes** with 0 errors: fixed tsconfig `moduleResolution` (node→bundler), `skipLibCheck`, narrowed `include` scope to `src/**`
+
+### Changed
+- **CLAUDE.md and ROADMAP.md**: Comprehensively rewritten, removing version history from v1.7.x (preserved in CHANGELOG) and stale planned items
+- **`testLLMConnection` strings i18n-ized**: Hardcoded Chinese replaced with TEXTS system, test prompt unified to English
+- **`tsconfig.json`**: `moduleResolution: "bundler"`, `skipLibCheck: true`, `include: ["src/**/*.ts"]`
+
 ## [1.9.0] - 2026-05-19
 
 ### Added

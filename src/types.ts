@@ -389,7 +389,7 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
 
   // Ingestion acceleration (default: 3 parallel for most providers)
   pageGenerationConcurrency: 3,
-  batchDelayMs: 300,
+  batchDelayMs: 500,
 
   // Query dedup
   lastOfferedQueryHash: '',

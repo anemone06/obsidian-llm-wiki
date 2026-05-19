@@ -83,6 +83,12 @@ export const EN_TEXTS = {
     saveButton: 'Save Settings',
     savedNotice: 'Settings saved!',
 
+    // Test Connection
+    testConnectionSuccessful: 'Connection successful',
+    testConnectionFailed: 'Connection failed',
+    testConnectionProvider: 'Provider: ',
+    errorUnknown: 'Unknown error',
+
     // Wiki Folder
     wikiSection: 'Wiki Folder Configuration',
     wikiFolderName: 'Wiki Folder',
