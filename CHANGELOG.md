@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.1] - 2026-05-20
+
+### Fixed
+- **Slug normalization missing in duplicate detection** (Issue #32): `resolvePagePath()` now checks existing page titles and aliases via normalized slug comparison before falling back to LLM. Catches stale filenames with spaces instead of hyphens (e.g. `Metabolisches Syndrom.md` vs `Metabolisches-Syndrom.md`), alias variants (`"Chain of Thought"` matched via alias of `"CoT"`), and case differences — all without LLM calls. Added 4 unit tests for slug-match coverage (title, alias, case-insensitive, edge cases)
+
 ## [1.10.0] - 2026-05-20
 
 ### Added

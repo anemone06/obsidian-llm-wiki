@@ -73,7 +73,7 @@ export class PageFactory {
     const existing = await this.ctx.tryReadFile(slugPath);
     if (existing !== null) return slugPath;
 
-    // Slow path: LLM semantic resolution against existing pages of the same type
+    // Fast path 2 + Slow path: share sameTypePages across slug-match and LLM resolution
     try {
       const allPages = await getExistingWikiPages(this.ctx.app, this.ctx.settings.wikiFolder);
       const sameTypePages = allPages
@@ -83,6 +83,23 @@ export class PageFactory {
           const bn = p.title || '';
           return !/^(entities|concepts|sources)([^\s\-_a-zA-Z0-9])/.test(bn);
         });
+
+      // Fast path 2: normalized slug match — catches files whose stored name
+      // differs from slugified form (e.g. spaces instead of hyphens).
+      // Checks both title and aliases, case-insensitive, to cover:
+      // - "Metabolisches Syndrom" vs "Metabolisches-Syndrom" (spaces → hyphens)
+      // - "Chain of Thought" matched via alias of existing page "CoT"
+      // - "deep learning" vs "Deep Learning" (case difference)
+      const targetSlug = slug.toLowerCase();
+      const slugMatch = sameTypePages.find(p =>
+        slugify(p.title).toLowerCase() === targetSlug ||
+        (p.aliases || []).some(a => slugify(a).toLowerCase() === targetSlug)
+      );
+      if (slugMatch) {
+        await this.appendAliases(slugMatch.path, [name]);
+        return slugMatch.path;
+      }
+
       if (sameTypePages.length === 0) return slugPath;
 
       const pagesList = sameTypePages

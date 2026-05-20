@@ -4,9 +4,10 @@
 
 ---
 
-## Current Phase: v1.10.0 — Aliases Support & Granularity Expansion
+## Current Phase: v1.10.1 — Slug Normalization Fix
 
-Completed Issues #30 and #31, plus comprehensive UX improvements.
+### Completed (v1.10.1)
+- ✅ **Issue #32 — Slug normalization missing in resolvePagePath**: Fast path 2 now checks both title AND aliases via normalized slug comparison (case-insensitive), catching space-vs-hyphen variants (`Metabolisches Syndrom` vs `Metabolisches-Syndrom`), alias slug variants, and case differences — all without LLM calls. Added 4 unit tests (96 total).
 
 ### Completed (v1.10.0)
 - ✅ **Issue #30 — Aliases omitted in duplicate detection**: Fixed `analyzeSource()` and `resolveEntityDedup()` to include aliases in existingPagesList, preventing LLM from creating duplicate stub pages for synonym names (e.g., "CoT" vs "思维链")

@@ -61,6 +61,48 @@ describe('slugify', () => {
   it('removes commas', () => {
     expect(slugify('Karpathy, Andrej')).toBe('Karpathy-Andrej');
   });
+
+  it('normalizes spaces to hyphens for slug-match comparison (Issue #32)', () => {
+    // resolvePagePath Fast path 2: slugify(p.title) === slug
+    // catches files whose stored name uses spaces instead of hyphens
+    expect(slugify('Metabolisches Syndrom')).toBe('Metabolisches-Syndrom');
+    expect(slugify('Machine Learning Basics')).toBe('Machine-Learning-Basics');
+    expect(slugify('hello world') === slugify('hello-world')).toBe(true);
+    expect(slugify('Test Page Name') === slugify('Test-Page-Name')).toBe(true);
+  });
+
+  it('slug-match handles edge cases with dots and spaces combined', () => {
+    expect(slugify('Dr. Smith Report')).toBe('Dr-Smith-Report');
+    expect(slugify('v1.0 Release Notes')).toBe('v1-0-Release-Notes');
+    // Mixed separators normalize to same slug
+    expect(slugify('hello.world test') === slugify('hello-world-test')).toBe(true);
+  });
+
+  it('slug-match is case-insensitive for title comparison', () => {
+    // resolvePagePath Fast path 2: slugify(p.title).toLowerCase() === targetSlug
+    const targetSlug = slugify('deep learning').toLowerCase(); // "deep-learning"
+    expect(slugify('Deep Learning').toLowerCase() === targetSlug).toBe(true);
+    expect(slugify('DEEP LEARNING').toLowerCase() === targetSlug).toBe(true);
+    expect(slugify('Deep-Learning').toLowerCase() === targetSlug).toBe(true);
+    // Different casing in alias
+    expect(slugify('Chain of Thought').toLowerCase() === 'chain-of-thought').toBe(true);
+  });
+
+  it('slug-match covers aliases with space/case variants', () => {
+    // Fast path 2 also checks: aliases.some(a => slugify(a).toLowerCase() === targetSlug)
+    const targetSlug = slugify('Chain of Thought').toLowerCase(); // "chain-of-thought"
+    const aliases = ['Chain of Thought', '思维链', 'CoT Reasoning'];
+    const aliasMatch = aliases.some(a => slugify(a).toLowerCase() === targetSlug);
+    expect(aliasMatch).toBe(true);
+    // Alias with different casing
+    const targetSlug2 = slugify('cot reasoning').toLowerCase();
+    const aliasMatch2 = aliases.some(a => slugify(a).toLowerCase() === targetSlug2);
+    expect(aliasMatch2).toBe(true);
+    // No match
+    const targetSlug3 = slugify('unrelated term').toLowerCase();
+    const aliasMatch3 = aliases.some(a => slugify(a).toLowerCase() === targetSlug3);
+    expect(aliasMatch3).toBe(false);
+  });
 });
 
 describe('parseFrontmatter', () => {
