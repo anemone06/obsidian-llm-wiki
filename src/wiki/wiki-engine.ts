@@ -351,8 +351,8 @@ export class WikiEngine {
             this.onProgress?.(`[${task.stepNum}/${totalSteps}] Updating: ${task.name}`);
 
             try {
-              await this.pageFactory.updateRelatedPage(task.name, analysis!, file);
-              return { success: true as const, name: task.name };
+              const updated = await this.pageFactory.updateRelatedPage(task.name, analysis!, file);
+              return { success: updated, name: task.name };
             } catch (error) {
               const reason = error instanceof Error ? error.message : String(error);
               console.error(`Related page "${task.name}" update failed:`, reason);
@@ -360,9 +360,9 @@ export class WikiEngine {
               // 重试机制（与页面生成一致）
               try {
                 await this.apiDelay(2000);
-                await this.pageFactory.updateRelatedPage(task.name, analysis!, file);
+                const updated = await this.pageFactory.updateRelatedPage(task.name, analysis!, file);
                 console.debug(`Related page "${task.name}" recovered on retry`);
-                return { success: true as const, name: task.name };
+                return { success: updated, name: task.name };
               } catch {
                 console.error(`Related page "${task.name}" retry also failed`);
                 return { success: false as const, name: task.name, reason };

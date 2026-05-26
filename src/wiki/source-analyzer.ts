@@ -146,7 +146,11 @@ export class SourceAnalyzer {
           sourceTitle = analysisData.source_title || file.basename;
           sourceSummary = analysisData.summary || '';
           contradictions = analysisData.contradictions || [];
-          relatedPages = analysisData.related_pages || [];
+          relatedPages = (analysisData.related_pages || []).map(p => {
+            // Strip wiki-link formatting if LLM outputs [[path|name]] instead of plain name
+            const match = String(p).match(/^\[\[(?:[^\]|]+\|)?([^\]]+)\]\]$/);
+            return match ? match[1] : p;
+          });
           keyPoints = analysisData.key_points || [];
         }
 

@@ -16,7 +16,7 @@ export const INGESTION_PROMPTS = {
 
 **Task Requirements:**
 0. Output the source file title (source_title) and a 100-200 word source summary (summary). Only output these two fields in the first round
-1. Extract entities and concepts from the source file that have not already been extracted. Note: Entities are not limited to frequently mentioned people or organizations — important figures, products, events, datasets, codebases etc. that appear only once should also be extracted. Do not skip an entity just because it has few mentions; judge by its importance in the text, not its frequency
+1. Extract entities and concepts that DESERVE standalone wiki pages — items another note could meaningfully link to, and that remain understandable independent of this source. Apply the wiki-link test before extracting: "Would a different note in this knowledge base link to [[this]]? Would someone search the wiki for this name?" If the answer is no, skip it. Bibliographic references (author citations like "Smith et al. 2022", study/trial names used as evidence pointers, journal article titles) are evidence containers — extract their FINDINGS as concepts instead, not the citation as an entity. Judge by wiki-graph value, not by prominence in the text
 2. Output at most {{batch_size}} items (entities + concepts total) this round
 3. Write a detailed, informative summary for each item (target 4-6 sentences). Include concrete information: what the entity/concept is, its role/significance in the source, key factual details, and how it relates to other items. Provide enough substance that the summary alone can seed a quality Wiki page
 4. For mentions_in_source: quote 2-4 verbatim sentences from the source where this entity/concept appears or is discussed. These quotes are critical — they provide the downstream page generator with source-grounded evidence. Include surrounding context, not just the name mention
@@ -57,15 +57,15 @@ export const INGESTION_PROMPTS = {
       "resolution": "Suggested resolution"
     }
   ],
-  "related_pages": ["Related existing Wiki page names"],
+  "related_pages": ["Related existing Wiki page names — use ONLY the plain page name, NOT wiki-link format. Example: 'Machine Learning' not [[concepts/Machine Learning|Machine Learning]]"],
   "key_points": ["Key point 1", "Key point 2"]
 }
 
 **Entity Recognition Guide:**
-- person: individual (author, researcher, historical figure, etc.)
+- person: individual who is a significant SUBJECT of the source. Authors cited only as evidence sources ("Smith et al. found...") are NOT wiki-worthy entities
 - organization: organization/institution (company, school, team, department, etc.)
 - project: project/initiative/program
-- product: product/tool/software/service/publication
+- product: product/tool/software/service. Publications only when they are the primary subject of analysis, not when cited as evidence sources
 - event: event/conference/milestone/historical occurrence
 - location: place/region/geographic concept
 - other: other concrete entities not fitting the concept category
@@ -78,7 +78,8 @@ export const INGESTION_PROMPTS = {
 - Carefully compare against existing content when detecting contradictions
 - related_pages should be pages that actually exist in the current Wiki
 - Output must be valid JSON format
-- Do NOT repeat any item already in the "extracted list". If no unextracted items remain in the source, return empty arrays [] for entities and concepts`,
+- Do NOT repeat any item already in the "extracted list". If no unextracted items remain in the source, return empty arrays [] for entities and concepts
+- Apply the wiki-link test to every candidate: if an entity/concept would not be linked from other notes, do not extract it. Knowledge claims and findings are more valuable than evidence containers`,
 
   // Semantic entity resolution: when slug-based matching fails, use LLM to determine
   // whether a newly extracted entity/concept is semantically equivalent to an existing page.

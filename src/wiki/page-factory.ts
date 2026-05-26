@@ -196,162 +196,7 @@ export class PageFactory {
     sourceFile: TFile | { path: string; basename: string },
     extraPagePaths: string[] = []
   ): Promise<string | null> {
-    if (!entity.name || entity.name.trim().length === 0) {
-      console.warn('Entity name is empty, skipping creation');
-      return null;
-    }
-
-    console.debug('=== Creating/Updating Entity Page ===');
-    console.debug('entity.name:', entity.name);
-    console.debug('type:', entity.type);
-
-    const path = await this.resolvePagePath(entity.name, 'entity', entity.summary);
-    console.debug('Resolved path:', path);
-
-    const existingContent = await this.ctx.tryReadFile(path);
-
-    // New page: generate full content
-    if (!existingContent) {
-      return this.createNewEntityPage(entity, sourceFile, extraPagePaths, path);
-    }
-
-    const isReviewed = parseFrontmatter(existingContent)?.reviewed === true;
-
-    if (isReviewed) {
-      // Reviewed page: minimal append only
-      console.debug('Entity page has reviewed: true, using minimal append mode:', path);
-      return this.appendToReviewedEntityPage(entity, sourceFile, existingContent, path);
-    }
-
-    // Existing page: intelligent merge
-    return this.mergeEntityPage(entity, sourceFile, existingContent, extraPagePaths, path);
-  }
-
-  private async createNewEntityPage(
-    entity: EntityInfo,
-    sourceFile: TFile | { path: string; basename: string },
-    extraPagePaths: string[],
-    path: string
-  ): Promise<string | null> {
-    const client = this.ctx.getClient();
-    if (!client) throw new Error('LLM client not initialized');
-
-    const prompt = PROMPTS.generateEntityPage
-      .replace('{{entity_name}}', entity.name)
-      .replace('{{entity_type}}', entity.type)
-      .replace('{{entity_summary}}', entity.summary)
-      .replace('{{mentions}}', entity.mentions_in_source?.join('\n') || 'No specific mentions')
-      .replace('{{related_entities}}', entity.related_entities?.join(', ') || 'No related entities')
-      .replace('{{related_concepts}}', entity.related_concepts?.join(', ') || 'No related concepts')
-      .replace('{{existing_pages}}', await this.buildPagesListForPrompt(extraPagePaths))
-      .replace('{{related_content}}', 'No existing content')
-      .replace('{{merge_strategy}}', 'New page, no merge needed.')
-      .replace('{{date}}', new Date().toISOString().split('T')[0])
-      .replace('{{source_file}}', sourceFile.path);
-
-    const finalPrompt = applySectionLabels(prompt, this.ctx.settings);
-
-    const pageContent = await client.createMessage({
-      model: this.ctx.settings.model,
-      max_tokens: 8000,
-      system: await this.ctx.buildSystemPrompt('entity'),
-      messages: [{ role: 'user', content: finalPrompt }]
-    });
-
-    const cleanedContent = cleanMarkdownResponse(pageContent);
-    const enforcedContent = enforceFrontmatterConstraints(cleanedContent, 'entity');
-    await this.ctx.createOrUpdateFile(path, enforcedContent);
-    return path;
-  }
-
-  private async mergeEntityPage(
-    entity: EntityInfo,
-    sourceFile: TFile | { path: string; basename: string },
-    existingContent: string,
-    extraPagePaths: string[],
-    path: string
-  ): Promise<string | null> {
-    const client = this.ctx.getClient();
-    if (!client) throw new Error('LLM client not initialized');
-
-    // 1. Programmatic frontmatter merge
-    const { frontmatter, body: existingBody } = mergeFrontmatter(existingContent, sourceFile.path);
-
-    // 2. LLM intelligent body merge
-    const prompt = PROMPTS.mergeEntityPage
-      .replace('{{existing_body}}', existingBody)
-      .replace('{{new_source}}', sourceFile.basename)
-      .replace('{{entity_summary}}', entity.summary)
-      .replace('{{mentions}}', entity.mentions_in_source?.join('\n') || '')
-      .replace('{{related_entities}}', entity.related_entities?.join(', ') || '')
-      .replace('{{related_concepts}}', entity.related_concepts?.join(', ') || '')
-      .replace('{{key_details}}', entity.mentions_in_source?.slice(0, 2).join('; ') || '')
-      .replace('{{existing_pages}}', await this.buildPagesListForPrompt(extraPagePaths));
-
-    const finalPrompt = applySectionLabels(prompt, this.ctx.settings);
-
-    const mergedBody = await client.createMessage({
-      model: this.ctx.settings.model,
-      max_tokens: 8000,
-      system: await this.ctx.buildSystemPrompt('merge'),
-      messages: [{ role: 'user', content: finalPrompt }]
-    });
-
-    const cleanedBody = cleanMarkdownResponse(mergedBody);
-
-    // Check for NO_NEW_CONTENT signal
-    if (cleanedBody.trim() === 'NO_NEW_CONTENT') {
-      console.debug('Entity page merge returned NO_NEW_CONTENT, keeping existing:', path);
-      return path;
-    }
-
-    // 3. Assemble final content
-    const finalContent = `${frontmatter}\n\n${cleanedBody}`;
-    await this.ctx.createOrUpdateFile(path, finalContent);
-    return path;
-  }
-
-  private async appendToReviewedEntityPage(
-    entity: EntityInfo,
-    sourceFile: TFile | { path: string; basename: string },
-    existingContent: string,
-    path: string
-  ): Promise<string | null> {
-    const client = this.ctx.getClient();
-    if (!client) throw new Error('LLM client not initialized');
-
-    // 1. Programmatic frontmatter merge
-    const { frontmatter, body: existingBody } = mergeFrontmatter(existingContent, sourceFile.path);
-
-    // 2. Minimal LLM check for genuinely new content
-    const prompt = PROMPTS.appendToReviewedPage
-      .replace('{{existing_body}}', existingBody)
-      .replace('{{new_source}}', sourceFile.basename)
-      .replace('{{entity_summary}}', entity.summary)
-      .replace('{{mentions}}', entity.mentions_in_source?.join('\n') || '')
-      .replace('{{key_details}}', entity.mentions_in_source?.slice(0, 2).join('; ') || '');
-
-    const finalPrompt = applySectionLabels(prompt, this.ctx.settings);
-
-    const newContent = await client.createMessage({
-      model: this.ctx.settings.model,
-      max_tokens: 4000,
-      system: await this.ctx.buildSystemPrompt('merge'),
-      messages: [{ role: 'user', content: finalPrompt }]
-    });
-
-    const cleanedContent = cleanMarkdownResponse(newContent);
-
-    // Check for NO_NEW_CONTENT signal
-    if (cleanedContent.trim() === 'NO_NEW_CONTENT') {
-      console.debug('Reviewed entity page has no new content, preserving existing:', path);
-      return path;
-    }
-
-    // 3. Assemble final content
-    const finalContent = `${frontmatter}\n\n${cleanedContent}`;
-    await this.ctx.createOrUpdateFile(path, finalContent);
-    return path;
+    return this.createOrUpdatePage(entity, 'entity', sourceFile, extraPagePaths);
   }
 
   async createOrUpdateConceptPage(
@@ -360,39 +205,48 @@ export class PageFactory {
     sourceFile: TFile | { path: string; basename: string },
     extraPagePaths: string[] = []
   ): Promise<string | null> {
-    if (!concept.name || concept.name.trim().length === 0) {
-      console.warn('Concept name is empty, skipping creation');
+    return this.createOrUpdatePage(concept, 'concept', sourceFile, extraPagePaths);
+  }
+
+  // ── Generic page CRUD (entity/concept unified) ──────────────────────
+
+  private async createOrUpdatePage(
+    info: EntityInfo | ConceptInfo,
+    pageType: 'entity' | 'concept',
+    sourceFile: TFile | { path: string; basename: string },
+    extraPagePaths: string[] = []
+  ): Promise<string | null> {
+    if (!info.name || info.name.trim().length === 0) {
+      console.warn(`${pageType} name is empty, skipping creation`);
       return null;
     }
 
-    console.debug('=== Creating/Updating Concept Page ===');
-    console.debug('concept.name:', concept.name);
-    console.debug('type:', concept.type);
+    console.debug(`=== Creating/Updating ${pageType} page ===`);
+    console.debug('name:', info.name);
+    console.debug('type:', info.type);
 
-    const path = await this.resolvePagePath(concept.name, 'concept', concept.summary);
+    const path = await this.resolvePagePath(info.name, pageType, info.summary);
     console.debug('Resolved path:', path);
 
     const existingContent = await this.ctx.tryReadFile(path);
 
-    // New page: generate full content
     if (!existingContent) {
-      return this.createNewConceptPage(concept, sourceFile, extraPagePaths, path);
+      return this.createNewPage(info, pageType, sourceFile, extraPagePaths, path);
     }
 
     const isReviewed = parseFrontmatter(existingContent)?.reviewed === true;
 
     if (isReviewed) {
-      // Reviewed page: minimal append only
-      console.debug('Concept page has reviewed: true, using minimal append mode:', path);
-      return this.appendToReviewedConceptPage(concept, sourceFile, existingContent, path);
+      console.debug(`${pageType} page has reviewed: true, using minimal append mode:`, path);
+      return this.appendToReviewedPage(info, sourceFile, existingContent, path);
     }
 
-    // Existing page: intelligent merge
-    return this.mergeConceptPage(concept, sourceFile, existingContent, extraPagePaths, path);
+    return this.mergePage(info, pageType, sourceFile, existingContent, extraPagePaths, path);
   }
 
-  private async createNewConceptPage(
-    concept: ConceptInfo,
+  private async createNewPage(
+    info: EntityInfo | ConceptInfo,
+    pageType: 'entity' | 'concept',
     sourceFile: TFile | { path: string; basename: string },
     extraPagePaths: string[],
     path: string
@@ -400,14 +254,19 @@ export class PageFactory {
     const client = this.ctx.getClient();
     if (!client) throw new Error('LLM client not initialized');
 
-    const prompt = PROMPTS.generateConceptPage
-      .replace('{{concept_name}}', concept.name)
-      .replace('{{concept_type}}', concept.type)
-      .replace('{{concept_summary}}', concept.summary)
-      .replace('{{mentions}}', concept.mentions_in_source?.join('\n') || 'No specific mentions')
+    const generatePrompt = pageType === 'entity' ? PROMPTS.generateEntityPage : PROMPTS.generateConceptPage;
+
+    const prompt = generatePrompt
+      .replace('{{entity_name}}', info.name)
+      .replace('{{concept_name}}', info.name)
+      .replace('{{entity_type}}', info.type)
+      .replace('{{concept_type}}', info.type)
+      .replace('{{entity_summary}}', info.summary)
+      .replace('{{concept_summary}}', info.summary)
+      .replace('{{mentions}}', info.mentions_in_source?.join('\n') || 'No specific mentions')
+      .replace('{{related_entities}}', info.related_entities?.join(', ') || 'No related entities')
+      .replace('{{related_concepts}}', info.related_concepts?.join(', ') || 'No related concepts')
       .replace('{{existing_pages}}', await this.buildPagesListForPrompt(extraPagePaths))
-      .replace('{{related_concepts}}', concept.related_concepts?.join(', ') || 'No related concepts')
-      .replace('{{related_entities}}', concept.related_entities?.join(', ') || 'No related entities')
       .replace('{{related_content}}', 'No existing content')
       .replace('{{merge_strategy}}', 'New page, no merge needed.')
       .replace('{{date}}', new Date().toISOString().split('T')[0])
@@ -418,18 +277,19 @@ export class PageFactory {
     const pageContent = await client.createMessage({
       model: this.ctx.settings.model,
       max_tokens: 8000,
-      system: await this.ctx.buildSystemPrompt('concept'),
+      system: await this.ctx.buildSystemPrompt(pageType),
       messages: [{ role: 'user', content: finalPrompt }]
     });
 
     const cleanedContent = cleanMarkdownResponse(pageContent);
-    const enforcedContent = enforceFrontmatterConstraints(cleanedContent, 'concept');
+    const enforcedContent = enforceFrontmatterConstraints(cleanedContent, pageType);
     await this.ctx.createOrUpdateFile(path, enforcedContent);
     return path;
   }
 
-  private async mergeConceptPage(
-    concept: ConceptInfo,
+  private async mergePage(
+    info: EntityInfo | ConceptInfo,
+    pageType: 'entity' | 'concept',
     sourceFile: TFile | { path: string; basename: string },
     existingContent: string,
     extraPagePaths: string[],
@@ -442,14 +302,17 @@ export class PageFactory {
     const { frontmatter, body: existingBody } = mergeFrontmatter(existingContent, sourceFile.path);
 
     // 2. LLM intelligent body merge
-    const prompt = PROMPTS.mergeConceptPage
+    const mergePrompt = pageType === 'entity' ? PROMPTS.mergeEntityPage : PROMPTS.mergeConceptPage;
+
+    const prompt = mergePrompt
       .replace('{{existing_body}}', existingBody)
       .replace('{{new_source}}', sourceFile.basename)
-      .replace('{{concept_summary}}', concept.summary)
-      .replace('{{mentions}}', concept.mentions_in_source?.join('\n') || '')
-      .replace('{{related_concepts}}', concept.related_concepts?.join(', ') || '')
-      .replace('{{related_entities}}', concept.related_entities?.join(', ') || '')
-      .replace('{{key_details}}', concept.mentions_in_source?.slice(0, 2).join('; ') || '')
+      .replace('{{entity_summary}}', info.summary)
+      .replace('{{concept_summary}}', info.summary)
+      .replace('{{mentions}}', info.mentions_in_source?.join('\n') || '')
+      .replace('{{related_entities}}', info.related_entities?.join(', ') || '')
+      .replace('{{related_concepts}}', info.related_concepts?.join(', ') || '')
+      .replace('{{key_details}}', info.mentions_in_source?.slice(0, 2).join('; ') || '')
       .replace('{{existing_pages}}', await this.buildPagesListForPrompt(extraPagePaths));
 
     const finalPrompt = applySectionLabels(prompt, this.ctx.settings);
@@ -463,9 +326,8 @@ export class PageFactory {
 
     const cleanedBody = cleanMarkdownResponse(mergedBody);
 
-    // Check for NO_NEW_CONTENT signal
     if (cleanedBody.trim() === 'NO_NEW_CONTENT') {
-      console.debug('Concept page merge returned NO_NEW_CONTENT, keeping existing:', path);
+      console.debug(`${pageType} page merge returned NO_NEW_CONTENT, keeping existing:`, path);
       return path;
     }
 
@@ -475,8 +337,8 @@ export class PageFactory {
     return path;
   }
 
-  private async appendToReviewedConceptPage(
-    concept: ConceptInfo,
+  private async appendToReviewedPage(
+    info: EntityInfo | ConceptInfo,
     sourceFile: TFile | { path: string; basename: string },
     existingContent: string,
     path: string
@@ -491,9 +353,9 @@ export class PageFactory {
     const prompt = PROMPTS.appendToReviewedPage
       .replace('{{existing_body}}', existingBody)
       .replace('{{new_source}}', sourceFile.basename)
-      .replace('{{entity_summary}}', concept.summary)
-      .replace('{{mentions}}', concept.mentions_in_source?.join('\n') || '')
-      .replace('{{key_details}}', concept.mentions_in_source?.slice(0, 2).join('; ') || '');
+      .replace('{{entity_summary}}', info.summary)
+      .replace('{{mentions}}', info.mentions_in_source?.join('\n') || '')
+      .replace('{{key_details}}', info.mentions_in_source?.slice(0, 2).join('; ') || '');
 
     const finalPrompt = applySectionLabels(prompt, this.ctx.settings);
 
@@ -506,9 +368,8 @@ export class PageFactory {
 
     const cleanedContent = cleanMarkdownResponse(newContent);
 
-    // Check for NO_NEW_CONTENT signal
     if (cleanedContent.trim() === 'NO_NEW_CONTENT') {
-      console.debug('Reviewed concept page has no new content, preserving existing:', path);
+      console.debug('Reviewed page has no new content, preserving existing:', path);
       return path;
     }
 
@@ -518,19 +379,19 @@ export class PageFactory {
     return path;
   }
 
-  async updateRelatedPage(pageName: string, analysis: SourceAnalysis, sourceFile: TFile | { path: string; basename: string }): Promise<void> {
+  async updateRelatedPage(pageName: string, analysis: SourceAnalysis, sourceFile: TFile | { path: string; basename: string }): Promise<boolean> {
     const existingPages = await getExistingWikiPages(this.ctx.app, this.ctx.settings.wikiFolder);
     const page = existingPages.find(p => p.title === pageName);
 
     if (!page) {
       console.debug('Related page not found:', pageName);
-      return;
+      return false;
     }
 
     const abstractFile = this.ctx.app.vault.getAbstractFileByPath(page.path);
     if (!(abstractFile instanceof TFile)) {
       console.debug('Related page is not a file:', pageName);
-      return;
+      return false;
     }
 
     const existingContent = await this.ctx.app.vault.read(abstractFile);
@@ -559,5 +420,6 @@ export class PageFactory {
     // 2. Assemble: programmatic frontmatter + LLM body
     const finalContent = `${frontmatter}\n\n${cleanedBody}`;
     await this.ctx.createOrUpdateFile(page.path, finalContent);
+    return true;
   }
 }
