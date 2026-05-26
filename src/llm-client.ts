@@ -56,7 +56,7 @@ export class AnthropicCompatibleClient implements LLMClient {
           error?: { message: string };
         };
 
-        if (data.error) throw new Error(data.error.message);
+        if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
         console.debug('Anthropic API response:', {
           stop_reason: data.stop_reason,
           content_length: data.content?.length || 0,
@@ -93,7 +93,7 @@ export class AnthropicCompatibleClient implements LLMClient {
               break;
             } catch (retryErr) {
               const msg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              if (/status 5\d{2}|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
+              if (/status 5\d{2}|overload|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
                 const delay = Math.pow(2, retryAttempt) * 1000 + Math.random() * 500;
                 console.warn(`Truncation retry error, reattempting in ${Math.round(delay)}ms: ${msg}`);
                 await new Promise(resolve => window.setTimeout(resolve, delay));
@@ -107,7 +107,7 @@ export class AnthropicCompatibleClient implements LLMClient {
             content?: Array<{ type: string; text?: string }>;
             error?: { message: string };
           };
-          if (retryData.error) throw new Error(retryData.error.message);
+          if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
           text = this.extractText(retryData.content || []);
         }
 
@@ -119,7 +119,7 @@ export class AnthropicCompatibleClient implements LLMClient {
       } catch (error) {
         lastError = error;
         const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
+        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
         if (isRetryable && attempt < 2) {
           const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
           console.warn(`Anthropic-compatible API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
@@ -325,7 +325,7 @@ export class AnthropicClient implements LLMClient {
       } catch (error) {
         lastError = error;
         const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
+        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
         if (isRetryable && attempt < 2) {
           const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
           console.warn(`Anthropic API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
@@ -441,7 +441,7 @@ export class OpenAICompatibleClient implements LLMClient {
           error?: { message: string };
         };
 
-        if (data.error) throw new Error(data.error.message);
+        if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
 
         const text = data.choices?.[0]?.message?.content || '';
 
@@ -465,7 +465,7 @@ export class OpenAICompatibleClient implements LLMClient {
               break;
             } catch (retryErr) {
               const msg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              if (/status 5\d{2}|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
+              if (/status 5\d{2}|overload|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
                 const delay = Math.pow(2, retryAttempt) * 1000 + Math.random() * 500;
                 console.warn(`Truncation retry error, reattempting in ${Math.round(delay)}ms: ${msg}`);
                 await new Promise(resolve => window.setTimeout(resolve, delay));
@@ -479,7 +479,7 @@ export class OpenAICompatibleClient implements LLMClient {
             choices?: Array<{ message?: { content?: string } }>;
             error?: { message: string };
           };
-          if (retryData.error) throw new Error(retryData.error.message);
+          if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
           return retryData.choices?.[0]?.message?.content || text;
         }
 
@@ -487,7 +487,7 @@ export class OpenAICompatibleClient implements LLMClient {
       } catch (error) {
         lastError = error;
         const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
+        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
         if (isRetryable && attempt < 2) {
           const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
           console.warn(`OpenAI-compatible API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
@@ -601,7 +601,7 @@ export class OpenAICompatibleClient implements LLMClient {
       } catch (error) {
         lastError = error;
         const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
+        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
         if (isRetryable && attempt < 2) {
           const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
           console.warn(`OpenAI-compatible stream error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
@@ -627,7 +627,7 @@ export class OpenAICompatibleClient implements LLMClient {
         error?: { message: string };
       };
 
-      if (data.error) throw new Error(data.error.message);
+      if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
 
       const modelIds = (data.data || [])
         .map(m => m.id)
