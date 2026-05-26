@@ -90,6 +90,12 @@ Este projeto evolui rapidamente — novos recursos, correções de bugs e melhor
 
 > Consulte [README_CN.md](README_CN.md) para instruções específicas de provider em chinês.
 
+### ⚠️ Atualizar de uma versão anterior?
+
+**Novo na v1.11.0**: O teste de conexão agora é obrigatório para funções principais. Configurações existentes são migradas automaticamente (`llmReady = true`). Alterar provedor ou chave API requer novo teste.
+
+Wikis criados antes da v1.11.0: execute **Lint Wiki** para corrigir automaticamente links duplamente aninhados (`[[[[...]]]]`) e stubs duplicados entre diretórios.
+
 ### 🎮 Uso
 
 | Método | Como |

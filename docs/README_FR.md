@@ -109,6 +109,11 @@ La ré-ingestion d'une même source effectue des mises à jour incrémentales su
 
 ### ⚠️ Mise à niveau depuis une version antérieure ?
 
+**Nouveau dans v1.11.0** : Le test de connexion est obligatoire pour les fonctions principales. Les configs existantes sont migrées automatiquement (`llmReady = true`). Changer de fournisseur ou de clé API nécessite un nouveau test.
+
+Wikis créés avant v1.11.0 : lancez **Lint Wiki** pour corriger automatiquement les liens doublement imbriqués (`[[[[...]]]]`) et les doublons de stub inter-répertoires.
+### ⚠️ Mise à niveau depuis une version antérieure ?
+
 Si vous effectuez une mise à niveau depuis une version **antérieure à la v1.7.11** (ou bien plus ancienne), vos pages Wiki existantes ont été générées sans plusieurs fonctionnalités ajoutées au fil des versions. Suivez ces étapes après la mise à jour pour mettre votre Wiki à jour :
 
 **1️⃣ Reconstruisez votre index**
