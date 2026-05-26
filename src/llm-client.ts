@@ -2,6 +2,37 @@ import Anthropic from '@anthropic-ai/sdk';
 import { requestUrl } from 'obsidian';
 import { LLMClient } from './types';
 
+// Shared retry helper — eliminates duplicated retry loops across all client classes.
+const RETRYABLE = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i;
+
+function errMsg(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 3,
+  label = 'API'
+): Promise<T> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      const msg = errMsg(error);
+      if (RETRYABLE.test(msg) && attempt < maxAttempts - 1) {
+        const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+        console.warn(`${label} error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
+        await new Promise(resolve => window.setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
 export class AnthropicCompatibleClient implements LLMClient {
   private apiKey: string;
   private baseUrl: string;
@@ -35,101 +66,67 @@ export class AnthropicCompatibleClient implements LLMClient {
     };
     if (params.system) body.system = params.system;
 
-    // Retry loop for 5xx / network errors (max 2 retries, exponential backoff)
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const response = await requestUrl({
-          url: this.baseUrl + '/messages',
-          method: 'POST',
-          headers: {
-            'x-api-key': this.apiKey,
-            'Anthropic-Version': this.apiVersion,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(body)
-        });
+    return withRetry(async () => {
+      const response = await requestUrl({
+        url: this.baseUrl + '/messages',
+        method: 'POST',
+        headers: {
+          'x-api-key': this.apiKey,
+          'Anthropic-Version': this.apiVersion,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
 
-        const data = response.json as {
+      const data = response.json as {
+        content?: Array<{ type: string; text?: string }>;
+        stop_reason?: string;
+        error?: { message: string };
+      };
+
+      if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
+      console.debug('Anthropic API response:', {
+        stop_reason: data.stop_reason,
+        content_length: data.content?.length || 0,
+        content_types: data.content?.map(c => c.type) || []
+      });
+      let text = this.extractText(data.content || []);
+      console.debug('Extracted text length:', text.length);
+
+      // Detect truncation: retry once with double the token limit.
+      if (data.stop_reason === 'max_tokens') {
+        const retryTokens = Math.min(params.max_tokens * 2, 16000);
+        console.warn(
+          `Anthropic-compatible response truncated at ${params.max_tokens} tokens (stop_reason=max_tokens). ` +
+          `Retrying with ${retryTokens} tokens.`
+        );
+        const retryResponse = await withRetry(async () => {
+          return await requestUrl({
+            url: this.baseUrl + '/messages',
+            method: 'POST',
+            headers: {
+              'x-api-key': this.apiKey,
+              'Anthropic-Version': this.apiVersion,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ ...body, max_tokens: retryTokens })
+          });
+        }, 2, 'Anthropic-compatible truncation retry');
+
+        const retryData = retryResponse.json as {
           content?: Array<{ type: string; text?: string }>;
-          stop_reason?: string;
           error?: { message: string };
         };
-
-        if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
-        console.debug('Anthropic API response:', {
-          stop_reason: data.stop_reason,
-          content_length: data.content?.length || 0,
-          content_types: data.content?.map(c => c.type) || []
-        });
-        let text = this.extractText(data.content || []);
-        console.debug('Extracted text length:', text.length);
-
-        // Detect truncation: retry once with double the token limit.
-        if (data.stop_reason === 'max_tokens') {
-          const retryTokens = Math.min(params.max_tokens * 2, 16000);
-          console.warn(
-            `Anthropic-compatible response truncated at ${params.max_tokens} tokens (stop_reason=max_tokens). ` +
-            `Retrying with ${retryTokens} tokens.`
-          );
-          const retryBody: Record<string, unknown> = {
-            ...body,
-            max_tokens: retryTokens
-          };
-          // Truncation retry also needs 5xx handling
-          let retryResponse;
-          for (let retryAttempt = 0; retryAttempt < 2; retryAttempt++) {
-            try {
-              retryResponse = await requestUrl({
-                url: this.baseUrl + '/messages',
-                method: 'POST',
-                headers: {
-                  'x-api-key': this.apiKey,
-                  'Anthropic-Version': this.apiVersion,
-                  'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(retryBody)
-              });
-              break;
-            } catch (retryErr) {
-              const msg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              if (/status 5\d{2}|overload|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
-                const delay = Math.pow(2, retryAttempt) * 1000 + Math.random() * 500;
-                console.warn(`Truncation retry error, reattempting in ${Math.round(delay)}ms: ${msg}`);
-                await new Promise(resolve => window.setTimeout(resolve, delay));
-                continue;
-              }
-              throw retryErr;
-            }
-          }
-          if (!retryResponse) throw new Error('Truncation retry failed: no response after retries');
-          const retryData = retryResponse.json as {
-            content?: Array<{ type: string; text?: string }>;
-            error?: { message: string };
-          };
-          if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
-          text = this.extractText(retryData.content || []);
-        }
-
-        // Safety: if prefill { was stripped by the provider, restore it
-        if (params.response_format?.type === 'json_object' && text.length > 0 && text[0] !== '{') {
-          text = '{' + text;
-        }
-        return text;
-      } catch (error) {
-        lastError = error;
-        const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
-        if (isRetryable && attempt < 2) {
-          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-          console.warn(`Anthropic-compatible API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
-          await new Promise(resolve => window.setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
+        if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
+        text = this.extractText(retryData.content || []);
       }
-    }
-    throw lastError;
+
+      // Safety: if prefill { was stripped by the provider, restore it
+      if (params.response_format?.type === 'json_object' && text.length > 0 && text[0] !== '{') {
+        text = '{' + text;
+      }
+      return text;
+    }, 3, 'Anthropic-compatible API');
   }
 
   async createMessageStream(params: {
@@ -285,56 +282,39 @@ export class AnthropicClient implements LLMClient {
       ? [...messages, { role: 'assistant' as const, content: '{' }]
       : messages;
 
-    // Retry loop for 5xx / network errors (max 2 retries, exponential backoff)
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const response = await this.client.messages.create({
+    return withRetry(async () => {
+      const response = await this.client.messages.create({
+        model: params.model,
+        max_tokens: params.max_tokens,
+        system: params.system || undefined,
+        messages: finalMessages
+      });
+      const textBlock = response.content.find(c => c.type === 'text');
+      let text = textBlock && 'text' in textBlock ? textBlock.text : '';
+
+      // Detect truncation: retry once with double the token limit.
+      if (response.stop_reason === 'max_tokens') {
+        const retryTokens = Math.min(params.max_tokens * 2, 16000);
+        console.warn(
+          `Anthropic response truncated at ${params.max_tokens} tokens (stop_reason=max_tokens). ` +
+          `Retrying with ${retryTokens} tokens.`
+        );
+        const retryResponse = await this.client.messages.create({
           model: params.model,
-          max_tokens: params.max_tokens,
+          max_tokens: retryTokens,
           system: params.system || undefined,
           messages: finalMessages
         });
-        const textBlock = response.content.find(c => c.type === 'text');
-        let text = textBlock && 'text' in textBlock ? textBlock.text : '';
-
-        // Detect truncation: if the API stopped because it hit max_tokens,
-        // retry once with double the limit so the response completes.
-        if (response.stop_reason === 'max_tokens') {
-          const retryTokens = Math.min(params.max_tokens * 2, 16000);
-          console.warn(
-            `Anthropic response truncated at ${params.max_tokens} tokens (stop_reason=max_tokens). ` +
-            `Retrying with ${retryTokens} tokens.`
-          );
-          const retryResponse = await this.client.messages.create({
-            model: params.model,
-            max_tokens: retryTokens,
-            system: params.system || undefined,
-            messages: finalMessages
-          });
-          const retryBlock = retryResponse.content.find(c => c.type === 'text');
-          text = retryBlock && 'text' in retryBlock ? retryBlock.text : '';
-        }
-
-        // Safety: if prefill { was stripped by the provider, restore it
-        if (params.response_format?.type === 'json_object' && text.length > 0 && text[0] !== '{') {
-          text = '{' + text;
-        }
-        return text;
-      } catch (error) {
-        lastError = error;
-        const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
-        if (isRetryable && attempt < 2) {
-          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-          console.warn(`Anthropic API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
-          await new Promise(resolve => window.setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
+        const retryBlock = retryResponse.content.find(c => c.type === 'text');
+        text = retryBlock && 'text' in retryBlock ? retryBlock.text : '';
       }
-    }
-    throw lastError;
+
+      // Safety: if prefill { was stripped by the provider, restore it
+      if (params.response_format?.type === 'json_object' && text.length > 0 && text[0] !== '{') {
+        text = '{' + text;
+      }
+      return text;
+    }, 3, 'Anthropic API');
   }
 
   async createMessageStream(params: {
@@ -421,81 +401,52 @@ export class OpenAICompatibleClient implements LLMClient {
       body.response_format = params.response_format;
     }
 
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const response = await requestUrl({
-          url: this.baseUrl + '/chat/completions',
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify(body)
-        });
+    return withRetry(async () => {
+      const response = await requestUrl({
+        url: this.baseUrl + '/chat/completions',
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(body)
+      });
 
-        const data = response.json as {
-          choices?: Array<{
-            message?: { content?: string };
-            finish_reason?: string;
-          }>;
+      const data = response.json as {
+        choices?: Array<{
+          message?: { content?: string };
+          finish_reason?: string;
+        }>;
+        error?: { message: string };
+      };
+
+      if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
+
+      const text = data.choices?.[0]?.message?.content || '';
+
+      // Detect truncation: retry once with double max_tokens
+      if (data.choices?.[0]?.finish_reason === 'length') {
+        const retryTokens = Math.min(params.max_tokens * 2, 16000);
+        console.warn(
+          `OpenAI-compatible response truncated at ${params.max_tokens} tokens (finish_reason=length). ` +
+          `Retrying with ${retryTokens} tokens.`
+        );
+        const retryResponse = await withRetry(async () => {
+          return await requestUrl({
+            url: this.baseUrl + '/chat/completions',
+            method: 'POST',
+            headers: this.getHeaders(),
+            body: JSON.stringify({ ...body, max_tokens: retryTokens })
+          });
+        }, 2, 'OpenAI-compatible truncation retry');
+
+        const retryData = retryResponse.json as {
+          choices?: Array<{ message?: { content?: string } }>;
           error?: { message: string };
         };
-
-        if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
-
-        const text = data.choices?.[0]?.message?.content || '';
-
-        // Detect truncation: retry once with double max_tokens
-        if (data.choices?.[0]?.finish_reason === 'length') {
-          const retryTokens = Math.min(params.max_tokens * 2, 16000);
-          console.warn(
-            `OpenAI-compatible response truncated at ${params.max_tokens} tokens (finish_reason=length). ` +
-            `Retrying with ${retryTokens} tokens.`
-          );
-          const retryBody = { ...body, max_tokens: retryTokens };
-          let retryResponse;
-          for (let retryAttempt = 0; retryAttempt < 2; retryAttempt++) {
-            try {
-              retryResponse = await requestUrl({
-                url: this.baseUrl + '/chat/completions',
-                method: 'POST',
-                headers: this.getHeaders(),
-                body: JSON.stringify(retryBody)
-              });
-              break;
-            } catch (retryErr) {
-              const msg = retryErr instanceof Error ? retryErr.message : String(retryErr);
-              if (/status 5\d{2}|overload|network|fetch|timeout/i.test(msg) && retryAttempt < 1) {
-                const delay = Math.pow(2, retryAttempt) * 1000 + Math.random() * 500;
-                console.warn(`Truncation retry error, reattempting in ${Math.round(delay)}ms: ${msg}`);
-                await new Promise(resolve => window.setTimeout(resolve, delay));
-                continue;
-              }
-              throw retryErr;
-            }
-          }
-          if (!retryResponse) throw new Error('Truncation retry failed: no response after retries');
-          const retryData = retryResponse.json as {
-            choices?: Array<{ message?: { content?: string } }>;
-            error?: { message: string };
-          };
-          if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
-          return retryData.choices?.[0]?.message?.content || text;
-        }
-
-        return text;
-      } catch (error) {
-        lastError = error;
-        const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
-        if (isRetryable && attempt < 2) {
-          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-          console.warn(`OpenAI-compatible API error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
-          await new Promise(resolve => window.setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
+        if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
+        return retryData.choices?.[0]?.message?.content || text;
       }
-    }
-    throw lastError;
+
+      return text;
+    }, 3, 'OpenAI-compatible API');
   }
 
   async createMessageStream(params: {
@@ -522,93 +473,75 @@ export class OpenAICompatibleClient implements LLMClient {
       stream: true
     };
 
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      try {
-        const response = await requestUrl({
-          url: this.baseUrl + '/chat/completions',
-          method: 'POST',
-          headers: this.getHeaders(),
-          body: JSON.stringify(body)
-        });
+    return withRetry(async () => {
+      const response = await requestUrl({
+        url: this.baseUrl + '/chat/completions',
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(body)
+      });
 
-        const responseText = response.text;
-        let fullText = '';
+      const responseText = response.text;
+      let fullText = '';
 
-        // Parse SSE events from response body.
-        // Handles both "data: " (with space) and "data:" (no space).
-        // Also handles \r\n and \n line endings.
-        const normalizedText = responseText.replace(/\r\n/g, '\n');
-        const events = normalizedText.split('\n\n');
-        for (const event of events) {
-          if (!event.trim()) continue;
-          const dataLine = event.split('\n').find(line => line.startsWith('data:'));
-          if (!dataLine) continue;
+      // Parse SSE events from response body.
+      const normalizedText = responseText.replace(/\r\n/g, '\n');
+      const events = normalizedText.split('\n\n');
+      for (const event of events) {
+        if (!event.trim()) continue;
+        const dataLine = event.split('\n').find(line => line.startsWith('data:'));
+        if (!dataLine) continue;
 
-          const dataContent = dataLine.substring(5).trim();
-          if (dataContent === '[DONE]') continue;
+        const dataContent = dataLine.substring(5).trim();
+        if (dataContent === '[DONE]') continue;
 
-          try {
-            const parsed = JSON.parse(dataContent) as {
-              choices?: Array<{
-                delta?: { content?: string };
-                finish_reason?: string;
-              }>;
-            };
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              fullText += content;
-              params.onChunk(content);
-            }
-          } catch {
-            // Skip malformed JSON in SSE
+        try {
+          const parsed = JSON.parse(dataContent) as {
+            choices?: Array<{
+              delta?: { content?: string };
+              finish_reason?: string;
+            }>;
+          };
+          const content = parsed.choices?.[0]?.delta?.content;
+          if (content) {
+            fullText += content;
+            params.onChunk(content);
           }
+        } catch {
+          // Skip malformed JSON in SSE
         }
-
-        // Fallback: if SSE parsing yielded nothing, try non-streaming JSON format.
-        // Some providers ignore stream:true and return standard JSON instead of SSE.
-        if (!fullText) {
-          console.debug('[OpenAICompat SSE] SSE parsing empty, trying non-streaming JSON fallback');
-          try {
-            const data = JSON.parse(responseText) as {
-              choices?: Array<{ message?: { content?: string } }>;
-              error?: { message: string };
-            };
-            if (data.error) throw new Error(data.error.message);
-            const text = data.choices?.[0]?.message?.content || '';
-            if (text) {
-              console.debug('[OpenAICompat SSE] Non-streaming fallback successful, length:', text.length);
-              fullText = text;
-              params.onChunk(text);
-            }
-          } catch (parseErr) {
-            console.debug('[OpenAICompat SSE] Non-streaming JSON parse also failed:', parseErr);
-          }
-        }
-
-        if (!fullText) {
-          throw new Error(
-            'OpenAI-compatible endpoint returned neither SSE events nor a standard JSON response. ' +
-            'The provider may not support streaming. ' +
-            'Response preview: ' + responseText.substring(0, 300)
-          );
-        }
-
-        return fullText;
-      } catch (error) {
-        lastError = error;
-        const msg = error instanceof Error ? error.message : String(error);
-        const isRetryable = /status 5\d{2}|status 429|overload|network|fetch|econnrefused|etimedout|timeout|abort/i.test(msg);
-        if (isRetryable && attempt < 2) {
-          const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-          console.warn(`OpenAI-compatible stream error on attempt ${attempt + 1}, retrying in ${Math.round(delay)}ms: ${msg}`);
-          await new Promise(resolve => window.setTimeout(resolve, delay));
-          continue;
-        }
-        throw error;
       }
-    }
-    throw lastError;
+
+      // Fallback: if SSE parsing yielded nothing, try non-streaming JSON format.
+      if (!fullText) {
+        console.debug('[OpenAICompat SSE] SSE parsing empty, trying non-streaming JSON fallback');
+        try {
+          const data = JSON.parse(responseText) as {
+            choices?: Array<{ message?: { content?: string } }>;
+            error?: { message: string };
+          };
+          if (data.error) throw new Error(data.error.message);
+          const text = data.choices?.[0]?.message?.content || '';
+          if (text) {
+            console.debug('[OpenAICompat SSE] Non-streaming fallback successful, length:', text.length);
+            fullText = text;
+            params.onChunk(text);
+          }
+        } catch (parseErr) {
+          console.debug('[OpenAICompat SSE] Non-streaming JSON parse also failed:', parseErr);
+        }
+      }
+
+      if (!fullText) {
+        throw new Error(
+          'OpenAI-compatible endpoint returned neither SSE events nor a standard JSON response. ' +
+          'The provider may not support streaming. ' +
+          'Response preview: ' + responseText.substring(0, 300)
+        );
+      }
+
+      return fullText;
+    }, 3, 'OpenAI-compatible stream');
   }
 
   async listModels(): Promise<string[]> {
