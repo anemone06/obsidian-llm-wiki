@@ -110,7 +110,6 @@ Re-Ingesting derselben Source führt zu inkrementellen Updates auf Entity/Concep
 **Neu in v1.11.0**: Der Verbindungstest ist jetzt Pflicht für Kernfunktionen. Bestehende Konfigurationen werden automatisch migriert (`llmReady = true`). Provider- oder API-Key-Wechsel erfordert erneuten Test.
 
 Vor v1.11.0 erstellte Wikis: **Lint Wiki** ausführen, um doppelt verschachtelte Links (`[[[[...]]]]`) und Cross-Directory-Stub-Duplikate automatisch zu beheben.
-### ⚠️ Upgrade von einer älteren Version?
 
 Wenn Sie von einer Version **vor v1.7.11** (oder noch früher) upgraden, wurden Ihre Wiki-Seiten ohne mehrere Funktionen generiert, die in späteren Versionen hinzugekommen sind. Führen Sie nach dem Upgrade diese Schritte aus, um Ihr Wiki auf den neuesten Stand zu bringen:
 

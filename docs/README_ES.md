@@ -90,12 +90,6 @@ Este proyecto evoluciona rápidamente — nuevas funciones, correcciones de erro
 
 > Consulta [README_CN.md](README_CN.md) para instrucciones de provider específicas en chino.
 
-### ⚠️ ¿Actualizar desde una versión anterior?
-
-**Nuevo en v1.11.0**: La prueba de conexión ahora es obligatoria para las funciones principales. Las configuraciones existentes se migran automáticamente (`llmReady = true`). Cambiar de proveedor o API Key requiere una nueva prueba.
-
-Wikis creados antes de v1.11.0: ejecute **Lint Wiki** para corregir automáticamente enlaces doblemente anidados (`[[[[...]]]]`) y stubs duplicados entre directorios.
-
 ### 🎮 Uso
 
 | Método | Cómo |
@@ -114,6 +108,10 @@ Re-ingesting la misma source realiza actualizaciones incrementales en entity/con
 **Smart Batch Skip:** Al ingerir una carpeta, el plugin detecta automáticamente archivos ya procesados y los omite para ahorrar tiempo y costos de API. El informe de batch muestra el conteo de omitidos.
 
 ### ⚠️ Actualizando desde una Versión Anterior
+
+**Nuevo en v1.11.0**: La prueba de conexión ahora es obligatoria para las funciones principales. Las configuraciones existentes se migran automáticamente (`llmReady = true`). Cambiar de proveedor o API Key requiere una nueva prueba.
+
+Wikis creados antes de v1.11.0: ejecute **Lint Wiki** para corregir automáticamente enlaces doblemente anidados (`[[[[...]]]]`) y stubs duplicados entre directorios.
 
 Si estás actualizando desde una versión **anterior a v1.7.11** (o mucho más antigua), tus páginas Wiki existentes se generaron sin varias capacidades añadidas a lo largo de muchas versiones. Sigue estos pasos tras actualizar para poner tu Wiki al día:
 
