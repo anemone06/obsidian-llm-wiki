@@ -449,6 +449,15 @@ The plugin never modifies your source files. Backup `wiki/` → update plugin �
 - [GitHub Issues](https://github.com/green-dalii/obsidian-llm-wiki/issues) — bug reports
 - [GitHub Discussions](https://github.com/green-dalii/obsidian-llm-wiki/discussions) — questions & feedback
 
+**How do I collect debug logs for troubleshooting?**
+
+1. Open Developer Tools (`Ctrl+Shift+I` / `Cmd+Option+I`)
+2. Go to the **Console** tab
+3. Run your operation (ingest, query, or lint)
+4. Look for messages with module name prefixes like `[Step]`, `[LLM]`, module names
+5. For local testing, use `pnpm build:dev` instead of `pnpm build` to preserve full debug output
+6. Copy the relevant log lines and include them in your GitHub issue — this makes bug diagnosis much faster
+
 ---
 
 ## 📜 License
