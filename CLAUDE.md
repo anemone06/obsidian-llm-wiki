@@ -19,6 +19,10 @@
 - ✅ **ROADMAP P1 — LLM client retry extraction**: Shared `withRetry<T>` helper eliminates duplicated retry loops across all 3 client classes (exponential backoff, error pattern matching, truncation retry). Code reduced -67 lines in `llm-client.ts`.
 - ✅ **ROADMAP P1 — `createMessageStream` language cleanup**: Removed unused `language` parameter from interface and 3 implementations. Auto-detecting question language is correct behavior — better UX than forcing UI language.
 - ✅ **Issue #44 — Ribbon icon + ingest current file**: `addRibbonIcon('sticker')` + command `Ingest current file`. Uses `getActiveFile()` to skip file picker. Validates non-md files and missing API key. 8-language i18n.
+- ✅ **ROADMAP P2 — `slugify` debug log reduction**: Removed 4 redundant intermediate console.debug calls. Normal path: 6→2 logs. Warnings and diagnostic blocks preserved.
+- ✅ **ROADMAP P2 — `mentions_in_source` filtering (Issue #39)**: `truncateMentions()` helper caps mentions at 500 chars before passing to LLM in create/merge/append prompts.
+- ✅ **ROADMAP P2 — Residual Chinese comment cleanup**: 10 comments in wiki-engine.ts + 7 debug strings in llm-client.ts + 2 in conversation-ingest.ts translated to English.
+- ✅ **ROADMAP P2 — `parseJsonResponse` + `mergeFrontmatter` supplemental tests**: +8 tests (repairFn callback, edge cases). 113 total tests.
 
 ### Completed (v1.10.2)
 - ✅ **Custom granularity per-type limits fix**: Three inconsistencies fixed — `source-analyzer.ts` enforces per-type caps, `getGranularityInstruction()` injects concrete numbers, `getGranularityFixLimits()` reads user settings. +6 unit tests.
@@ -34,18 +38,18 @@
 - ~~`createMessageStream` language type consistency~~ → dead code removed v1.10.3
 - ~~Ingest current file + ribbon icon (Issue #44)~~ → done v1.10.3
 
-### P2 — Medium-term
-- `parseJsonResponse` + `mergeFrontmatter` unit tests — auditors' #1 test priority
-- Anthropic prompt caching via `cache_control: ephemeral` (Issue #38) — cost savings
-- `mentions_in_source` filtering in merge prompts (Issue #39) — merge quality
-- `slugify` debug log reduction (8→2) — high-frequency noise
-- Residual Chinese comment cleanup — codebase language consistency
+### P2 — Medium-term (all completed ✅)
+- ~~`parseJsonResponse` + `mergeFrontmatter` unit tests~~ → +8 tests done v1.10.3
+- ~~`mentions_in_source` filtering (Issue #39)~~ → done v1.10.3
+- ~~`slugify` debug log reduction~~ → 6→2 done v1.10.3
+- ~~Residual Chinese comment cleanup~~ → done v1.10.3
 
 ### P3 — Nice-to-have
 - Source title in frontmatter (Issue #36) — needs clarification from issue author
 - Connection failure UX (Issue #42) — network error guidance
 
-### Already Evaluated (not doing)
+### Evaluated & Rejected
+- Anthropic prompt caching (Issue #38) — System prompts are too small (<1k tokens) for cache threshold (1024 tokens). User message caching via `cacheBreakpoint` already captures the main savings. Not worth the type-safety risk and minimal ROI.
 - `getExistingWikiPages` cache bypass → Solve when it hurts
 - `runLintWiki` 760-line method → Flat > Nested
 - Custom YAML parser → Correct choice for Obsidian plugin constraints
