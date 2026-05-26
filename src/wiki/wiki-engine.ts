@@ -391,28 +391,28 @@ export class WikiEngine {
         new Notice(formatRateLimitNotice(pageGenRateInfo, TEXTS[this.settings.language] as unknown as Record<string, string>), 10000);
       }
 
-      // Stage 4: Related Pages Update (并行化改造)
+      // Stage 4: Related Pages Update
       const relatedStart = Date.now();
       const relatedConcurrency = this.settings.pageGenerationConcurrency ?? 1;
       const relatedDelay = this.settings.batchDelayMs ?? 300;
 
-      // 准备任务列表
+      // Prepare related page tasks
       const relatedTasks = analysis.related_pages.map((name, idx) => ({
         name,
         index: idx,
-        stepNum: step + idx + 1  // 计算每个任务的步骤编号
+        stepNum: step + idx + 1  // compute per-task step number
       }));
 
       let relatedCount = 0;
       const relatedTotal = relatedTasks.length;
       const relatedFailures: Array<{ name: string; reason: string }> = [];
 
-      // 分批并行处理
+      // Process in parallel batches
       for (let i = 0; i < relatedTasks.length; i += relatedConcurrency) {
         this.checkCancelled();
         const batch = relatedTasks.slice(i, i + relatedConcurrency);
 
-        // 执行batch并行更新
+        // Execute batch updates in parallel
         const batchResults = await Promise.allSettled(
           batch.map(async (task) => {
             this.onProgress?.(`[${task.stepNum}/${totalSteps}] Updating: ${task.name}`);
@@ -424,7 +424,7 @@ export class WikiEngine {
               const reason = error instanceof Error ? error.message : String(error);
               console.error(`Related page "${task.name}" update failed:`, reason);
 
-              // 重试机制（与页面生成一致）
+              // Retry once (same pattern as page generation)
               try {
                 await this.apiDelay(2000);
                 const updated = await this.pageFactory.updateRelatedPage(task.name, analysis!, file);
@@ -438,7 +438,7 @@ export class WikiEngine {
           })
         );
 
-        // 收集成功结果
+        // Collect successful results
         batchResults.forEach((r, idx) => {
           if (r.status === 'fulfilled' && r.value.success) {
             analysis!.updated_pages.push(batch[idx].name);
@@ -452,7 +452,7 @@ export class WikiEngine {
           }
         });
 
-        // batch间延迟（除最后一批）
+        // Delay between batches (except last)
         if (i + relatedConcurrency < relatedTasks.length) {
           await this.apiDelay(relatedDelay);
         }
@@ -472,7 +472,7 @@ export class WikiEngine {
         console.warn(`[Rate Limit] Related pages update: ${relatedRateInfo.count} item(s) failed with 429, ` +
           `suggested concurrency=${relatedRateInfo.suggestedConcurrency}, delay=${relatedRateInfo.suggestedDelay}ms`);
         new Notice(formatRateLimitNotice(relatedRateInfo, TEXTS[this.settings.language] as unknown as Record<string, string>), 10000);
-      }  // 更新step变量，确保后续 phase编号正确
+      }  // update step count for subsequent phase numbering
 
       // Stage 5: Contradiction Recording
       const contradictionStart = Date.now();
@@ -589,7 +589,7 @@ export class WikiEngine {
         await this.app.vault.createFolder(folder);
         console.debug('Creating folder:', folder);
       } catch {
-        // 文件夹已存在
+        // Folder already exists
       }
     }
 

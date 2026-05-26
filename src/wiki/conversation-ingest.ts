@@ -62,7 +62,7 @@ export class ConversationIngestor {
     this.ctx.onProgress?.('Analyzing conversation...');
 
     const actualDate = new Date().toISOString().split('T')[0];
-    console.debug('[系统时间]', actualDate);
+    console.debug('[System time]', actualDate);
 
     const indexPath = `${this.ctx.settings.wikiFolder}/index.md`;
     const existingWikiIndex = await this.ctx.tryReadFile(indexPath) || 'Wiki is empty';
@@ -179,7 +179,7 @@ CRITICAL RULES:
 
     const semanticSlug = slugify(parsed.source_title);
     const summaryPath = `${this.ctx.settings.wikiFolder}/sources/${semanticSlug}.md`;
-    console.debug('[语义化文件路径]', summaryPath);
+    console.debug('[Semantic file path]', summaryPath);
 
     // Build planned paths before summary so the LLM can reference them
     const convPlannedPaths: string[] = [summaryPath];

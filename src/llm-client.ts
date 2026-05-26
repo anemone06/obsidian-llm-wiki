@@ -152,8 +152,8 @@ export class AnthropicCompatibleClient implements LLMClient {
     };
     if (params.system) body.system = params.system;
 
-    console.debug('[AnthropicCompat SSE] 发送流式请求, model:', params.model, 'max_tokens:', params.max_tokens,
-      'system长度:', params.system?.length || 0, 'messages数:', messages.length);
+    console.debug('[AnthropicCompat SSE] sending stream request, model:', params.model, 'max_tokens:', params.max_tokens,
+      'system length:', params.system?.length || 0, 'messages count:', messages.length);
 
     let response;
     try {
@@ -168,13 +168,13 @@ export class AnthropicCompatibleClient implements LLMClient {
         body: JSON.stringify(body)
       });
     } catch (err) {
-      console.error('[AnthropicCompat SSE] requestUrl 请求失败:', err);
+      console.error('[AnthropicCompat SSE] requestUrl request failed:', err);
       throw err;
     }
 
     const responseText = response.text;
-    console.debug('[AnthropicCompat SSE] 收到响应, 长度:', responseText.length,
-      '前200字符:', responseText.substring(0, 200));
+    console.debug('[AnthropicCompat SSE] response received, length:', responseText.length,
+      'first 200 chars:', responseText.substring(0, 200));
 
     // Parse SSE events from response body.
     // Handles both "data: " (with space, Anthropic official) and "data:" (no space,
@@ -210,7 +210,7 @@ export class AnthropicCompatibleClient implements LLMClient {
     // Many Anthropic-compatible providers ignore stream:true and return a
     // standard JSON response instead of SSE events.
     if (!fullText) {
-      console.debug('[AnthropicCompat SSE] SSE 解析为空, 尝试非流式JSON回退');
+      console.debug('[AnthropicCompat SSE] SSE parsing empty, trying non-streaming JSON fallback');
       try {
         const data = JSON.parse(responseText) as {
           content?: Array<{ type: string; text?: string }>;
@@ -219,11 +219,11 @@ export class AnthropicCompatibleClient implements LLMClient {
         if (data.error) throw new Error(data.error.message);
         fullText = this.extractText(data.content || []);
         if (fullText) {
-          console.debug('[AnthropicCompat SSE] 非流式回退成功, 长度:', fullText.length);
+          console.debug('[AnthropicCompat SSE] non-streaming fallback successful, length:', fullText.length);
           params.onChunk(fullText);
         }
       } catch (parseErr) {
-        console.debug('[AnthropicCompat SSE] 非流式JSON解析也失败:', parseErr);
+        console.debug('[AnthropicCompat SSE] non-streaming JSON parse also failed:', parseErr);
       }
     }
 
@@ -235,7 +235,7 @@ export class AnthropicCompatibleClient implements LLMClient {
       );
     }
 
-    console.debug('[AnthropicCompat SSE] 成功, 响应长度:', fullText.length);
+    console.debug('[AnthropicCompat SSE] success, response length:', fullText.length);
     return fullText;
   }
 
