@@ -140,6 +140,16 @@ export default class LLMWikiPlugin extends Plugin {
       }
     });
 
+    this.addCommand({
+      id: 'ingest-active-file',
+      name: t.cmdIngestActiveFile,
+      callback: () => this.ingestActiveFile()
+    });
+
+    this.addRibbonIcon('file-up', t.cmdIngestActiveFile, () => {
+      this.ingestActiveFile();
+    });
+
     this.ingestStatusBar = this.addStatusBarItem();
     this.ingestStatusBar.addClass('llm-wiki-status-bar');
     this.ingestStatusBar.addClass('llm-wiki-status-bar-hidden');
@@ -295,6 +305,32 @@ export default class LLMWikiPlugin extends Plugin {
         new Notice(TEXTS[this.settings.language].errorIngestFailed + errMsg, 8000);
       });
     }).open();
+  }
+
+  ingestActiveFile() {
+    if (!this.llmClient) {
+      new Notice(TEXTS[this.settings.language].errorNoApiKey);
+      return;
+    }
+
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!activeFile) {
+      const texts = TEXTS[this.settings.language];
+      new Notice((texts as unknown as Record<string, string>).noActiveFile || 'No file is currently open', 5000);
+      return;
+    }
+
+    if (activeFile.extension !== 'md') {
+      new Notice('Only Markdown files can be ingested', 5000);
+      return;
+    }
+
+    this.showProgress(`Ingesting: ${activeFile.basename}`);
+    this.wikiEngine.ingestSource(activeFile).catch(e => {
+      console.error('Ingest active file failed:', e);
+      const errMsg = e instanceof Error ? e.message : String(e);
+      new Notice(TEXTS[this.settings.language].errorIngestFailed + errMsg, 8000);
+    });
   }
 
   selectFolderToIngest() {

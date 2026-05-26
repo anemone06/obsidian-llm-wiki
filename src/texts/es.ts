@@ -317,6 +317,8 @@ export const ES_TEXTS = {
     cmdRegenerateIndex: 'Regenerar índice',
     cmdSuggestSchema: 'Sugerir actualizaciones del esquema',
     cmdCancelIngestion: 'Cancelar ingesta actual',
+    cmdIngestActiveFile: 'Ingerir archivo actual',
+    noActiveFile: 'No hay ningún archivo abierto',
 
     // Ingestion status bar
     ingestionStatusBar: 'Ingiriendo... clic para cancelar',

@@ -317,6 +317,8 @@ export const JA_TEXTS = {
     cmdRegenerateIndex: 'インデックスの再生成',
     cmdSuggestSchema: 'スキーマ更新の提案',
     cmdCancelIngestion: '現在の取り込みをキャンセル',
+    cmdIngestActiveFile: '現在のファイルを取り込む',
+    noActiveFile: '現在開いているファイルはありません',
 
     // Ingestion status bar
     ingestionStatusBar: '取り込み中... クリックでキャンセル',

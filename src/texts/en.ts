@@ -320,6 +320,8 @@ export const EN_TEXTS = {
     cmdRegenerateIndex: 'Regenerate index',
     cmdSuggestSchema: 'Suggest schema updates',
     cmdCancelIngestion: 'Cancel current ingestion',
+    cmdIngestActiveFile: 'Ingest current file',
+    noActiveFile: 'No file is currently open',
 
     // Ingestion status bar
     ingestionStatusBar: 'Ingesting... click to cancel',

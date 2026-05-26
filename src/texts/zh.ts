@@ -318,6 +318,8 @@ export const ZH_TEXTS = {
     cmdRegenerateIndex: '重新生成索引',
     cmdSuggestSchema: '建议 Schema 更新',
     cmdCancelIngestion: '取消当前提取',
+    cmdIngestActiveFile: '摄入当前文件',
+    noActiveFile: '当前没有打开的文件',
 
     // Ingestion status bar
     ingestionStatusBar: '提取中... 点击取消',

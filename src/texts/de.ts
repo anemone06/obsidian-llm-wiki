@@ -317,6 +317,8 @@ export const DE_TEXTS = {
     cmdRegenerateIndex: 'Index neu generieren',
     cmdSuggestSchema: 'Schema-Aktualisierungen vorschlagen',
     cmdCancelIngestion: 'Aktuelle Aufnahme abbrechen',
+    cmdIngestActiveFile: 'Aktuelle Datei aufnehmen',
+    noActiveFile: 'Keine Datei geöffnet',
 
     // Ingestion status bar
     ingestionStatusBar: 'Aufnahme läuft... zum Abbrechen klicken',

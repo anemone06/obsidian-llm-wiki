@@ -318,6 +318,8 @@ export const KO_TEXTS = {
     cmdRegenerateIndex: '인덱스 재생성',
     cmdSuggestSchema: '스키마 업데이트 제안',
     cmdCancelIngestion: '현재 수집 취소',
+    cmdIngestActiveFile: '현재 파일 수집',
+    noActiveFile: '열려 있는 파일이 없습니다',
 
     // Ingestion status bar
     ingestionStatusBar: '수집 중... 클릭하여 취소',
