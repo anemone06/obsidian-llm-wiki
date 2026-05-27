@@ -24,6 +24,7 @@
   - [🔑 Configurar um LLM Provider](#-configurar-um-llm-provider)
   - [🎮 Uso](#-uso)
   - [⚠️ Atualizando de uma Versão Anterior?](#️-atualizando-de-uma-versão-anterior)
+- [⚡ Novidades na v1.12.0](#-novidades-na-v1120)
 - [✨ Funcionalidades](#-funcionalidades)
   - [📊 Qualidade do Conhecimento](#-qualidade-do-conhecimento)
   - [🛠️ Manutenção](#️-manutenção)
@@ -174,6 +175,26 @@ Settings → **Ingestion Acceleration**:
 > **🛡️ Segurança**: A geração paralela usa `Promise.allSettled` — se uma página falhar, outras continuam. Páginas com falha são tentadas novamente individualmente com exponential backoff. O Smart Batch Skip (v1.7.7) detecta automaticamente arquivos já ingeridos para economizar tempo e custos de API.
 
 ---
+---
+
+## ⚡ Novidades na v1.12.0
+
+Esta é uma **atualização de desempenho crítica para produção**. O processo de extração por ingestão foi fundamentalmente redesenhado — a lista de páginas não é mais incluída em cada chamada LLM. A extração agora escala independentemente do tamanho do Wiki.
+
+**Melhorias principais:**
+
+- **A ingestão é ~80% mais rápida.** Um arquivo curto que antes levava 30–90 segundos agora é concluído em 5–15 segundos. Quanto maior o Wiki, mais significativa a diferença.
+- **Qualidade de extração significativamente melhorada.** Sem a lista massiva de páginas confundindo o LLM, a extração é mais limpa e não alucina entidades de outras páginas do Wiki.
+- **O tamanho do Wiki não afeta mais a velocidade de ingestão individual.** Um Wiki de 10.000 páginas processa cada arquivo na mesma velocidade de um de 500 páginas. Pronto para produção em larga escala.
+- **Controle inteligente de lotes.** Artigos curtos são concluídos em 1–2 rodadas. A barra de progresso mostra a contagem de lotes e resultados acumulados.
+- **Correspondência determinista de páginas relacionadas.** A correspondência cruzada usa algoritmo programático de slug+alias em vez de adivinhação do LLM — mais confiável e sem custo adicional.
+
+**Atualizando de uma versão anterior?** Execute **Lint Wiki** uma vez após a atualização para corrigir automaticamente problemas históricos. Sua configuração existente é preservada.
+
+**Recomendamos fortemente que todos os usuários atualizem para esta versão.**
+
+---
+
 
 ## ✨ Funcionalidades
 

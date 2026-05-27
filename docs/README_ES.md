@@ -24,6 +24,7 @@
   - [🔑 Configurar un Provider de LLM](#-configurar-un-provider-de-llm)
   - [🎮 Uso](#-uso)
   - [⚠️ Actualizando desde una Versión Anterior](#️-actualizando-desde-una-versión-anterior)
+- [⚡ Novedades en v1.12.0](#-novedades-en-v1120)
 - [✨ Características](#-características)
   - [📊 Calidad del Conocimiento](#-calidad-del-conocimiento)
   - [🛠️ Mantenimiento](#️-mantenimiento)
@@ -174,6 +175,26 @@ Configuración → **Ingestion Acceleration**:
 > **🛡️ Seguridad:** La generación paralela usa `Promise.allSettled` — si una página falla, las demás continúan. Las páginas fallidas se reintentan individualmente con backoff exponencial. Smart Batch Skip (v1.7.7) detecta automáticamente archivos ya ingestados para ahorrar tiempo y costos de API.
 
 ---
+---
+
+## ⚡ Novedades en v1.12.0
+
+Esta es una **actualización de rendimiento crítica para producción**. El proceso de extracción de ingestión se ha rediseñado fundamentalmente: la lista de páginas ya no se incluye en cada llamada al LLM. La extracción ahora escala independientemente del tamaño del Wiki.
+
+**Mejoras clave:**
+
+- **La ingestión es ~80% más rápida.** Un archivo corto que antes tomaba 30–90 segundos ahora se completa en 5–15 segundos. Cuanto más grande sea el Wiki, más notable la diferencia.
+- **Calidad de extracción significativamente mejorada.** Sin la lista masiva de páginas confundiendo al LLM, la extracción es más limpia y no alucina entidades de otras páginas del Wiki.
+- **El tamaño del Wiki ya no frena la ingestión de archivos individuales.** Un Wiki de 10.000 páginas procesa cada archivo a la misma velocidad que uno de 500 páginas. Listo para producción a gran escala.
+- **Control inteligente de lotes.** Los artículos cortos se completan en 1–2 rondas. La barra de progreso muestra el conteo de lotes y resultados acumulados.
+- **Emparejamiento determinista de páginas relacionadas.** El cruce de referencias usa coincidencia programática de slug+alias en lugar de adivinación del LLM — más confiable y sin costo adicional.
+
+**¿Actualizando desde una versión anterior?** Ejecute **Lint Wiki** una vez después de actualizar para corregir automáticamente problemas históricos. Su configuración existente se conserva.
+
+**Recomendamos encarecidamente a todos los usuarios actualizar a esta versión.**
+
+---
+
 
 ## ✨ Características
 

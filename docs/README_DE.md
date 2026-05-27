@@ -24,6 +24,7 @@
   - [🔑 LLM Provider konfigurieren](#-llm-provider-konfigurieren)
   - [🎮 Nutzung](#-nutzung)
   - [⚠️ Upgrade von einer älteren Version?](#️-upgrade-von-einer-älteren-version)
+- [⚡ Was ist neu in v1.12.0](#-was-ist-neu-in-v1120)
 - [✨ Funktionen](#-funktionen)
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -179,6 +180,26 @@ Settings → **Ingestion Acceleration**:
 > **🛡️ Safety**: Parallele Generierung nutzt `Promise.allSettled` — bei Fehler einer Seite laufen andere weiter. Fehlgeschlagene Seiten werden einzeln mit Exponential Backoff wiederholt. Smart Batch Skip (v1.7.7) erkennt automatisch bereits verarbeitete Dateien und spart so Zeit und API-Kosten.
 
 ---
+---
+
+## ⚡ Was ist neu in v1.12.0
+
+Dies ist ein **produktionskritisches Performance-Release**. Der Extraktionsprozess wurde grundlegend überarbeitet — die Seitenliste wird nicht mehr in jedem LLM-Prompt eingebettet. Die Extraktion skaliert nun unabhängig von der Wiki-Größe.
+
+**Wichtigste Verbesserungen:**
+
+- **Ingestion ist ~80% schneller.** Eine kurze Quelle, die vorher 30–90 Sekunden dauerte, benötigt jetzt nur noch 5–15 Sekunden. Je größer das Wiki, desto größer der Unterschied.
+- **Extraktionsqualität deutlich verbessert.** Ohne die massive Seitenliste wird das LLM nicht mehr abgelenkt — Extraktionen sind sauberer und halluzinieren keine Entitäten aus anderen Wiki-Seiten.
+- **Wiki-Größe verlangsamt die Aufnahme einzelner Dateien nicht mehr.** Ein 10.000-Seiten-Wiki verarbeitet jede Datei genauso schnell wie ein 500-Seiten-Wiki. Produktionsbereit für große Wikis.
+- **Smarter Batch-Kontrolle.** Kurze Artikel werden in 1–2 Runden abgeschlossen. Fortschrittsanzeige zeigt jetzt Batch-Zähler und kumulierte Ergebnisse.
+- **Deterministische Related-Page-Erkennung.** Kreuzreferenzierung erfolgt programmatisch über Slug+Alias-Matching statt LLM-Vermutung — zuverlässiger und ohne Zusatzkosten.
+
+**Von einer älteren Version upgraden?** Führen Sie nach dem Upgrade einmal **Lint Wiki** aus, um historische Probleme automatisch zu beheben. Ihre bestehende Konfiguration bleibt erhalten.
+
+**Wir empfehlen dringend allen Nutzern das Upgrade auf diese Version.**
+
+---
+
 
 ## ✨ Funktionen
 
