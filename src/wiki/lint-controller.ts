@@ -179,8 +179,6 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     console.debug(`lintWiki: read ${totalPages}/${totalPages} pages`);
 
     // ---- 0. Double-nested wiki-link fix (programmatic, no LLM) ----
-    // Fixes [[[[entities/Foo|Foo]]]] → [[entities/Foo|Foo]] caused by historical
-    // updateLog bug. Scans wiki pages already in memory + log.md.
     stageNotice.setMessage(t.lintScanningLinks);
     let doubleNestFixes = 0;
     for (const [path, info] of pageMap) {
@@ -296,6 +294,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
           for (let i = 0; i < batches.length; i += concurrency) {
             checkCancelled();
             const chunk = batches.slice(i, i + concurrency);
+            stageNotice.setMessage(`Checking duplicates: batch ${Math.floor(i / concurrency) + 1}/${Math.ceil(batches.length / concurrency)}...`);
             const results = await Promise.allSettled(
               chunk.map(async (batch, bi) => {
                 const batchNum = i + bi + 1;
