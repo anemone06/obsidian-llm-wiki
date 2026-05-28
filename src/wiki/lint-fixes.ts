@@ -762,7 +762,7 @@ tags: [${stubType === 'entity' ? 'other' : 'term'}]
   }
 }
 
-function escapeRegex(s: string): string {
+export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
@@ -798,7 +798,7 @@ function buildSectionLabelsHint(settings: import('../types').LLMWikiSettings): s
 // Normalize frontmatter dates: replace any LLM-generated `updated` with
 // the current date. The LLM often generates dates from its training data
 // which can be older than `created`, breaking chronology.
-function normalizeFrontmatterDates(content: string, dateStr: string): string {
+export function normalizeFrontmatterDates(content: string, dateStr: string): string {
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
   if (!fmMatch) return content;
 

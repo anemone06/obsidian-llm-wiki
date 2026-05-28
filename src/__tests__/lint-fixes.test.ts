@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isPageEmpty, detectPollutedPages, fixDoubleNestedWikiLinks } from '../wiki/lint-fixes';
+import { isPageEmpty, detectPollutedPages, fixDoubleNestedWikiLinks, escapeRegex, normalizeFrontmatterDates } from '../wiki/lint-fixes';
 
 describe('fixDoubleNestedWikiLinks', () => {
   it('fixes double-nested with display text', () => {
@@ -114,5 +114,53 @@ describe('detectPollutedPages', () => {
     expect(result).toHaveLength(2);
     expect(result[0].cleanTitle).toBe('布局优化');
     expect(result[1].cleanTitle).toBe('张三');
+  });
+});
+
+// ── escapeRegex ────────────────────────────────────────────────
+
+describe('escapeRegex', () => {
+  it('escapes special regex characters', () => {
+    const result = escapeRegex('[.*+?^${}()|]');
+    expect(result).toBe('\\[\\.\\*\\+\\?\\^\\$\\{\\}\\(\\)\\|\\]');
+    // Verify it's a valid regex
+    expect(() => new RegExp(result)).not.toThrow();
+  });
+
+  it('passes through regular text unchanged', () => {
+    expect(escapeRegex('hello world')).toBe('hello world');
+  });
+
+  it('handles empty string', () => {
+    expect(escapeRegex('')).toBe('');
+  });
+});
+
+// ── normalizeFrontmatterDates ───────────────────────────────────
+
+describe('normalizeFrontmatterDates', () => {
+  it('updates existing updated date', () => {
+    const input = '---\ntype: entity\nupdated: 2025-01-01\n---\n\nBody';
+    const result = normalizeFrontmatterDates(input, '2026-05-28');
+    expect(result).toContain('updated: 2026-05-28');
+    expect(result).not.toContain('2025-01-01');
+  });
+
+  it('adds updated field when missing', () => {
+    const input = '---\ntype: entity\n---\n\nBody';
+    const result = normalizeFrontmatterDates(input, '2026-05-28');
+    expect(result).toContain('updated: 2026-05-28');
+  });
+
+  it('preserves other frontmatter fields', () => {
+    const input = '---\ntype: concept\ntags: [method]\nupdated: 2025-06-01\n---\n\nBody';
+    const result = normalizeFrontmatterDates(input, '2026-05-28');
+    expect(result).toContain('type: concept');
+    expect(result).toContain('tags: [method]');
+  });
+
+  it('returns content unchanged when no frontmatter exists', () => {
+    const input = '# Just markdown\n\nNo frontmatter here';
+    expect(normalizeFrontmatterDates(input, '2026-05-28')).toBe(input);
   });
 });
