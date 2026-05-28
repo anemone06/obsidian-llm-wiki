@@ -323,9 +323,11 @@ export const ZH_TEXTS = {
     cmdCancelIngestion: '取消当前提取',
     cmdIngestActiveFile: '摄入当前文件',
     noActiveFile: '当前没有打开的文件',
+    mdOnlyFile: '仅支持摄入 Markdown 文件',
 
     // Ingestion status bar
     ingestionStatusBar: '提取中... 点击取消',
+    lintStatusBar: '维护中... 点击取消',
     ingestionCancelling: '正在取消 — 当前批次完成后将停止',
     ingestionCancelled: '提取已取消',
 
@@ -364,6 +366,9 @@ export const ZH_TEXTS = {
     lintLinkComplete: '孤立页面链接完成。已链接 {linked} 页。',
     lintFixNoAction: '未执行操作（无 client）',
     lintFixIndexUpdated: 'Wiki 索引和日志已更新。',
+    lintPollutedFixed: '已修复污染页面：{fixed}/{total}。索引已重建。',
+    regenerateIndexCompleted: '索引已重建',
+    operationFailed: '失败：',
     lintFixAllComplete: '所有修复已完成。详情见日志。',
 
     // 维护报告弹窗

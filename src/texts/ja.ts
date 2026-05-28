@@ -322,9 +322,11 @@ export const JA_TEXTS = {
     cmdCancelIngestion: '現在の取り込みをキャンセル',
     cmdIngestActiveFile: '現在のファイルを取り込む',
     noActiveFile: '現在開いているファイルはありません',
+    mdOnlyFile: 'Markdownファイルのみ取り込み可能です',
 
     // Ingestion status bar
     ingestionStatusBar: '取り込み中... クリックでキャンセル',
+    lintStatusBar: 'チェック中... クリックでキャンセル',
     ingestionCancelling: 'キャンセル中 — 現在のバッチ完了後に停止します',
     ingestionCancelled: '取り込みがキャンセルされました',
 
@@ -366,6 +368,9 @@ export const JA_TEXTS = {
     lintLinkComplete: '孤立ページへのリンク完了。{linked}ページにリンクを設定しました。',
     lintFixNoAction: '操作なし（クライアント未接続）',
     lintFixIndexUpdated: 'Wikiインデックスとログを更新しました。',
+    lintPollutedFixed: '汚染ページ修正済み：{fixed}/{total}。インデックス再構築済み。',
+    regenerateIndexCompleted: 'インデックス再構築済み',
+    operationFailed: '失敗：',
     lintFixAllComplete: 'すべての修復が完了しました。詳細はログを確認してください。',
 
     // Lint Report Modal

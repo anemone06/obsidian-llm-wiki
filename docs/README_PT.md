@@ -31,6 +31,7 @@
   - [💬 Consulta e Feedback](#-consulta-e-feedback)
   - [🌐 LLM e Idioma](#-llm-e-idioma)
   - [🏗️ Arquitetura e Desempenho](#️-arquitetura-e-desempenho)
+  - [🔒 Privacidade e segurança](#-privacidade-e-segurança)
 - [⌨️ Comandos](#️-comandos)
 - [📖 Exemplo](#-exemplo)
 - [🤖 Guia de Seleção de Modelo](#-guia-de-seleção-de-modelo)
@@ -41,6 +42,7 @@
   - [⚡ Performance e Controle de custos](#-performance-e-controle-de-custos)
   - [🧹 Manutenção](#-manutenção)
   - [🔍 Solução de Problemas](#-solução-de-problemas)
+  - [🔒 Transparência e conformidade](#-transparência-e-conformidade)
 - [📜 Licença](#-licença)
 - [🙏 Agradecimentos](#-agradecimentos)
 ## 💡 O que é LLM-Wiki?
@@ -238,6 +240,16 @@ Esta é uma **atualização de desempenho crítica para produção**. O processo
 - **📚 Extração em Lote Iterativa** — Dimensionamento adaptativo de lotes elimina o gargalo de max_tokens para documentos longos
 - **🏛️ Arquitetura de Três Camadas** — `sources/` (read-only) → `wiki/` (gerado por LLM) → `schema/` (config co-evoluída)
 - **🧩 Código Modular** — 13 módulos focados em `src/`
+
+### 🔒 Privacidade e segurança
+
+- **Sem backend, sem telemetria.** O plugin é executado inteiramente dentro do Obsidian — não há servidor externo, análise ou coleta de dados de qualquer tipo. Suas notas nunca saem do seu cofre, a menos que você configure explicitamente um provedor LLM.
+- **Seus dados permanecem locais por padrão.** O plugin não armazena, armazena em cache ou transmite seu conteúdo para qualquer lugar além da API LLM que você escolher. Apenas o texto que você envia para ingestão ou consulta sai do seu dispositivo — e apenas para o provedor que você configurou.
+- **Modo totalmente local com Ollama, LM Studio ou provedores locais.** Para total soberania de dados, use um LLM executado localmente. Suas notas são processadas inteiramente na sua máquina — nada toca a Internet.
+- **Permissões mínimas.** O acesso aos arquivos do cofre é necessário para a gestão do wiki (ler notas, gerar páginas, detetar links mortos). O acesso à rede é usado exclusivamente para chamadas da API LLM ao provedor que você escolheu. O acesso à área de transferência limita-se ao botão "Copiar" no modal de Consulta — apenas quando você clica nele.
+
+---
+
 
 ---
 
@@ -472,6 +484,19 @@ O plugin nunca modifica seus arquivos fonte. Faça backup de `wiki/` → atualiz
 
 ---
 
+## 🔒 Transparência e conformidade
+
+Este plugin está listado no Mercado de Plugins Comunitários do Obsidian e passa por revisão automatizada de segurança e permissões.
+
+**O plugin não tem backend, nem infraestrutura de servidor, nem qualquer tipo de recolha de dados.** É software puramente local executado dentro do Obsidian. O plugin não pode e não recolhe, armazena ou transmite os seus dados para nenhum servidor — porque tal servidor não existe.
+
+**O acesso à rede** é usado apenas para comunicar com o provedor LLM que você configurar — nenhuma outra chamada de rede é feita. Isto está totalmente sob o seu controlo: você escolhe o provedor, você insere a chave API, você decide para onde vão os seus dados.
+
+**O acesso ao sistema de arquivos** (enumeração do cofre) é necessário para construir e manter o wiki: ler as suas notas de origem, gerar páginas, varrer links mortos e detetar páginas duplicadas. O plugin nunca modifica os seus arquivos de origem — apenas os arquivos dentro da pasta wiki.
+
+**O acesso à área de transferência** é usado exclusivamente pelo botão "Copiar" no modal de Consulta, e apenas quando clica nele.
+
+Se preferir total localidade de dados, use um provedor LLM local como Ollama ou LM Studio. Com um provedor local, os seus dados nunca saem da sua máquina.
 ## 📜 Licença
 
 Licença MIT — veja [LICENSE](LICENSE).

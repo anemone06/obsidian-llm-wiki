@@ -323,9 +323,11 @@ export const KO_TEXTS = {
     cmdCancelIngestion: '현재 수집 취소',
     cmdIngestActiveFile: '현재 파일 수집',
     noActiveFile: '열려 있는 파일이 없습니다',
+    mdOnlyFile: 'Markdown 파일만 수집할 수 있습니다',
 
     // Ingestion status bar
     ingestionStatusBar: '수집 중... 클릭하여 취소',
+    lintStatusBar: '점검 중... 클릭하여 취소',
     ingestionCancelling: '취소 중 — 현재 배치 완료 후 중지됩니다',
     ingestionCancelled: '수집이 취소되었습니다',
 
@@ -367,6 +369,9 @@ export const KO_TEXTS = {
     lintLinkComplete: '고아 링크 완료. {linked} 페이지 링크됨.',
     lintFixNoAction: '조치 없음 (클라이언트 없음)',
     lintFixIndexUpdated: '위키 인덱스 및 로그가 업데이트되었습니다.',
+    lintPollutedFixed: '오염된 페이지 수정 완료: {fixed}/{total}. 인덱스 재생성됨.',
+    regenerateIndexCompleted: '인덱스 재생성됨',
+    operationFailed: '실패: ', 
     lintFixAllComplete: '모든 수정이 완료되었습니다. 자세한 내용은 로그를 확인하세요.',
 
     // Lint Report Modal

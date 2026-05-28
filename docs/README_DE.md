@@ -31,6 +31,7 @@
   - [💬 Query & Feedback](#-query--feedback)
   - [🌐 LLM & Language](#-llm--language)
   - [🏗️ Architecture & Performance](#️-architecture--performance)
+  - [🔒 Datenschutz & Sicherheit](#-datenschutz--sicherheit)
 - [⌨️ Befehle](#️-befehle)
 - [📖 Beispiel](#-beispiel)
 - [🤖 Modellempfehlungen](#-modellempfehlungen)
@@ -48,6 +49,7 @@
   - [🛠️ Was macht "Smart Fix All" und in welcher Reihenfolge?](#️-was-macht-smart-fix-all-und-in-welcher-reihenfolge)
   - [💰 Wie vermeide ich unerwartete API-Kosten?](#-wie-vermeide-ich-unerwartete-api-kosten)
   - [📦 Wie führe ich ein Upgrade durch, ohne meine Wiki-Daten zu verlieren?](#-wie-führe-ich-ein-upgrade-durch-ohne-meine-wiki-daten-zu-verlieren)
+  - [🔒 Transparenz & Compliance](#-transparenz--compliance)
 - [📜 License](#-license)
 - [🙏 Danksagungen](#-danksagungen)
 ## 💡 Über LLM Wiki
@@ -243,6 +245,16 @@ Dies ist ein **produktionskritisches Performance-Release**. Der Extraktionsproze
 - **📚 Iterative Batch Extraction** — Adaptive Batch-Sizing, eliminiert max_tokens-Bottleneck bei langen Dokumenten
 - **🏛️ Three-Layer Architecture** — `sources/` (read-only) → `wiki/` (LLM-generated) → `schema/` (co-evolved Config)
 - **🧩 Modular Codebase** — 13 fokussierte Module in `src/`
+
+### 🔒 Datenschutz & Sicherheit
+
+- **Kein Backend, keine Telemetrie.** Das Plugin läuft vollständig innerhalb von Obsidian — es gibt keinen externen Server, keine Analyse und keine Datenerfassung jeglicher Art. Ihre Notizen verlassen niemals Ihren Vault, es sei denn, Sie konfigurieren ausdrücklich einen LLM-Anbieter.
+- **Ihre Daten bleiben standardmäßig lokal.** Das Plugin speichert, zwischenspeichert oder überträgt Ihre Inhalte nirgendwo außerhalb der von Ihnen gewählten LLM-API. Nur der Text, den Sie zur Aufnahme oder Abfrage senden, verlässt Ihr Gerät — und nur an den von Ihnen konfigurierten Anbieter.
+- **Vollständiger lokaler Modus mit Ollama, LM Studio oder lokalen Anbietern.** Für vollständige Datensouveränität verwenden Sie ein lokal laufendes LLM. Ihre Notizen werden vollständig auf Ihrem Rechner verarbeitet — nichts berührt das Internet.
+- **Minimale Berechtigungen.** Vault-Dateizugriff ist für die Wiki-Verwaltung erforderlich (Lesen von Notizen, Generieren von Seiten, Erkennen toter Links). Netzwerkzugriff wird ausschließlich für LLM-API-Aufrufe an Ihren gewählten Anbieter verwendet. Zwischenablagezugriff ist auf die Schaltfläche „Kopieren" im Abfrage-Modal beschränkt — nur wenn Sie darauf klicken.
+
+---
+
 
 ---
 
@@ -497,6 +509,19 @@ Das Plugin ändert niemals Ihre Quelldateien in `sources/`. Wiki-Seiten in `wiki
 
 ---
 
+## 🔒 Transparenz & Compliance
+
+Dieses Plugin ist im Obsidian Community Plugin Market gelistet und wird einer automatisierten Überprüfung auf Sicherheit und Berechtigungen unterzogen.
+
+**Das Plugin hat kein Backend, keine Server-Infrastruktur und keinerlei Datenerfassung.** Es ist reine lokale Software, die innerhalb von Obsidian ausgeführt wird. Das Plugin kann und wird Ihre Daten auf keine Weise sammeln, speichern oder an irgendeinen Server übertragen — weil ein solcher Server nicht existiert.
+
+**Netzwerkzugriff** wird nur zur Kommunikation mit dem von Ihnen konfigurierten LLM-Anbieter verwendet — es werden keine anderen Netzwerkaufrufe getätigt. Dies liegt vollständig in Ihrer Kontrolle: Sie wählen den Anbieter, Sie geben den API-Schlüssel ein, Sie entscheiden, wohin Ihre Daten gehen.
+
+**Dateisystemzugriff** (Vault-Auflistung) ist für den Aufbau und die Pflege des Wikis erforderlich: Lesen Ihrer Quellnotizen, Generieren von Seiten, Scannen auf tote Links und Erkennen doppelter Seiten. Das Plugin verändert niemals Ihre Quelldateien — nur Dateien im Wiki-Ordner.
+
+**Zwischenablagezugriff** wird ausschließlich von der Schaltfläche „Kopieren" im Abfrage-Modal verwendet, und nur, wenn Sie darauf klicken.
+
+Wenn Sie vollständige Datenlokalität bevorzugen, verwenden Sie einen lokalen LLM-Anbieter wie Ollama oder LM Studio. Mit einem lokalen Anbieter verlassen Ihre Daten niemals Ihren Rechner.
 ## 📜 License
 
 MIT License — siehe [LICENSE](LICENSE).

@@ -322,9 +322,11 @@ export const DE_TEXTS = {
     cmdCancelIngestion: 'Aktuelle Aufnahme abbrechen',
     cmdIngestActiveFile: 'Aktuelle Datei aufnehmen',
     noActiveFile: 'Keine Datei geöffnet',
+    mdOnlyFile: 'Nur Markdown-Dateien können aufgenommen werden',
 
     // Ingestion status bar
     ingestionStatusBar: 'Aufnahme läuft... zum Abbrechen klicken',
+    lintStatusBar: 'Prüfung läuft... zum Abbrechen klicken',
     ingestionCancelling: 'Wird abgebrochen — Stopp nach aktuellem Batch',
     ingestionCancelled: 'Aufnahme abgebrochen',
 
@@ -366,6 +368,9 @@ export const DE_TEXTS = {
     lintLinkComplete: 'Verwaiste-Seiten-Verlinkung abgeschlossen. {linked} Seiten verlinkt.',
     lintFixNoAction: 'Keine Maßnahme ergriffen (kein Client)',
     lintFixIndexUpdated: 'Wiki-Index und Protokoll aktualisiert.',
+    lintPollutedFixed: 'Beschädigte Seiten behoben: {fixed}/{total}. Index neu generiert.',
+    regenerateIndexCompleted: 'Index neu generiert',
+    operationFailed: 'Fehlgeschlagen: ', 
     lintFixAllComplete: 'Alle Behebungen abgeschlossen. Details im Protokoll.',
 
     // Lint Report Modal

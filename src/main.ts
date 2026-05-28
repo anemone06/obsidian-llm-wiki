@@ -110,13 +110,14 @@ export default class LLMWikiPlugin extends Plugin {
       name: t.cmdRegenerateIndex,
       callback: () => {
         void (async () => {
-          new Notice(t.cmdRegenerateIndex + '...');
+          const texts = TEXTS[this.settings.language] as unknown as Record<string, string>;
+          new Notice((texts.regenerateIndexCompleted || 'Regenerating index...') + '...');
           try {
             await this.wikiEngine.generateIndexFromEngine();
-            new Notice(t.cmdRegenerateIndex + ' ' + 'completed.');
+            new Notice(texts.regenerateIndexCompleted || 'Index regenerated');
           } catch (err) {
             console.error('Regenerate index failed:', err);
-            new Notice(`Failed: ${err instanceof Error ? err.message : String(err)}`);
+            new Notice((texts.operationFailed || 'Failed: ') + (err instanceof Error ? err.message : String(err)));
           }
         })();
       }
@@ -166,6 +167,22 @@ export default class LLMWikiPlugin extends Plugin {
       () => {
         const texts = TEXTS[this.settings.language] || TEXTS.en;
         const label = (texts as unknown as Record<string, string>).ingestionStatusBar || 'Ingesting... click to cancel';
+        if (this.ingestStatusBar) {
+          this.ingestStatusBar.setText(label);
+          this.ingestStatusBar.removeClass('llm-wiki-status-bar-hidden');
+        }
+      },
+      () => {
+        if (this.ingestStatusBar) {
+          this.ingestStatusBar.addClass('llm-wiki-status-bar-hidden');
+        }
+      }
+    );
+
+    this.wikiEngine.setLintCallbacks(
+      () => {
+        const texts = TEXTS[this.settings.language] || TEXTS.en;
+        const label = (texts as unknown as Record<string, string>).lintStatusBar || 'Linting... click to cancel';
         if (this.ingestStatusBar) {
           this.ingestStatusBar.setText(label);
           this.ingestStatusBar.removeClass('llm-wiki-status-bar-hidden');
@@ -332,7 +349,8 @@ export default class LLMWikiPlugin extends Plugin {
     }
 
     if (activeFile.extension !== 'md') {
-      new Notice('Only Markdown files can be ingested', 5000);
+      const texts = TEXTS[this.settings.language];
+      new Notice((texts as unknown as Record<string, string>).mdOnlyFile || 'Only Markdown files can be ingested', 5000);
       return;
     }
 

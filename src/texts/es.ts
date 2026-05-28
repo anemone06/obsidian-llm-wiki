@@ -322,9 +322,11 @@ export const ES_TEXTS = {
     cmdCancelIngestion: 'Cancelar ingesta actual',
     cmdIngestActiveFile: 'Ingerir archivo actual',
     noActiveFile: 'No hay ningún archivo abierto',
+    mdOnlyFile: 'Solo se pueden ingerir archivos Markdown',
 
     // Ingestion status bar
     ingestionStatusBar: 'Ingiriendo... clic para cancelar',
+    lintStatusBar: 'Verificando... clic para cancelar',
     ingestionCancelling: 'Cancelando — se detendrá tras el lote actual',
     ingestionCancelled: 'Ingesta cancelada',
 
@@ -366,6 +368,9 @@ export const ES_TEXTS = {
     lintLinkComplete: 'Enlace de huérfanas completado. Enlazadas {linked} páginas.',
     lintFixNoAction: 'No se tomó ninguna acción (sin cliente)',
     lintFixIndexUpdated: 'Índice y registro de la Wiki actualizados.',
+    lintPollutedFixed: 'Páginas contaminadas corregidas: {fixed}/{total}. Índice regenerado.',
+    regenerateIndexCompleted: 'Índice regenerado',
+    operationFailed: 'Error: ', 
     lintFixAllComplete: 'Todas las correcciones completadas. Consulta el registro para más detalles.',
 
     // Lint Report Modal
