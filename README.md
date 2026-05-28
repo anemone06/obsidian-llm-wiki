@@ -31,6 +31,7 @@
   - [💬 Query & Feedback](#-query--feedback)
   - [🌐 LLM & Language](#-llm--language)
   - [🏗️ Architecture & Performance](#️-architecture--performance)
+- [🔒 Privacy & Security](#privacy--security)
 - [⌨️ Commands](#️-commands)
 - [📖 Example](#-example)
 - [🤖 Model Selection Guide](#-model-selection-guide)
@@ -41,6 +42,7 @@
   - [⚡ Performance & Cost](#-performance--cost)
   - [🧹 Maintenance](#-maintenance)
   - [🔍 Troubleshooting](#-troubleshooting)
+- [🔒 Transparency & Compliance](#transparency--compliance)
 - [📜 License](#-license)
 - [🙏 Acknowledgments](#-acknowledgments)
 ---
@@ -241,6 +243,13 @@ This is a **production-critical performance release**. Ingestion extraction has 
 - **⏹️ Batch-Level Cancellation** — Cancel long-running operations at batch boundaries, preserving completed work with immediate user feedback
 - **🏛️ Three-Layer Architecture** — `sources/` (read-only) → `wiki/` (LLM-generated) → `schema/` (co-evolved config)
 - **🧩 Modular Codebase** — 13 focused modules in `src/`
+
+### 🔒 Privacy & Security
+
+- **No backend, no telemetry.** The plugin runs entirely inside Obsidian — there is no external server, no analytics, and no data collection of any kind. Your notes never leave your vault unless you explicitly configure an LLM provider.
+- **Your data stays local by default.** The plugin does not store, cache, or transmit your content anywhere beyond the LLM API you choose. Only the text you send for ingestion or query leaves your device — and only to the provider you configured.
+- **Full local mode with Ollama, LM Studio, or local providers.** For complete data sovereignty, use a locally-running LLM. Your notes are processed entirely on your machine — nothing touches the internet.
+- **Minimal permissions.** Vault file access is required for wiki management (reading notes, generating pages, detecting dead links). Network access is used exclusively for LLM API calls to your chosen provider. Clipboard access is limited to the "Copy" button in the Query modal — only when you click it.
 
 ---
 
@@ -481,6 +490,20 @@ The plugin never modifies your source files. Backup `wiki/` → update plugin �
 4. Look for messages with module name prefixes like `[Step]`, `[LLM]`, module names
 5. For local testing, use `pnpm build:dev` instead of `pnpm build` to preserve full debug output
 6. Copy the relevant log lines and include them in your GitHub issue — this makes bug diagnosis much faster
+
+---
+
+## 🔒 Transparency & Compliance
+
+This plugin is listed on the Obsidian Community Plugin Market and undergoes automated review for security and permissions.
+
+**Network access** is used only to communicate with the LLM provider you configure — no other network calls are made. At no point is your data sent to any server controlled by the plugin author.
+
+**File system access** (vault enumeration) is required to build and maintain the wiki: reading your source notes, generating pages, scanning for dead links, and detecting duplicate pages. The plugin never modifies your source files — only files under the wiki folder.
+
+**Clipboard access** is used exclusively by the "Copy" button in the Query modal, and only when you click it.
+
+If you prefer complete data locality, use a local LLM provider such as Ollama or LM Studio. With a local provider, your data never leaves your machine.
 
 ---
 
