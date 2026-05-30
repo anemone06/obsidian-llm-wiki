@@ -1,10 +1,19 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-05-26
+**Last Updated:** 2026-05-30
 
 ---
 
-## Current Phase: v1.12.0 — Production-Grade Performance
+## Current Phase: v1.12.5 — Cross-Type Duplicate Prevention
+
+### Completed (v1.12.5)
+- ✅ **Cross-folder entity/concept duplicate prevention (#54)**: `resolvePagePath()` checks opposite folder (entities ↔ concepts) when same-type matching fails. Cross-type collisions merge content into existing page instead of silently losing information. Contributed by @dmarchevsky.
+- ✅ **Historical cross-type duplicate detection in Fast path 1**: Exact slug match also checks opposite folder, bridging aliases for pre-existing dual pages.
+- ✅ **Collision content preservation**: Collision branch now calls `mergePage`/`appendToReviewedPage` with target's own type, preserving source content instead of discarding it.
+- ✅ **IngestReportModal displays collisions**: Cross-type collisions section added to ingestion report.
+- ✅ **Type-safe i18n**: `getText()` helper replaces 13 instances of `as unknown as Record<string, string>`.
+- ✅ **Reduced I/O**: Cross-type collision uses in-memory path match (eliminates `otherExact` tryReadFile).
+- ✅ **Test coverage**: 173 tests across 4 test files (+8 since v1.12.4).
 
 ### Completed (v1.12.0)
 - ✅ **Extraction prompt rearchitected**: Full page list removed from prompt. Extraction speed is now independent of wiki size. ~80% faster for typical files.
@@ -24,7 +33,6 @@
 
 | Item | Source | Effort |
 |------|--------|--------|
-| Production build strip `console.debug` (esbuild `drop`) | 审计二：213条三版未清理 | 10min |
 | Mock infrastructure + `page-factory.ts` core tests | 两审计共识：~4500行核心零测试 | 1周 |
 | `runLintWiki` phase extraction (835→6×~80行) | 审计二：835行，趋势增长 | 半天 |
 
@@ -40,7 +48,8 @@
 | Item | Effort |
 |------|--------|
 | Good First Issue tagging | 10min |
-| esbuild upgrade (fix dev-only vulnerability) | 10min |
+
+### Completed (v1.12.0)
 
 ### Evaluated & Rejected (v1.12.0)
 
