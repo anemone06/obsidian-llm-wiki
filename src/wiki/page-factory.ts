@@ -88,7 +88,18 @@ export class PageFactory {
 
     // Fast path: exact slug match (same type folder)
     const existing = await this.ctx.tryReadFile(slugPath);
-    if (existing !== null) return { path: slugPath };
+    if (existing !== null) {
+      // Check for historical cross-type duplicate: if the same name exists in the
+      // opposite folder, it means an earlier ingestion classified this item differently.
+      // Append the new name as an alias to bridge the two pages (Bug #1 fix).
+      const otherSlugPath = `${this.ctx.settings.wikiFolder}/${otherFolder}/${slug}.md`;
+      const otherExisting = await this.ctx.tryReadFile(otherSlugPath);
+      if (otherExisting !== null) {
+        console.warn(`Historical cross-type duplicate detected: ${folder}/${slug}.md and ${otherFolder}/${slug}.md both exist — appending alias`);
+        await this.appendAliases(otherSlugPath, [name]);
+      }
+      return { path: slugPath };
+    }
 
     // Fast path 2 + Slow path: share sameTypePages across slug-match and LLM resolution
     try {

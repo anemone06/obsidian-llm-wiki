@@ -227,7 +227,7 @@ export class IngestReportModal extends Modal {
   }
 
   onOpen() {
-    const { sourceFile, createdPages, updatedPages, entitiesCreated, conceptsCreated, failedItems, contradictionsFound, success, errorMessage, elapsedSeconds, skippedFiles, totalFilesInFolder } = this.report;
+    const { sourceFile, createdPages, updatedPages, entitiesCreated, conceptsCreated, failedItems, contradictionsFound, success, errorMessage, collisions, elapsedSeconds, skippedFiles, totalFilesInFolder } = this.report;
 
     const statusEmoji = success ? '✅' : '⚠️';
     this.contentEl.createEl('h2', { text: `${statusEmoji} ${this.t('ingestReportTitle')}` });
@@ -263,6 +263,17 @@ export class IngestReportModal extends Modal {
     statsEl.createEl('p', { text: this.t('ingestReportUpdatedPages').replace('{count}', String(updatedPages.length)) });
     if (contradictionsFound > 0) {
       statsEl.createEl('p', { text: this.t('ingestReportContradictionsFound').replace('{count}', String(contradictionsFound)) });
+    }
+
+    // Collisions
+    if (collisions && collisions.length > 0) {
+      this.contentEl.createEl('h3', { text: '🔀 ' + this.t('ingestReportCollisions') + ` (${collisions.length})` });
+      const list = this.contentEl.createEl('ul');
+      for (const c of collisions) {
+        const sourceTypeLabel = c.sourceType === 'entity' ? this.t('ingestReportEntityType') : this.t('ingestReportConceptType');
+        const targetTypeLabel = c.targetType === 'entity' ? this.t('ingestReportEntityType') : this.t('ingestReportConceptType');
+        list.createEl('li', { text: `"${c.name}" (${sourceTypeLabel}) → ${targetTypeLabel}` });
+      }
     }
 
     // Created pages
