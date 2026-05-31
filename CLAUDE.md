@@ -127,21 +127,77 @@ src/
 
 ## 🛡️ Three-No Principle
 
-Every change must satisfy all three before being considered complete. **Automated checks alone are not sufficient** — each item requires explicit manual verification against the modified code.
+Every change must satisfy all three before being considered complete.
+**Automated gates catch syntax/type/test errors; manual review catches logic
+and architectural errors that no linter can see.**
 
-1. **No Side Effects — required manual review**: Changes must not affect behavior outside their intended scope. Refactored code must produce identical output. New features must not alter existing workflows.
-   - **Manual check**: Read every call-site of the modified function. Trace data flow through all consumers. Verify no other module depends on the previous behavior. Check that error propagation paths remain intact.
-2. **No Breaking Changes — required manual review**: No API signature changes without call-site updates. No config format changes. No file format changes. Existing users must not need to reconfigure.
-   - **Manual check**: Compare old and new function signatures. Check settings schema for added/removed fields. Verify saved `data.json` from previous versions still loads correctly.
-3. **No Test Errors or Warnings — automated gates**: `pnpm lint` must produce 0 errors and 0 warnings. `pnpm test` must pass all tests (0 failures). `npx tsc --noEmit` must produce 0 errors. `pnpm build` must exit cleanly.
+### 1. No Side Effects — required structured review
 
-Verification gates:
+**Goal**: The change does not alter behavior outside its intended scope.
+
+#### 1a. Call-site Audit
+Run `grep -rn "<functionName>" src/` to list every call-site. For each:
+- [ ] **Arguments**: check if any caller depends on old return value / side effect
+- [ ] **Return value**: check if any caller would break with new return shape
+- [ ] **Error handling**: check if try/catch or `.catch()` paths still make sense
+
+#### 1b. Data Flow Trace
+For each modified function, trace:
+- [ ] **Inputs**: Where does each parameter value originate? (user input / setting / file / LLM / computed)
+- [ ] **Outputs**: Where does each return value / mutated state go? (file write / UI / downstream function / cache)
+- [ ] **Side effects**: Does the function mutate external state? (file system, Obsidian API, global vars, DOM)
+- [ ] **IO points**: Mark every `await this.ctx.*`, `app.*`, `document.*`, `localStorage.*`
+
+#### 1c. State Mutation Analysis
+- [ ] If the function is async: can it run concurrently with itself or another function touching the same state?
+- [ ] If the function writes files: does it overwrite or append? Is the path deterministic?
+- [ ] If the function reads settings: does it handle missing/new fields gracefully?
+
+#### 1d. Error Propagation Check
+- [ ] New error paths: are they caught by all callers?
+- [ ] Changed error types: do existing catch blocks still match?
+- [ ] Silent failures: are there any paths that swallow errors without logging?
+
+**Deliverable**: A 3-5 sentence side-effect assessment, e.g.:
+> "Modified `resolvePagePath` is called from 2 private methods in PageFactory.
+> The new `collision` return field is consumed by `createOrUpdatePage` and
+> `IngestReportModal` only. No other module touches this path. The function
+> still writes aliases via `appendAliases` (same side effect as before); no
+> new IO introduced."
+
+### 2. No Breaking Changes — required structured review
+
+**Goal**: Existing users do not need to reconfigure or migrate data.
+
+| Dimension | Check | Method | Pass Criteria |
+|-----------|-------|--------|---------------|
+| **API Signature** | Function params / return type changed? | `git diff` + `grep` | All call-sites updated; no new required params without defaults |
+| **Settings Schema** | `data.json` fields added/removed? | Check `types.ts` + `settings.ts` | New fields have defaults in constructor; removed fields are gracefully ignored |
+| **File Format** | Frontmatter / output / index format changed? | Check generation templates | Old files load without error; new format is backward-compatible |
+| **Default Behavior** | Any default value changed? | Check constructor / config init | Old behavior is preserved unless explicitly opted in |
+| **Command/Setting IDs** | Any command palette ID or setting key renamed? | `grep` for IDs/keys | IDs unchanged; if changed, old IDs still map |
+| **Obsidian API** | Minimum Obsidian version requirement changed? | `manifest.json` | `minAppVersion` >= current; no new Obsidian-exclusive APIs |
+
+**Deliverable**: A breaking-change verdict: "None detected" or a specific migration plan.
+
+### 3. No Test Errors or Warnings — automated gates
+
+```bash
+pnpm lint          # ESLint: must produce 0 errors, 0 warnings
+pnpm test          # Vitest: all pass, 0 failures
+npx tsc --noEmit   # TypeScript: 0 errors
+pnpm build         # esbuild: clean exit
 ```
-pnpm lint          # 0 errors, 0 warnings
-pnpm test          # all pass, 0 failures
-npx tsc --noEmit   # 0 errors
-pnpm build         # clean exit
-```
+
+If any gate fails: fix the root cause, do NOT add `@ts-ignore` or `eslint-disable`
+to silence it. Re-run all four gates after each fix.
+
+### ⚠️ Anti-patterns that bypass these checks
+
+- "The tests pass, so it's fine" → Tests only cover what you thought to test
+- "It's just a one-line change" → One-line changes are the most dangerous
+- "I'll add tests later" → Tests must accompany the change, not follow it
+- "The PR review will catch it" → The reviewer has less context than you
 
 ## ⚠️ Git Safety Protocol
 
