@@ -65,6 +65,33 @@ export function computeSlug(text: string): string {
   return finalSlug;
 }
 
+// Filter out aliases that are redundant against a page's own filename.
+// Obsidian resolves `[[X]]` to a file whose basename equals X (case-insensitive),
+// so an alias that already equals the filename is a self-pointing no-op that only
+// clutters frontmatter. This commonly happens on cross-type collisions where the
+// colliding name is identical to the existing page's name (e.g. adding "Vigilanz"
+// to vigilanz.md). Comparison is exact case-insensitive basename match — NOT slug
+// based — because Obsidian does not collapse spaces/symbols when resolving links,
+// so a space-variant like "Deep Learning" on deep-learning.md IS a useful alias
+// and must be kept.
+// Pure function (no IO) so the dedup rule can be unit-tested in isolation.
+export function filterRedundantAliases(
+  pagePath: string,
+  candidateAliases: string[]
+): string[] {
+  const fileName = pagePath.split('/').pop() || '';
+  const fileKey = fileName.replace(/\.md$/i, '').trim().toLowerCase();
+  const seen = new Set<string>();
+  return candidateAliases.filter(alias => {
+    if (!alias || alias.trim().length === 0) return false;
+    const key = alias.trim().toLowerCase();
+    if (key === fileKey) return false; // already resolves to this file — redundant
+    if (seen.has(key)) return false; // duplicate within the batch (case-insensitive)
+    seen.add(key);
+    return true;
+  });
+}
+
 export async function parseJsonResponse(
   response: string,
   repairFn?: (malformedJson: string) => Promise<string>

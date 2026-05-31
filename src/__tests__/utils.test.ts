@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { slugify, computeSlug, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag, extractBody, getText } from '../utils';
+import { slugify, computeSlug, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag, extractBody, getText, filterRedundantAliases } from '../utils';
 import { getGranularityInstruction, getGranularityFixLimits } from '../wiki/system-prompts';
 import { LLMWikiSettings } from '../types';
 
@@ -766,5 +766,44 @@ describe('getText', () => {
   it('handles non-existent replacement placeholders gracefully', () => {
     const result = getText('en', 'ingestionCancelled', { nonexistent: 'foo' });
     expect(result).toBe('Ingestion cancelled');
+  });
+});
+
+describe('filterRedundantAliases', () => {
+  it('drops an alias identical to the page filename (case-insensitive)', () => {
+    const result = filterRedundantAliases('wiki/entities/vigilanz.md', ['Vigilanz']);
+    expect(result).toEqual([]);
+  });
+
+  it('keeps a genuine alias that differs from the filename', () => {
+    const result = filterRedundantAliases('wiki/entities/vigilanz.md', ['监测']);
+    expect(result).toEqual(['监测']);
+  });
+
+  it('drops self-pointing alias but keeps distinct ones in the same batch', () => {
+    const result = filterRedundantAliases('wiki/entities/openai.md', ['OpenAI', 'OAI']);
+    expect(result).toEqual(['OAI']);
+  });
+
+  it('keeps a space-variant alias because Obsidian does not collapse spaces to dashes', () => {
+    // File is deep-learning.md; [[Deep Learning]] would NOT auto-resolve to it,
+    // so "Deep Learning" is a useful alias and must be kept.
+    const result = filterRedundantAliases('wiki/concepts/deep-learning.md', ['Deep Learning']);
+    expect(result).toEqual(['Deep Learning']);
+  });
+
+  it('removes duplicate aliases within the batch (case-insensitive)', () => {
+    const result = filterRedundantAliases('wiki/entities/foo.md', ['GPT', 'gpt']);
+    expect(result).toEqual(['GPT']);
+  });
+
+  it('skips empty or whitespace-only aliases', () => {
+    const result = filterRedundantAliases('wiki/entities/openai.md', ['', '   ', 'OpenAI Inc']);
+    expect(result).toEqual(['OpenAI Inc']);
+  });
+
+  it('handles paths without a folder prefix', () => {
+    const result = filterRedundantAliases('vigilanz.md', ['Vigilanz', 'Surveillance']);
+    expect(result).toEqual(['Surveillance']);
   });
 });

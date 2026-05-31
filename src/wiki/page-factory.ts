@@ -19,6 +19,7 @@ import {
   parseJsonResponse,
   enforceFrontmatterConstraints,
   truncateMentions,
+  filterRedundantAliases,
 } from '../utils';
 import { applySectionLabels } from './system-prompts';
 import { getExistingWikiPages } from './lint-fixes';
@@ -42,9 +43,15 @@ export class PageFactory {
     const content = await this.ctx.tryReadFile(pagePath);
     if (!content) return;
 
+    // Drop aliases that already equal the page's filename (case-insensitive),
+    // e.g. adding "Vigilanz" to vigilanz.md. Common on cross-type collisions
+    // where the colliding name is identical to the existing page's name.
+    const candidates = filterRedundantAliases(pagePath, newAliases);
+    if (candidates.length === 0) return;
+
     const fm = parseFrontmatter(content);
     const existingAliases = Array.isArray(fm?.aliases) ? fm.aliases : [];
-    const toAdd = newAliases.filter(a => !existingAliases.includes(a));
+    const toAdd = candidates.filter(a => !existingAliases.includes(a));
     if (toAdd.length === 0) return;
 
     const merged = [...existingAliases, ...toAdd];
