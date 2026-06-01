@@ -119,7 +119,7 @@ Este projeto evolui rapidamente — novos recursos, correções de bugs e melhor
 
 **🦙 Ollama (local, sem API key):** Instale [Ollama](https://ollama.com), puxe um modelo (`ollama pull gemma4`), selecione "Ollama (Local)" no dropdown de provider.
 
-> Consulte [README_CN.md](docs/README_CN.md) para instruções específicas de provider em chinês.
+> Consulte o [Guia de Seleção de Modelo](#-guia-de-seleção-de-modelo) para detalhes.
 
 ### 🎮 Uso
 
@@ -140,41 +140,45 @@ Re-ingerir a mesma source faz atualizações incrementais em Entity/Concept page
 
 ### ⚠️ Atualizando de uma Versão Anterior?
 
-**Novo na v1.11.0**: O teste de conexão agora é obrigatório para funções principais. Configurações existentes são migradas automaticamente (`llmReady = true`). Alterar provedor ou chave API requer novo teste.
+**Esta versão é totalmente compatível com versões anteriores.** A v1.14.0 não traz mudanças disruptivas — suas páginas Wiki, configurações e fluxos de trabalho existentes são preservados. Nenhuma reconfiguração ou migração de dados é necessária.
 
-Wikis criados antes da v1.11.0: execute **Lint Wiki** para corrigir automaticamente links duplamente aninhados (`[[[[...]]]]`) e stubs duplicados entre diretórios.
+**Se sua Wiki existente foi construída ao longo de muitas versões**, algumas páginas podem não dispor de recursos recentes (aliases, deduplicação ciente de alias, prompts modernizados). Execute **Verificar Wiki** para ver o que precisa de atenção. O **Smart Fix All** resolve as correções mais comuns em um clique.
 
-Se você está atualizando de uma versão **anterior à v1.7.11** (ou muito mais antiga), suas páginas Wiki existentes foram geradas sem várias capacidades adicionadas ao longo de vários lançamentos. Siga estas etapas após atualizar para atualizar sua Wiki:
+**Se você está atualizando de uma versão anterior à v1.14.0**, execute **Verificar Wiki** uma vez para corrigir automaticamente problemas históricos:
+- **Links duplamente aninhados** `[[[[entities/Foo|Foo]]]]` no log.md — o Lint detecta e corrige sem nenhum custo de LLM
+- **Stubs duplicados entre diretórios** — páginas que existem tanto em `entities/` quanto em `concepts/` com o mesmo slug agora são corretamente correspondidas
+
+**Para Wikis construídas ao longo de muitas versões**, siga estes passos para trazer sua Wiki aos padrões atuais:
 
 **1️⃣ Reconstrua seu índice**
-`Cmd+P` → **"Regenerar índice"** — Isso reconstrói `wiki/index.md` com entradas de alias para cada página, habilitando busca alias-aware (ex.: pesquisar "DSA" encontra "DeepSeek-Sparse-Attention"). O formato antigo do índice listava apenas títulos de páginas.
+`Cmd+P` → **"Regenerar índice"** — Isso reconstrói `wiki/index.md` com entradas de alias para cada página, habilitando busca ciente de alias (ex.: pesquisar "DSA" encontra "DeepSeek-Sparse-Attention"). O formato antigo do índice listava apenas títulos de páginas.
 
 **2️⃣ Execute Verificar Wiki**
 `Cmd+P` → **"Verificar Wiki"** — Isso examina toda a sua Wiki e mostra:
-- **🏷️ Aliases ausentes**: Páginas sem aliases (todas as pré-v1.7.11). Clique em **"Complete Aliases"** — o LLM gera traduções, siglas e nomes alternativos em lote. Isso é crítico para a detecção de duplicados.
-- **🔄 Páginas duplicadas**: Páginas com conteúdo sobreposto (ex.: "CoT" vs "Cadeia-de-Pensamento" criadas por versões antigas sem dedup alias-aware). Clique em **"Merge Duplicates"** para fundi-las e preservar todos os aliases.
+- **🏷️ Aliases ausentes**: Páginas sem aliases (em qualquer versão, se você nunca executou "Complete Aliases"). Clique em **"Complete Aliases"** — o LLM gera traduções, siglas e nomes alternativos em lote. Isso é essencial para a detecção de duplicados.
+- **🔄 Páginas duplicadas**: Páginas com conteúdo sobreposto (ex.: "CoT" vs "Cadeia-de-Pensamento" criadas por versões antigas que não tinham deduplicação ciente de alias). Clique em **"Merge Duplicates"** para fundi-las e preservar todos os aliases.
 - **💀 Dead links / Páginas vazias / Órfãos**: Problemas padrão de manutenção de Wiki.
 
 **3️⃣ Use Smart Fix All**
-Clique em **"Smart Fix All"** no relatório do Lint para reparo em um clique com ordenação por causalidade: aliases completados → duplicados mesclados → dead links corrigidos → órfãos vinculados → páginas vazias expandidas. Esta é a maneira mais rápida de limpar uma Wiki construída ao longo de várias versões.
+Clique em **"Smart Fix All"** no relatório do Verificar para reparo em um clique com ordenação por causalidade: aliases completados → duplicados mesclados → dead links corrigidos → órfãos vinculados → páginas vazias expandidas. Esta é a maneira mais rápida de limpar uma Wiki construída ao longo de várias versões.
 
 **4️⃣ Habilite a geração paralela de páginas**
-Settings → **Ingestion Acceleration**:
-- **⚡ Page Generation Concurrency**: Defina para 3 na maioria dos providers (era 1/serial por padrão antes da v1.7.3). Acelera a ingestão em 2–3× em sources com 10+ Entity.
+Configurações → **Ingestion Acceleration**:
+- **⚡ Page Generation Concurrency**: Defina para 3 na maioria dos providers. Acelera a ingestão em 2–3× em sources com 10+ Entity.
 - **⏱️ Batch Delay**: Comece em 300ms. Aumente para 500–800ms se encontrar rate limiting.
 
-**5️⃣ Revise as novas configurações (adicionadas entre v1.4.0–v1.7.x):**
-- **🌐 Wiki Output Language** (v1.6.5): Independente do idioma da interface — sua Wiki pode estar em chinês enquanto a UI do plugin permanece em inglês, ou vice-versa.
-- **📊 Granularidade de extração** (v1.6.2, v1.10.0 estendida): Cinco opções controlam o quão profundamente o LLM extrai Entity das sources:
+**5️⃣ Revise as configurações atuais:**
+- **🌐 Idioma de Saída da Wiki**: Independente do idioma da interface — sua Wiki pode estar em chinês enquanto a UI do plugin permanece em inglês, ou vice-versa.
+- **📊 Granularidade de extração**: Cinco opções controlam o quão profundamente o LLM extrai Entity das sources:
   - **Fina** (~100 itens) — Análise profunda, menções marginais incluídas. Alto custo de tokens, ideal para fontes principais.
   - **Padrão** (~50 itens) — Extração equilibrada. Bom padrão para notas diárias.
   - **Grossa** (~10 itens) — Visão rápida, apenas Entity principais. Baixo custo, ingestão rápida.
   - **Mínima** (~5 itens) — Apenas itens essenciais. Ideal para processamento em lote de 100+ arquivos ou testar novas sources.
   - **Personalizada** (1–300 itens) — Limites definidos pelo usuário para Entity/Concept, workflows especializados.
   > 💡 **Recomendação**: Use Mínima ou Grossa para grandes pastas para economizar tempo e custos de API. Fina apenas seletivamente para documentos principais que merecem análise profunda.
-- **🔄 Auto-Maintenance** (v1.4.0): File watcher opcional, Lint periódico e verificação de saúde na inicialização. Todos desligados por padrão — ative apenas se quiser processamento automático em segundo plano.
+- **🔄 Auto-Manutenção**: Observador de arquivos opcional, Lint periódico e verificação de saúde na inicialização. Todos desligados por padrão — ative apenas se quiser processamento automático em segundo plano.
 
-> **🛡️ Segurança**: A geração paralela usa `Promise.allSettled` — se uma página falhar, outras continuam. Páginas com falha são tentadas novamente individualmente com exponential backoff. O Smart Batch Skip (v1.7.7) detecta automaticamente arquivos já ingeridos para economizar tempo e custos de API.
+> **🛡️ Segurança**: A geração paralela usa `Promise.allSettled` — se uma página falhar, outras continuam. Páginas com falha são tentadas novamente individualmente com exponential backoff. O Smart Batch Skip detecta automaticamente arquivos já ingeridos para economizar tempo e custos de API.
 
 ---
 ---
@@ -407,30 +411,26 @@ Coloque notas, ele extrai pessoas, conceitos e teorias, e gera uma Wiki intercon
 **Requisitos mínimos?**
 Obsidian v1.6.6+, desktop (Windows/macOS/Linux), uma API key de um LLM provider. Ollama funciona localmente sem API key.
 
-**Por que não consigo usar as funções após instalar? (v1.11.0)**
-Configurações → Karpathy LLM Wiki → escolher provedor → inserir API Key → Fetch Models → selecionar modelo → Test Connection. O indicador verde "LLM Ready" desbloqueia todas as funções.
+**Por que não consigo usar as funções após instalar?**
+O plugin exige um teste de conexão bem-sucedido antes de desbloquear as funções principais. Vá em **Configurações → Karpathy LLM Wiki** → escolha um provider → insira sua API key → clique em **Fetch Models** → selecione um modelo → clique em **Test Connection**. Quando o indicador verde "LLM Ready" aparecer, todas as funções estarão disponíveis. Isso evita falhas silenciosas de providers mal configurados.
 
-**Como cancelar uma ingestão/Lint em execução? (v1.11.0)**
-Clique na barra de status ou Ctrl+P → "Cancel current ingestion". Para limpo ao final do lote atual.
+**Como cancelar uma ingestão ou Verificar em execução?**
+Clique no texto da barra de status durante uma operação (mostra "Ingesting... click to cancel"), ou use `Ctrl+P` → "Cancel current ingestion". A operação para de forma limpa no próximo limite de lote, preservando todo o trabalho já concluído.
 
-**Colchetes duplos [[[[...]]]] no log.md — como corrigir?**
-Execute Lint Wiki — detecta e corrige automaticamente todos os links aninhados duplos (v1.11.0+).
+**Como ingerir rapidamente o arquivo que estou editando?**
+Clique no ícone `sticker` na barra lateral esquerda, ou use `Ctrl+P` → "Ingest current file". Isso pula o seletor de arquivo e ingere diretamente a aba ativa do editor.
 
+**Colchetes duplos `[[[[entities/Foo|Foo]]]]` no log.md — como corrigir?**
+Execute **Verificar Wiki** — o scanner agora detecta e corrige automaticamente todos os wiki-links duplamente aninhados em todo o diretório da Wiki (incluindo log.md) sem nenhum custo de LLM. Nenhuma limpeza manual é necessária.
 
-y.
+**Por que recebo erros "Overloaded"?**
+O plugin agora reconhece o erro 529 de overload da Anthropic como retentável. Erros de overload são automaticamente reexecutados com exponential backoff em todos os providers.
 
-**Por que não consigo usar as funções após instalar? (v1.11.0)**
-Configurações → Karpathy LLM Wiki → escolher provedor → inserir API Key → Fetch Models → selecionar modelo → Test Connection. O indicador verde "LLM Ready" desbloqueia todas as funções.
-
-**Como cancelar uma ingestão/Lint em execução? (v1.11.0)**
-Clique na barra de status ou Ctrl+P → "Cancel current ingestion". Para limpo ao final do lote atual.
-
-**Colchetes duplos [[[[...]]]] no log.md — como corrigir?**
-Execute Lint Wiki — detecta e corrige automaticamente todos os links aninhados duplos (v1.11.0+).
-
+**Por que um stub duplicado foi criado quando a página já existe em entities/ ou concepts/?**
+O plugin agora usa correspondência baseada em slug — diferentes formatações do mesmo nome são resolvidas para a página existente em vez de criar um stub duplicado.
 
 **Qual modelo escolher?**
-Veja [Recomendações de modelos](#-recomendações-de-modelos) acima. Modelos de contexto longo são recomendados — quanto maior sua Wiki, mais contexto o LLM precisa.
+Veja o [Guia de Seleção de Modelo](#-guia-de-seleção-de-modelo) acima. Modelos de contexto longo são recomendados — quanto maior sua Wiki, mais contexto o LLM precisa.
 
 ### 🏷️ Aliases e Duplicados
 

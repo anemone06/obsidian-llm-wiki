@@ -59,16 +59,16 @@ Production-critical performance release. Extraction fundamentally rearchitected 
 | Hash-bucket dedup (O(n²)→O(n log n)) | No user-reported perf issue; solve when it hurts |
 | Anthropic prompt caching (Issue #38) | System prompts too small for 1024-token cache threshold |
 
-### Next: v1.14.0 — Core Tests Expansion
+### Next: v1.15.0 — Wiki Engine Full-Path Tests
 
-**P0 — Core Engine Tests**
+**P0 — Core Engine Tests (continued)**
 
 | Item | Status |
 |------|--------|
-| mock infrastructure (`createMockContext`) | ✅ Done (86f5765) |
-| source-analyzer core tests (5 cases) | ✅ Done (ddf77d4) |
-| page-factory appendAliases tests (5 cases) | ✅ Done (feat/mock-infrastructure) |
-| ConflictResolver (7 cases) | ✅ Done (feat/conflict-resolver) |
+| mock infrastructure (`createMockContext`) | ✅ Done (v1.14.0) |
+| source-analyzer core tests | ✅ Done (v1.14.0) |
+| page-factory appendAliases tests | ✅ Done (v1.14.0) |
+| ConflictResolver | ✅ Done (v1.14.0) |
 | wiki-engine ingestSource full path | ⬜ ~1 day |
 | query-engine core flow | ⬜ ~1 day |
 
@@ -82,21 +82,75 @@ Production-critical performance release. Extraction fundamentally rearchitected 
 - Good First Issue tagging (10min)
 - WIKI_SUBFOLDERS full migration in lint-fixes.ts frontmatter writes (10min)
 
-### Implemented (v1.11.0) — Full Issue Resolution & UX Hardening
+### Evaluated & Rejected
+
+| Proposal | Reason |
+|----------|--------|
+| Hexagonal Architecture (Port-Adapter) | Over-engineering for Obsidian plugin context |
+| Vector search (Ollama embeddings) | Requires infrastructure <1% of users have |
+| Hash-bucket dedup (O(n²)→O(n log n)) | No user-reported perf issue; solve when it hurts |
+| Anthropic prompt caching (Issue #38) | System prompts too small for 1024-token cache threshold |
+| API URL validation | Obsidian's requestUrl already validates; self-phishing impossible |
 
 ---
 
-## Current Status
+## Known Gaps (from Karpathy audit)
 
-### All P1/P2 Complete — v1.11.0 Milestone
+| # | Gap | Severity |
+|---|-----|----------|
+| 1 | Lint: no stale-claim detection | Medium |
+| 2 | Lint: no missing-important-page detection | Medium |
+| 3 | Lint: no suggested-questions output | Low |
+| 4 | Lint: batch fix without per-item review | Medium |
+| 5 | Ingest: no interactive "discuss key takeaways with user" before writing | Medium |
+| 6 | Query: output format limited to markdown (no tables/slides/charts) | Low |
+| 7 | Schema: rules-engine based, not co-evolved LLM instruction doc | Low |
 
-8 Issues closed. 6 ROADMAP improvements delivered. 113 tests.
+---
 
-**Remaining (P3):**
+## Planned (Postponed)
 
-| Action | Effort | Why |
-|--------|--------|-----|
-| #36 — Source title in frontmatter | 1h | Needs clarification from issue author |
+### Ingest Wizard + Lint Per-Item Review
+
+Karpathy: *"I like to do them one at a time, and be involved myself."*
+
+- **Ingest Wizard** — Step-by-step guided ingest with user review before writing
+- **Lint per-item review** — Preview LLM fix proposals before applying
+- **Proactive schema suggestions** — After ingest, flag new types outside schema categories
+- **Output format diversity** — Tables, comparison views
+
+### Long-term Vision
+
+| Feature | Description |
+|---------|-------------|
+| Wiki Health Dashboard | Obsidian custom view with growth, link density, contradiction trends |
+| Wiki Content Export | GraphML, JSON, static site formats |
+| Agent Mode | Full auto-maintain lifecycle, proactive suggestions |
+| Multi-modal Support | Images, PDF, audio/video knowledge extraction |
+
+---
+
+## Version Timeline
+
+| Version | Date | Key Features | Status |
+|---------|------|-------------|--------|
+| **v1.14.0** | 2026-06 | Architecture quality, test infrastructure, dual gate verification | Released |
+| **v1.13.0** | 2026-05 | Cross-type dedup, normalizeBatchResponse, aliases seeding, Three-No framework | Released |
+| **v1.12.6** | 2026-05 | Build verification fix, dependency pinning | Released |
+| **v1.12.0** | 2026-05 | Extraction rearchitected (~80% faster), dynamic batch limits, convergence detection | Released |
+| **v1.11.0** | 2026-05 | llmReady gating, cancel ingestion, ribbon icon, double-nested link fix | Released |
+| **v1.10.x** | 2026-05 | Aliases support, minimal/custom granularity, slug normalization | Released |
+| **v1.9.x** | 2026-05 | 4-layer pollution defense, code quality upgrade (B+→A-), lint report enhancements | Released |
+| **v1.8.x** | 2026-05 | Full i18n for 8 languages, dynamic download badge, rate limit detection | Released |
+| **v1.7.x** | 2026-05 | Code quality milestone, 20 releases, lint UI freeze fix, modular refactoring | Released |
+| **v1.6.x** | 2026-05 | Wiki output language, iterative batch extraction, query-to-wiki feedback | Released |
+| **v1.4.0** | 2026-04 | Schema layer, auto-maintenance, ESLint compliance | Released |
+| **v1.0.0** | 2026-04 | Multi-page generation, entity/concept extraction, bidirectional links | Released |
+| **v1.15.0** | TBD | Wiki engine full-path tests, query engine core flow | Planned |
+
+---
+
+**Maintainer:** Greener-Dalii
 
 **Evaluated & Rejected:**
 - #38 Anthropic prompt caching — system prompts too small for cache threshold; `cacheBreakpoint` already handles main savings

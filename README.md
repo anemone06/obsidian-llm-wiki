@@ -121,7 +121,7 @@ This project evolves rapidly — new features, bug fixes, and improvements are s
 
 **🦙 Ollama (local, no API key):** Install [Ollama](https://ollama.com), pull a model (`ollama pull gemma4`), select "Ollama (Local)" in the provider dropdown.
 
-> See [README_CN.md](docs/README_CN.md) for provider-specific instructions in Chinese.
+> See [Model Selection Guide](#-model-selection-guide) for details.
 
 ### 🎮 Usage
 
@@ -141,20 +141,22 @@ Re-ingesting the same source does incremental updates on entity/concept pages (n
 
 ### ⚠️ Upgrading from an Older Version?
 
-**New in v1.11.0**: Core features (ingest, lint, query) now require a successful connection test before they unlock. Existing users are automatically migrated — your saved configuration sets `llmReady = true` without any action needed. If you change providers or API keys, re-run Test Connection.
+**This release is fully backward-compatible.** v1.14.0 contains no breaking changes — your existing wiki pages, settings, and workflows are preserved. No reconfiguration or data migration needed.
 
-**If upgrading from before v1.11.0**, run **Lint Wiki** once to automatically fix historical issues:
+**If your existing Wiki was built across many versions**, some pages may lack recent capabilities (aliases, alias-aware dedup, modernized prompts). Run **Lint Wiki** to see what needs attention. Smart Fix All handles the most common cleanups in one click.
+
+**If upgrading from a version before v1.14.0**, run **Lint Wiki** once to automatically fix historical issues:
 - **Double-nested links** `[[[[entities/Foo|Foo]]]]` in log.md — Lint detects and fixes these with zero LLM cost
 - **Cross-directory stub duplicates** — pages that exist in both `entities/` and `concepts/` with the same slug are now correctly matched
 
-If you're upgrading from a version **before v1.7.11** (or much earlier), your existing Wiki pages were generated without several capabilities added over many releases. Follow these steps after upgrading to bring your Wiki up to date:
+**For wikis built across many versions**, follow these steps to bring your Wiki up to current standards:
 
 **1️⃣ Rebuild your index**
 `Cmd+P` → **"Regenerate index"** — This rebuilds `wiki/index.md` with alias entries for every page, enabling alias-aware search (e.g., searching "DSA" finds "DeepSeek-Sparse-Attention"). The old index format only listed page titles.
 
 **2️⃣ Run Lint wiki**
 `Cmd+P` → **"Lint wiki"** — This scans your entire Wiki and shows:
-- **🏷️ Missing aliases**: Pages without aliases (all pre-v1.7.11 pages). Click **"Complete Aliases"** — the LLM generates translations, acronyms, and alternate names in bulk. This is critical for duplicate detection.
+- **🏷️ Missing aliases**: Pages without aliases (any version, if you never ran "Complete Aliases"). Click **"Complete Aliases"** — the LLM generates translations, acronyms, and alternate names in bulk. This is critical for duplicate detection.
 - **🔄 Duplicate pages**: Pages with overlapping content (e.g., "CoT" vs "思维链" created by older versions that didn't have alias-aware dedup). Click **"Merge Duplicates"** to fuse them and preserve all aliases.
 - **💀 Dead links / Empty pages / Orphans**: Standard wiki maintenance issues.
 
@@ -163,21 +165,21 @@ Click **"Smart Fix All"** in the Lint report for a one-click, causality-ordered 
 
 **4️⃣ Enable parallel page generation**
 Settings → **Ingestion Acceleration**:
-- **⚡ Page Generation Concurrency**: Set to 3 for most providers (was 1/serial by default before v1.7.3). Speeds up ingestion 2–3× on sources with 10+ entities.
+- **⚡ Page Generation Concurrency**: Set to 3 for most providers. Speeds up ingestion 2–3× on sources with 10+ entities.
 - **⏱️ Batch Delay**: Start at 300ms. Increase to 500–800ms if you hit rate limits.
 
-**5️⃣ Review new settings (added since v1.4.0–v1.7.x):**
-- **🌐 Wiki Output Language** (v1.6.5): Independent from UI language — your Wiki can be in Chinese while the plugin UI stays in English, or vice versa.
-- **📊 Extraction Granularity** (v1.6.2, expanded in v1.10.0): Five options control how deeply the LLM extracts entities from sources:
+**5️⃣ Review current settings:**
+- **🌐 Wiki Output Language**: Independent from UI language — your Wiki can be in Chinese while the plugin UI stays in English, or vice versa.
+- **📊 Extraction Granularity**: Five options control how deeply the LLM extracts entities from sources:
   - **Fine** (~100 items) — Deep analysis, edge-case mentions included. High token cost, best for key sources.
   - **Standard** (~50 items) — Balanced extraction. Good default for daily notes.
   - **Coarse** (~10 items) — Quick overview, core entities only. Low cost, fast ingestion.
   - **Minimal** (~5 items) — Essential items only. Ideal for batch processing 100+ files or testing new sources.
   - **Custom** (1–300 items) — User-defined entity/concept limits for specialized workflows.
   > 💡 **Recommendation**: Use Minimal or Coarse for large folders to save time and API costs. Use Fine selectively on key documents that warrant deep analysis.
-- **🔄 Auto-Maintenance** (v1.4.0): Optional file watcher, periodic Lint, and startup health check. All default OFF — enable only if you want automatic background processing.
+- **🔄 Auto-Maintenance**: Optional file watcher, periodic Lint, and startup health check. All default OFF — enable only if you want automatic background processing.
 
-> **🛡️ Safety**: Parallel generation uses `Promise.allSettled` — if one page fails, others continue. Failed pages are retried individually with exponential backoff. Smart Batch Skip (v1.7.7) automatically detects already-ingested files to save time and API costs.
+> **🛡️ Safety**: Parallel generation uses `Promise.allSettled` — if one page fails, others continue. Failed pages are retried individually with exponential backoff. Smart Batch Skip automatically detects already-ingested files to save time and API costs.
 
 ---
 
@@ -452,29 +454,23 @@ Upgrade to v1.7.17+ — Lint now yields to Obsidian's UI thread every 50 pages, 
 
 ### 🔍 Troubleshooting
 
-**Why can't I use ingest/lint/query after installing? (v1.11.0)**
-The plugin now requires a successful connection test before core features unlock. Go to **Settings → Karpathy LLM Wiki** → pick a provider → enter your API key → click **Fetch Models** → select a model → click **Test Connection**. Once you see the green "LLM Ready" indicator, all features are available. This prevents silent failures from misconfigured providers.
+**Why can't I use ingest/lint/query after installing?**
+The plugin requires a successful connection test before core features unlock. Go to **Settings → Karpathy LLM Wiki** → pick a provider → enter your API key → click **Fetch Models** → select a model → click **Test Connection**. Once you see the green "LLM Ready" indicator, all features are available. This prevents silent failures from misconfigured providers.
 
-**How do I cancel a running ingestion or lint? (v1.11.0)**
+**How do I cancel a running ingestion or lint?**
 Click the status bar text during an operation (it shows "Ingesting... click to cancel"), or use `Ctrl+P` → "Cancel current ingestion". The operation stops cleanly at the next batch boundary, preserving all completed work.
 
-**How do I quickly ingest the file I'm currently editing? (v1.11.0)**
+**How do I quickly ingest the file I'm currently editing?**
 Click the `sticker` icon in the left ribbon bar, or use `Ctrl+P` → "Ingest current file". This skips the file picker and directly ingests the active editor tab.
 
-**What's new in v1.11.0?**
-See the [CHANGELOG](CHANGELOG.md) for full details. Highlights: guided LLM setup with connection test, cancel running operations, one-click ingest from ribbon, double-nested link auto-fix, 529 overload retry, and 8 closed GitHub issues.
-
 **I see `[[[[entities/Foo|Foo]]]]` double brackets in my log.md — how do I fix this?**
-This was a bug (#37) in versions before v1.11.0. Run **Lint Wiki** — the scanner now automatically detects and fixes all double-nested wiki-links across your entire wiki directory (including log.md) with zero LLM cost. No manual cleanup needed.
+Run **Lint Wiki** — the scanner now automatically detects and fixes all double-nested wiki-links across your entire wiki directory (including log.md) with zero LLM cost. No manual cleanup needed.
 
-**Why am I getting "Overloaded" errors that don't retry?**
-Versions before v1.11.0 didn't recognize Anthropic's 529 overload error as retryable. Fixed in v1.11.0 — overload errors are now automatically retried with exponential backoff across all providers.
+**Why am I getting "Overloaded" errors?**
+The plugin now recognizes Anthropic's 529 overload error as retryable. Overload errors are automatically retried with exponential backoff across all providers.
 
 **Why was a duplicate stub created when the page already exists in entities/ or concepts/?**
-Pre-v1.11.0 stub creation only matched exact titles. If "Machine Learning" existed as a concept but a broken link pointed to `entities/Machine-Learning`, a duplicate stub was created. v1.11.0 adds slug-based matching — different formatting of the same name now resolves to the existing page.
-
-**Why does the extraction now skip citation authors and study names?**
-v1.11.0 changed extraction criteria from "what appears in the text?" to "what deserves a wiki page?" — bibliographic references are now recognized as evidence containers rather than wiki-worthy entities. Their findings are extracted as concepts instead.
+The plugin now uses slug-based matching — different formatting of the same name resolves to the existing page instead of creating a duplicate stub.
 
 **Query can't find pages I know exist?**
 Three common causes: (1) Index is stale → **Regenerate index**. (2) Missing aliases → **Complete Aliases**. (3) Try different phrasing — LLM does semantic matching, not keyword search.
