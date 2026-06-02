@@ -1,26 +1,27 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-01
+**Last Updated:** 2026-06-02
 
 ---
 
-## Current Phase: v1.14.0 — Architecture Quality & Test Infrastructure
+## Current Phase: v1.15.0 — P1 + Selective P2 (Test Infrastructure)
 
-### Completed (v1.14.0)
-- ✅ **Model compatibility expansion (Issues #64/#65)**: DeepSeek-R1, QwQ (reasoning models), and LM Studio fully supported. Think token stripping removes reasoning blocks. LM Studio compatibility removes unsupported `response_format: json_object`.
-- ✅ **Test infrastructure expansion**: Mock infrastructure (`createMockContext`, `createMockFile`) enables unit testing of core engine modules without Obsidian runtime. Total tests doubled from ~200 to 400 (+200 tests).
-- ✅ **TypeScript type safety complete**: Fixed 8 type errors in `page-factory-core.test.ts`. Project achieves TypeScript strict mode compliance.
-- ✅ **Dual Gate Verification Mechanism**: Upgraded quality gates to require both ESLint and TypeScript passing (0 errors + 0 warnings each). ESLint alone insufficient for type safety.
-- ✅ **Core architecture refactoring**: Extracted 4 pure function modules to `src/core/`: conflict-resolver (136 lines), dead-link-detector (95 lines), orphan-matcher (82 lines), prompt-builders (104 lines).
-- ✅ **Constants centralization**: Centralized 30+ scattered magic numbers into `src/constants.ts` (192 lines). Activated semantic constants: WIKI_SUBFOLDERS, notice durations, token budgets.
-- ✅ **Query engine stability**: Page content loading capped at 3000 tokens in `loadRelevantPages` to prevent overflow.
-- ✅ **Documentation upgrades**: TDD Standard, Development Protocol, ROADMAP architecture quality plan, Dual Gate Verification documentation.
-- ✅ **Code quality**: 2576 lines added, 503 lines removed across 44 files. Zero side effects, zero breaking changes.
-- ✅ **400 tests** across 17 test files (+200 since v1.13.0).
+### Completed (v1.15.0)
+- ✅ **`parseSSEEvents` shared extraction** (Issue #207): Pure function module, 11 tests, used by both `AnthropicCompatibleClient` and `OpenAICompatibleClient`. -36 lines.
+- ✅ **`AnthropicClient` truncation tests** (Issue #208): 9 new tests via `vi.mock('@anthropic-ai/sdk')`. Coverage: truncation detection, no-retry on non-max_tokens, outer withRetry, prefill brace restoration, MAX_TOKENS_BATCH cap, cacheBreakpoint passthrough.
+- ✅ **`withTruncationRetry` shared helper** (Issue #211): Pure function module, 7 tests. Eliminated 3 duplicate truncation-retry blocks across LLM clients. -3 lines.
+- ✅ **Issue #80 wiki init UX**: Auto-init wiki on LLM Ready + status indicator. Defensive `createFolder` in `regenerateDefaultSchema`. 8-language i18n.
+- ✅ **`isWikiInitialized` DRY fix**: Extracted from `settings.ts` (2 duplicate sites → 1 method). 10 new tests cover IO check, auto-init, schema button, defensive createFolder.
+- ✅ **Streaming architecture investigation**: Documented in memory + ROADMAP P3. Root cause: commit `13e5777` replaced OpenAI SDK with `requestUrl` for "CORS" (pseudo-reason — Electron actually bypasses CORS). Only Anthropic official has true streaming.
+- ✅ **453 tests** across 22 test files (+53 since v1.14.0).
+
+### Deferred to P3 (high mock complexity — current ROI insufficient)
+- ⏸ wiki-engine `ingestSource` full-path tests (P2 #4 → P3 #14): requires Obsidian App + 5 submodule mocks
+- ⏸ query-engine core flow tests (P2 #5 → P3 #15): requires Modal + MarkdownRenderer + DOM mocks
 
 ### Earlier Releases
 
-Complete version history (v1.13.0 → v1.0.0) is maintained in [ROADMAP.md](ROADMAP.md). CLAUDE.md tracks only the current phase and active work items.
+Complete version history (v1.14.0 → v1.0.0) is maintained in [ROADMAP.md](ROADMAP.md). CLAUDE.md tracks only the current phase and active work items.
 
 ### P0 — In Progress
 

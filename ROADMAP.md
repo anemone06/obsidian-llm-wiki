@@ -72,16 +72,16 @@ Production-critical performance release. Extraction fundamentally rearchitected 
 
 | # | Item | Source | Effort | Status |
 |---|------|--------|--------|--------|
-| 2 | Extract `parseSSEEvents` shared function | Model Audit B #2 | 1.5h | ⬜ |
-| 3 | Add `AnthropicClient` truncation retry tests | Audit consensus | 30min | ⬜ |
+| 2 | Extract `parseSSEEvents` shared function | Model Audit B #2 | 1.5h | ✅ |
+| 3 | Add `AnthropicClient` truncation retry tests | Audit consensus | 30min | ✅ |
 
 **P2 — Core Engine Tests (Next Week)**
 
 | # | Item | Source | Effort | Status |
 |---|------|--------|--------|--------|
-| 4 | wiki-engine `ingestSource` full-path tests | 7th audit repeat | 2-3d | ⬜ |
-| 5 | query-engine core flow tests (Layer 1/2/3) | Audit consensus | 1-2d | ⬜ |
-| 6 | Extract `withTruncationRetry` helper | Model Audit B #2 | 1h | ⬜ |
+| 4 | wiki-engine `ingestSource` full-path tests | 7th audit repeat | 2-3d | ⬜ **Deferred to P3** |
+| 5 | query-engine core flow tests (Layer 1/2/3) | Audit consensus | 1-2d | ⬜ **Deferred to P3** |
+| 6 | Extract `withTruncationRetry` helper | Model Audit B #2 | 1h | ✅ |
 
 **P3 — Architecture Refactoring (v1.16.0+)**
 
@@ -94,11 +94,25 @@ Production-critical performance release. Extraction fundamentally rearchitected 
 | 11 | `parseJsonResponse` 内部 strip think blocks | Second audit | 15min | ⬜ |
 | 12 | `disable_thinking` interface + per-client implementation | Issue #72 | 2-3h | ⬜ |
 | 13 | Restore true streaming for 3rd-party providers (fetch + ReadableStream or SDK option) | User UX feedback 2026-06-02 | 1-2d | ⬜ Deferred |
+| 14 | wiki-engine `ingestSource` full-path integration tests (deferred from P2 — requires heavy Obsidian App + 5 submodule mocks) | 7th audit repeat | 2-3d | ⬜ Deferred |
+| 15 | query-engine core flow tests (deferred from P2 — requires Modal + MarkdownRenderer + DOM + LLMWikiPlugin mocks) | Audit consensus | 1-2d | ⬜ Deferred |
 
 **Second Audit Deep Findings (2026-06-02):**
 - `source-analyzer.ts:113` shadows `MAX_TOKENS_BATCH` with local `MAX_TOKENS = 16000`
 - `parseJsonResponse` (11 call sites) lacks think-block stripping — `extractBalancedJson` can silently extract wrong JSON from `<think>` reasoning pseudocode
 - `disable_thinking?: boolean` on `LLMClient.createMessage` with provider-specific mapping (LM Studio `model_kwargs` vs Anthropic `thinking.type`) is the cleanest #72 fix
+
+**Completed (v1.15.0 — P1 + selective P2)**
+- ✅ `parseSSEEvents` shared function extraction (#2) — pure function, 11 tests
+- ✅ `AnthropicClient` truncation retry tests (#3) — 9 tests, all paths covered
+- ✅ `withTruncationRetry` helper extraction (#6) — pure function, 7 tests
+- ✅ Issue #80 wiki init UX (auto-init on LLM Ready + status indicator)
+- ✅ `isWikiInitialized` helper extraction (DRY fix in settings.ts) + 10 tests
+- ✅ Streaming architecture investigation (P3 #13 documented for future)
+
+**Deferred from P2 (too complex for current ROI):**
+- ⏸ wiki-engine `ingestSource` full-path tests — requires Obsidian App + 5 submodule mocks
+- ⏸ query-engine core flow tests — requires Modal + MarkdownRenderer + DOM mocks
 
 **Completed (v1.14.0)**
 - ✅ `withRetry` nested retry fix (3×→1× calls)
