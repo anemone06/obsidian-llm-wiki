@@ -193,16 +193,23 @@ to silence it. Re-run all four gates after each fix.
 2. Update relevant docs and memory
 3. Present change summary for user review
 4. Commit locally after user approval (do NOT push directly to main)
-5. When ready to push: create a feature branch, push the branch, create a PR, merge via GitHub UI
-6. Main branch is protected — direct pushes are rejected
+5. When ready to push: create a feature branch, push the branch, create a PR, **merge via `gh pr merge`** (or GitHub UI)
+6. After PR merge: pull main, create tag (NO `v` prefix), push tag
+7. Wait for GitHub Actions to create Draft Release
+8. Generate release notes (via `/obsidian-plugin-release` skill)
+9. **Main branch is protected** — direct pushes are rejected with `GH013`
 
 ```bash
 # Push workflow (main is protected)
-git checkout -b feat/short-description
-git push origin feat/short-description
-gh pr create --title "feat: description" --body "## Summary\n...\n\n## Test plan\n- [x] ..." --base main
+git checkout -b chore/vX.Y.Z-release
+git push origin chore/vX.Y.Z-release
+gh pr create --title "chore: bump version to X.Y.Z" --body "## Summary\n...\n\n## Test plan\n- [x] ..." --base main
 gh pr merge <PR#> --merge --delete-branch
 git checkout main && git pull origin main
+
+# Tag (after PR merge, NO 'v' prefix)
+git tag -a X.Y.Z -m "X.Y.Z"
+git push origin X.Y.Z
 ```
 
 ## Tag & Release workflow
