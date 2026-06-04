@@ -55,8 +55,8 @@ export const EN_TEXTS = {
     lmstudioHint: 'LM Studio runs locally, API Key is optional',
 
     // LLM execution cap
-    maxTokensPerCallName: 'Max Tokens Per Call',
-    maxTokensPerCallDesc: 'Cap LLM output for local models. 0 = no cap (cloud default). 4K/8K recommended for LM Studio / Ollama.',
+    maxTokensPerCallName: 'Context Window',
+    maxTokensPerCallDesc: 'Limit generation tokens to fit your model\'s context window. 0 = no cap (cloud default).',
 
     // Model Selection
     modelSection: 'Model Selection',

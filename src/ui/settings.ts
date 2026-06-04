@@ -388,8 +388,8 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     // Issue #75: max tokens per call — shown for local/custom providers only
     const localLikeProviders = ['ollama', 'lmstudio', 'custom', 'anthropic-compatible'];
     if (localLikeProviders.includes(this.tempSettings.provider)) {
-      const tokenOptions = [0, 1024, 2048, 4096, 8192, 16384, 32768];
-      const tokenLabels = ['0 (No limit)', '1K', '2K', '4K', '8K', '16K', '32K'];
+      const tokenOptions = [0, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576];
+      const tokenLabels = ['0 (No limit)', '4K', '8K', '16K', '32K', '64K', '128K', '256K', '512K', '1M'];
       const currentVal = this.tempSettings.maxTokensPerCall ?? 0;
       new Setting(containerEl)
         .setName(this.getText('maxTokensPerCallName'))

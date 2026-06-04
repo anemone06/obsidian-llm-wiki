@@ -52,8 +52,8 @@ export const DE_TEXTS = {
     // Ollama Hint
     ollamaHint: 'Ollama läuft lokal, kein API-Schlüssel erforderlich',
     lmstudioHint: 'LM Studio läuft lokal, API-Key ist optional',
-    maxTokensPerCallName: 'Max. Tokens pro Aufruf',
-    maxTokensPerCallDesc: 'LLM-Ausgabe für lokale Modelle begrenzen. 0 = kein Limit (Cloud-Standard). 4K/8K empfohlen für LM Studio/Ollama.',
+    maxTokensPerCallName: 'Kontextfenster',
+    maxTokensPerCallDesc: 'Tokens an das Kontextfenster des Modells anpassen. 0 = kein Limit (Cloud).',
 
     // Model Selection
     modelSection: 'Modellauswahl',
