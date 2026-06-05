@@ -1,4 +1,3 @@
-import Anthropic from '@anthropic-ai/sdk';
 import { requestUrl } from 'obsidian';
 import { LLMClient } from './types';
 import { MAX_RETRIES, RETRY_BASE_DELAY_MS, MAX_TOKENS_BATCH } from './constants';
@@ -228,15 +227,13 @@ export class AnthropicCompatibleClient implements LLMClient {
   }
 }
 export class AnthropicClient implements LLMClient {
-  private client: Anthropic;
   private apiKey: string;
+  private baseUrl: string;
+  private apiVersion = '2023-06-01';
 
   constructor(apiKey: string, baseUrl?: string) {
     this.apiKey = apiKey;
-    this.client = new Anthropic({
-      apiKey,
-      ...(baseUrl ? { baseURL: baseUrl } : {})
-    });
+    this.baseUrl = baseUrl || 'https://api.anthropic.com';
   }
 
   async createMessage(params: {
@@ -248,47 +245,74 @@ export class AnthropicClient implements LLMClient {
     cacheBreakpoint?: number;
     maxTokensPerCall?: number;
   }): Promise<string> {
-    // Support prompt caching: split first user message at cacheBreakpoint
-    const messages = params.messages.map((msg, idx) => {
-      if (idx === 0 && msg.role === 'user' && params.cacheBreakpoint &&
-          params.cacheBreakpoint > 0 && params.cacheBreakpoint < msg.content.length) {
-        const cached = msg.content.substring(0, params.cacheBreakpoint);
-        const rest = msg.content.substring(params.cacheBreakpoint);
-        return {
-          role: 'user' as const,
-          content: [
-            { type: 'text' as const, text: cached, cache_control: { type: 'ephemeral' as const } },
-            { type: 'text' as const, text: rest }
-          ]
-        };
-      }
-      return msg;
-    });
+    const messages: Array<Record<string, unknown>> = params.response_format?.type === 'json_object'
+      ? [...params.messages, { role: 'assistant', content: '{' }]
+      : [...params.messages];
 
-    const finalMessages = params.response_format?.type === 'json_object'
-      ? [...messages, { role: 'assistant' as const, content: '{' }]
-      : messages;
+    if (params.cacheBreakpoint && params.cacheBreakpoint > 0 && messages.length > 0) {
+      const first = messages[0];
+      if (first.role === 'user' && typeof first.content === 'string' &&
+          params.cacheBreakpoint < first.content.length) {
+        const text = first.content;
+        first.content = [
+          { type: 'text', text: text.substring(0, params.cacheBreakpoint), cache_control: { type: 'ephemeral' } },
+          { type: 'text', text: text.substring(params.cacheBreakpoint) },
+        ];
+      }
+    }
+
+    const body: Record<string, unknown> = {
+      model: params.model,
+      max_tokens: params.max_tokens,
+      messages,
+    };
+    if (params.system) body.system = params.system;
 
     return withRetry(async () => {
-      const initialResponse = await this.client.messages.create({
-        model: params.model,
-        max_tokens: params.max_tokens,
-        system: params.system || undefined,
-        messages: finalMessages
+      const response = await requestUrl({
+        url: `${this.baseUrl}/messages`,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'Anthropic-Version': this.apiVersion,
+        },
+        body: JSON.stringify(body),
       });
 
+      const data = response.json as {
+        content?: Array<{ type: string; text?: string }>;
+        stop_reason?: string;
+        error?: { message: string };
+      };
+
+      if (data.error) throw new Error(`status ${response.status}: ${data.error.message}`);
+
       const text = await withTruncationRetry({
-        initialFn: async () => initialResponse,
-        retryFn: async (retryTokens) => this.client.messages.create({
-          model: params.model,
-          max_tokens: retryTokens,
-          system: params.system || undefined,
-          messages: finalMessages
-        }),
+        initialFn: async () => data,
+        retryFn: async (retryTokens) => {
+          const retryResponse = await requestUrl({
+            url: `${this.baseUrl}/messages`,
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': this.apiKey,
+              'Anthropic-Version': this.apiVersion,
+            },
+            body: JSON.stringify({ ...body, max_tokens: retryTokens }),
+          });
+          const retryData = retryResponse.json as {
+            content?: Array<{ type: string; text?: string }>;
+            stop_reason?: string;
+            error?: { message: string };
+          };
+          if (retryData.error) throw new Error(`status ${retryResponse.status}: ${retryData.error.message}`);
+          return retryData;
+        },
         isTruncated: (r) => r.stop_reason === 'max_tokens',
         extractText: (r) => {
-          const block = r.content.find(c => c.type === 'text');
-          return block && 'text' in block ? block.text : '';
+          const block = r.content?.find(c => c.type === 'text');
+          return block && 'text' in block ? block.text || '' : '';
         },
         getMaxTokens: () => params.max_tokens,
         getStopReason: (r) => r.stop_reason,
@@ -296,7 +320,6 @@ export class AnthropicClient implements LLMClient {
         label: 'Anthropic API',
       });
 
-      // Safety: if prefill { was stripped by the provider, restore it
       if (params.response_format?.type === 'json_object' && text.length > 0 && text[0] !== '{') {
         return '{' + text;
       }
@@ -321,21 +344,31 @@ export class AnthropicClient implements LLMClient {
           }
         ];
 
-    const stream = this.client.messages.stream({
-      model: params.model,
-      max_tokens: params.max_tokens,
-      system: params.system || undefined,
-      messages: messagesWithLanguageHint as Anthropic.MessageParam[]
-    });
+    const responseText = await requestUrl({
+      url: `${this.baseUrl}/messages`,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': this.apiKey,
+        'Anthropic-Version': this.apiVersion,
+      },
+      body: JSON.stringify({
+        model: params.model,
+        max_tokens: params.max_tokens,
+        system: params.system || undefined,
+        messages: messagesWithLanguageHint,
+        stream: true,
+      }),
+    }).then(r => r.text);
 
+    const deltas = parseSSEEvents(responseText, 'anthropic');
     let fullResponse = '';
-
-    stream.on('text', (text) => {
-      fullResponse += text;
-      params.onChunk(text);
-    });
-
-    await stream.finalMessage();
+    for (const d of deltas) {
+      if (d.text) {
+        fullResponse += d.text;
+        params.onChunk(d.text);
+      }
+    }
     return fullResponse;
   }
 

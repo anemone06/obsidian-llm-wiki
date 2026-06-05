@@ -1,21 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { requestUrl } from 'obsidian';
 
-// Mock the Anthropic SDK at the module level. The factory runs before AnthropicClient
-// is loaded, so the constructor's `new Anthropic({...})` call receives our mock.
-const mockMessagesCreate = vi.fn();
-vi.mock('@anthropic-ai/sdk', () => {
-  return {
-    default: class MockAnthropic {
-      messages = { create: mockMessagesCreate };
-      // Constructor receives { apiKey, baseURL? } — just store for inspection
-      constructor(_config: { apiKey: string; baseURL?: string }) {
-        // no-op; mockMessagesCreate is what tests assert against
-      }
-    }
-  };
-});
-
 import { AnthropicClient, AnthropicCompatibleClient, OpenAICompatibleClient } from '../llm-client';
 
 const mockRequestUrl = vi.mocked(requestUrl);
@@ -197,23 +182,13 @@ describe('OpenAICompatibleClient.createMessage', () => {
   });
 });
 
-// Helper: build a mock Anthropic SDK response (mirrors the SDK's Message shape)
-function makeAnthropicSdkResponse(text: string, stopReason: string | null = 'end_turn') {
-  return {
-    content: [{ type: 'text', text }],
-    stop_reason: stopReason,
-  };
-}
-
 describe('AnthropicClient.createMessage', () => {
   beforeEach(() => {
-    mockMessagesCreate.mockClear();
+    mockRequestUrl.mockClear();
   });
 
   it('returns text on successful non-truncated response', async () => {
-    mockMessagesCreate.mockResolvedValueOnce(
-      makeAnthropicSdkResponse('Hello world', 'end_turn')
-    );
+    mockRequestUrl.mockResolvedValueOnce(makeAnthropicResponse('Hello world', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     const result = await client.createMessage({
@@ -223,13 +198,13 @@ describe('AnthropicClient.createMessage', () => {
     });
 
     expect(result).toBe('Hello world');
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(1);
+    expect(mockRequestUrl).toHaveBeenCalledTimes(1);
   });
 
   it('detects truncation (stop_reason=max_tokens) and retries with doubled max_tokens', async () => {
-    mockMessagesCreate
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('Hello', 'max_tokens'))
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('Hello world', 'end_turn'));
+    mockRequestUrl
+      .mockResolvedValueOnce(makeAnthropicResponse('Hello', 'max_tokens'))
+      .mockResolvedValueOnce(makeAnthropicResponse('Hello world', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     const result = await client.createMessage({
@@ -239,17 +214,15 @@ describe('AnthropicClient.createMessage', () => {
     });
 
     expect(result).toBe('Hello world');
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(2);
+    expect(mockRequestUrl).toHaveBeenCalledTimes(2);
 
-    // Second call should use doubled max_tokens
-    const retryCall = mockMessagesCreate.mock.calls[1][0] as { max_tokens: number };
-    expect(retryCall.max_tokens).toBe(200);
+    const retryCall = mockRequestUrl.mock.calls[1][0] as { body: string };
+    const retryBody = JSON.parse(retryCall.body) as { max_tokens: number };
+    expect(retryBody.max_tokens).toBe(200);
   });
 
   it('does not retry when stop_reason is not max_tokens (e.g. end_turn, stop_sequence)', async () => {
-    mockMessagesCreate.mockResolvedValueOnce(
-      makeAnthropicSdkResponse('Complete answer', 'end_turn')
-    );
+    mockRequestUrl.mockResolvedValueOnce(makeAnthropicResponse('Complete answer', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     const result = await client.createMessage({
@@ -259,13 +232,13 @@ describe('AnthropicClient.createMessage', () => {
     });
 
     expect(result).toBe('Complete answer');
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(1); // no retry
+    expect(mockRequestUrl).toHaveBeenCalledTimes(1); // no retry
   });
 
   it('outer retry on retryable network error (status 500)', async () => {
-    mockMessagesCreate
+    mockRequestUrl
       .mockRejectedValueOnce(new Error('status 500: server error'))
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('Hello', 'end_turn'));
+      .mockResolvedValueOnce(makeAnthropicResponse('Hello', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     const result = await client.createMessage({
@@ -275,11 +248,11 @@ describe('AnthropicClient.createMessage', () => {
     });
 
     expect(result).toBe('Hello');
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(2);
+    expect(mockRequestUrl).toHaveBeenCalledTimes(2);
   });
 
   it('does not retry on non-retryable error (status 400)', async () => {
-    mockMessagesCreate.mockRejectedValueOnce(new Error('status 400: bad request'));
+    mockRequestUrl.mockRejectedValueOnce(new Error('status 400: bad request'));
 
     const client = new AnthropicClient('test-key');
     await expect(client.createMessage({
@@ -288,15 +261,13 @@ describe('AnthropicClient.createMessage', () => {
       messages: [{ role: 'user', content: 'hi' }],
     })).rejects.toThrow('status 400: bad request');
 
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(1);
+    expect(mockRequestUrl).toHaveBeenCalledTimes(1);
   });
 
   it('restores prefill brace if stripped by provider in truncation retry path', async () => {
-    // First call: truncated, response starts with content (no leading {)
-    mockMessagesCreate
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('"key": "value"}', 'max_tokens'))
-      // Retry call: successful, again stripped leading {
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('"key": "value"}', 'end_turn'));
+    mockRequestUrl
+      .mockResolvedValueOnce(makeAnthropicResponse('"key": "value"}', 'max_tokens'))
+      .mockResolvedValueOnce(makeAnthropicResponse('"key": "value"}', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     const result = await client.createMessage({
@@ -306,15 +277,14 @@ describe('AnthropicClient.createMessage', () => {
       response_format: { type: 'json_object' },
     });
 
-    // Both responses are missing leading { — both should be restored
     expect(result).toBe('{"key": "value"}');
-    expect(mockMessagesCreate).toHaveBeenCalledTimes(2);
+    expect(mockRequestUrl).toHaveBeenCalledTimes(2);
   });
 
   it('caps retry max_tokens at MAX_TOKENS_BATCH (16000) when doubled exceeds it', async () => {
-    mockMessagesCreate
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('truncated', 'max_tokens'))
-      .mockResolvedValueOnce(makeAnthropicSdkResponse('full response', 'end_turn'));
+    mockRequestUrl
+      .mockResolvedValueOnce(makeAnthropicResponse('truncated', 'max_tokens'))
+      .mockResolvedValueOnce(makeAnthropicResponse('full response', 'end_turn'));
 
     const client = new AnthropicClient('test-key');
     await client.createMessage({
@@ -323,13 +293,14 @@ describe('AnthropicClient.createMessage', () => {
       messages: [{ role: 'user', content: 'hi' }],
     });
 
-    const retryCall = mockMessagesCreate.mock.calls[1][0] as { max_tokens: number };
-    expect(retryCall.max_tokens).toBe(16000);
+    const retryCall = mockRequestUrl.mock.calls[1][0] as { body: string };
+    const retryBody = JSON.parse(retryCall.body) as { max_tokens: number };
+    expect(retryBody.max_tokens).toBe(16000);
   });
 
   it('passes through response_format prefill brace correctly when not truncated', async () => {
-    mockMessagesCreate.mockResolvedValueOnce(
-      makeAnthropicSdkResponse('"key": "value"}', 'end_turn') // missing leading {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeAnthropicResponse('"key": "value"}', 'end_turn')
     );
 
     const client = new AnthropicClient('test-key');
@@ -343,9 +314,9 @@ describe('AnthropicClient.createMessage', () => {
     expect(result).toBe('{"key": "value"}');
   });
 
-  it('passes cacheBreakpoint through to messages.create', async () => {
-    mockMessagesCreate.mockResolvedValueOnce(
-      makeAnthropicSdkResponse('cached response', 'end_turn')
+  it('passes cacheBreakpoint through to request body', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeAnthropicResponse('cached response', 'end_turn')
     );
 
     const client = new AnthropicClient('test-key');
@@ -358,10 +329,11 @@ describe('AnthropicClient.createMessage', () => {
       cacheBreakpoint: 10,
     });
 
-    const callArgs = mockMessagesCreate.mock.calls[0][0] as { messages: unknown[] };
-    expect(callArgs.messages).toHaveLength(1);
-    // After caching split, single message becomes array of content blocks
-    const firstMsg = callArgs.messages[0] as { content: unknown };
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { messages: Array<{ content: unknown; role: string }> };
+    expect(body.messages).toHaveLength(1);
+    const firstMsg = body.messages[0];
     expect(Array.isArray(firstMsg.content)).toBe(true);
+    expect((firstMsg.content as Array<unknown>)[0]).toHaveProperty('cache_control');
   });
 });

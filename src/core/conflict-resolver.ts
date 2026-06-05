@@ -48,9 +48,9 @@ function oppositeFolder(pageType: PageType): string {
 /** Return the slug-match key for a page: its title's slug + its alias slugs. */
 function slugMatchKeys(page: PageRef): Set<string> {
   const keys = new Set<string>();
-  keys.add(computeSlug(page.title).toLowerCase());
+  keys.add(computeSlug(page.title));
   for (const alias of page.aliases || []) {
-    keys.add(computeSlug(alias).toLowerCase());
+    keys.add(computeSlug(alias));
   }
   return keys;
 }

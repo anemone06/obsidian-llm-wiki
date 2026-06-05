@@ -62,7 +62,7 @@ export function computeSlug(text: string): string {
 
   if (finalSlug.length === 0) return 'untitled-' + Date.now();
 
-  return finalSlug;
+  return finalSlug.toLowerCase();
 }
 
 // Filter out aliases that are redundant against a page's own filename.
@@ -890,13 +890,13 @@ export function matchExtractedToExisting(
   // Precompute slug values silently — page titles and aliases don't change
   const pageSlugs = existingPages.map(p => ({
     title: p.title,
-    slug: computeSlug(p.title).toLowerCase(),
-    aliasSlugs: (p.aliases || []).map(a => computeSlug(a).toLowerCase()),
+    slug: computeSlug(p.title),
+    aliasSlugs: (p.aliases || []).map(a => computeSlug(a)),
   }));
 
   const matched = new Set<string>();
   for (const name of extractedNames) {
-    const targetSlug = computeSlug(name).toLowerCase();
+    const targetSlug = computeSlug(name);
     const match = pageSlugs.find(p =>
       p.slug === targetSlug ||
       p.aliasSlugs.some(a => a === targetSlug)

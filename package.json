@@ -1,6 +1,6 @@
 {
   "name": "karpathywiki",
-  "version": "1.16.0",
+  "version": "1.16.1",
   "packageManager": "pnpm@10.14.0",
   "description": "Karpathy's LLM Wiki implementation - multi-page knowledge generation with conversational query",
   "main": "main.js",
@@ -36,9 +36,6 @@
     "tslib": "2.4.0",
     "typescript": "5.9.3",
     "vitest": "4.1.6"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "0.24.3"
   },
   "pnpm": {
     "onlyBuiltDependencies": ["esbuild"],
