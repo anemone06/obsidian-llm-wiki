@@ -8,16 +8,32 @@ import { vi } from 'vitest';
 // eslint-disable-next-line obsidianmd/no-global-this
 globalThis.window = globalThis;
 
+// NoticeMock hoisted to top of file so vi.mock factory can reference it
+const { NoticeMock } = vi.hoisted(() => {
+  class NoticeMock {
+    static instances: Array<{ message: string; hidden: boolean }> = [];
+    private _message: string;
+    constructor(message: string, _timeout?: number) {
+      this._message = message;
+      NoticeMock.instances.push({ message, hidden: false });
+      // Testing: console intentionally not used
+    }
+    setMessage(message: string): void {
+      this._message = message;
+    }
+    hide(): void {
+      const last = NoticeMock.instances[NoticeMock.instances.length - 1];
+      if (last) last.hidden = true;
+    }
+  }
+  return { NoticeMock };
+});
+
 // Mock obsidian module globally — all tests inherit this
 vi.mock('obsidian', () => ({
   // Basic exports
   normalizePath: (path: string) => path,
-  // Notice class
-  Notice: class {
-    constructor(message: string, timeout?: number) {
-      // Testing: console intentionally not used
-    }
-  },
+  Notice: NoticeMock,
   // TFile/TFolder stubs
   TFile: class {
     path = '';

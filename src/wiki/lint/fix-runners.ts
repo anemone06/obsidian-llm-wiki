@@ -10,10 +10,23 @@ import { parseJsonResponse, detectRateLimitFailures, formatRateLimitNotice } fro
 import { TOKENS_LINT_ALIAS_BATCH, NOTICE_ERROR, NOTICE_RATE_LIMIT } from '../../constants';
 import { buildWikiLanguageDirective } from '../system-prompts';
 
+// Issue #94: Status bar "click to cancel" already exists, but the fix-runner
+// functions in this module previously never received the AbortSignal. Each
+// runner must check `signal.aborted` at entry and inside its loop. Without
+// this, users could click the status bar during a long fix phase and the
+// LLM calls inside the runners would keep running to completion.
+function checkCancelled(signal: AbortSignal | undefined): void {
+  if (signal?.aborted) {
+    throw new DOMException('Lint cancelled by user', 'AbortError');
+  }
+}
+
 export async function runAliasCompletion(
   ctx: LintContext,
+  signal: AbortSignal | undefined,
   aliasDeficientPages: Array<{ path: string; content: string; basename: string }>,
 ): Promise<{ filled: number; results: string[] }> {
+  checkCancelled(signal);
   const client = ctx.llmClient;
   if (!client) return { filled: 0, results: [] };
 
@@ -28,7 +41,9 @@ export async function runAliasCompletion(
   const aliasStartTime = Date.now();
   const aliasFailures: Array<{ name: string; reason: string }> = [];
 
-  for (let i = 0; i < aliasDeficientPages.length; i += concurrency) {
+  try {
+    for (let i = 0; i < aliasDeficientPages.length; i += concurrency) {
+    checkCancelled(signal);
     const batch = aliasDeficientPages.slice(i, i + concurrency);
     const batchNum = Math.floor(i / concurrency) + 1;
     const batchStartTime = Date.now();
@@ -109,6 +124,9 @@ export async function runAliasCompletion(
       await new Promise(resolve => window.setTimeout(resolve, ctx.settings.batchDelayMs ?? 300));
     }
   }
+  } finally {
+    fixNotice.hide();
+  }
 
   // Rate-limit detection for alias completion
   const aliasRateInfo = detectRateLimitFailures(aliasFailures, concurrency, ctx.settings.batchDelayMs ?? 300);
@@ -118,7 +136,6 @@ export async function runAliasCompletion(
     new Notice(formatRateLimitNotice(aliasRateInfo, ctx.settings.language), NOTICE_RATE_LIMIT);
   }
 
-  fixNotice.hide();
   const totalTime = Date.now() - aliasStartTime;
   console.debug(`[Alias] All done — success=${filled}, fail=${aliasDeficientPages.length - filled}, totalTime=${totalTime}ms`);
   return { filled, results };
@@ -126,8 +143,10 @@ export async function runAliasCompletion(
 
 export async function runDeadLinkFixes(
   ctx: LintContext,
+  signal: AbortSignal | undefined,
   deadLinks: Array<{ source: string; target: string }>,
 ): Promise<{ fixed: number; results: string[] }> {
+  checkCancelled(signal);
   const t = TEXTS[ctx.settings.language];
   const seen = new Set<string>();
   const unique = deadLinks.filter(dl => {
@@ -139,107 +158,131 @@ export async function runDeadLinkFixes(
   let fixed = 0;
   const results: string[] = [];
   const fixNotice = new Notice('', 0);
-  for (let i = 0; i < unique.length; i++) {
-    const dl = unique[i];
-    fixNotice.setMessage(t.lintFixProgress.replace('{current}', String(i + 1)).replace('{total}', String(unique.length)).replace('{target}', dl.target));
-    console.debug(`lintFix: dead link ${i + 1}/${unique.length}: ${dl.source} -> ${dl.target}`);
-    try {
-      const sourcePath = `${ctx.settings.wikiFolder}/${dl.source}.md`;
-      const result = await ctx.wikiEngine.fixDeadLink(sourcePath, dl.target);
-      console.debug(`Dead link fix: ${dl.source} -> ${dl.target}: ${result}`);
-      if (!result.includes(t.lintFixNoAction)) {
-        fixed++;
-        results.push(`- [[${dl.source}]]: \`[[${dl.target}]]\` → ${result}`);
+  try {
+    for (let i = 0; i < unique.length; i++) {
+      checkCancelled(signal);
+      const dl = unique[i];
+      fixNotice.setMessage(t.lintFixProgress.replace('{current}', String(i + 1)).replace('{total}', String(unique.length)).replace('{target}', dl.target));
+      console.debug(`lintFix: dead link ${i + 1}/${unique.length}: ${dl.source} -> ${dl.target}`);
+      try {
+        const sourcePath = `${ctx.settings.wikiFolder}/${dl.source}.md`;
+        const result = await ctx.wikiEngine.fixDeadLink(sourcePath, dl.target);
+        console.debug(`Dead link fix: ${dl.source} -> ${dl.target}: ${result}`);
+        if (!result.includes(t.lintFixNoAction)) {
+          fixed++;
+          results.push(`- [[${dl.source}]]: \`[[${dl.target}]]\` → ${result}`);
+        }
+      } catch (e) {
+        console.error(`Failed to fix dead link: ${dl.source} -> ${dl.target}`, e);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        new Notice(t.lintFixItemFailed.replace('{target}', dl.target).replace('{error}', errMsg), NOTICE_ERROR);
       }
-    } catch (e) {
-      console.error(`Failed to fix dead link: ${dl.source} -> ${dl.target}`, e);
-      const errMsg = e instanceof Error ? e.message : String(e);
-      new Notice(t.lintFixItemFailed.replace('{target}', dl.target).replace('{error}', errMsg), NOTICE_ERROR);
     }
+  } finally {
+    // Simplify Phase 1.3: dismiss the persistent Notice even on AbortError,
+    // otherwise it stays on the status bar forever (zero-timeout Notice).
+    fixNotice.hide();
   }
-  fixNotice.hide();
   return { fixed, results };
 }
 
 export async function runEmptyPageFixes(
   ctx: LintContext,
+  signal: AbortSignal | undefined,
   emptyPages: Array<{ path: string; content: string }>,
 ): Promise<{ filled: number; results: string[] }> {
+  checkCancelled(signal);
   const t = TEXTS[ctx.settings.language];
   let filled = 0;
   const results: string[] = [];
   const fixNotice = new Notice('', 0);
-  for (let i = 0; i < emptyPages.length; i++) {
-    const ep = emptyPages[i];
-    fixNotice.setMessage(t.lintFillProgress.replace('{current}', String(i + 1)).replace('{total}', String(emptyPages.length)).replace('{page}', ep.path));
-    console.debug(`lintFix: fill empty page ${i + 1}/${emptyPages.length}: ${ep.path}`);
-    try {
-      const summary = await ctx.wikiEngine.fillEmptyPage(ep.path, ep.content);
-      filled++;
-      results.push(`- ${summary}`);
-    } catch (e) {
-      console.error(`Failed to expand empty page: ${ep.path}`, e);
-      const errMsg = e instanceof Error ? e.message : String(e);
-      new Notice(t.lintFillFailed.replace('{page}', ep.path).replace('{error}', errMsg), NOTICE_ERROR);
+  try {
+    for (let i = 0; i < emptyPages.length; i++) {
+      checkCancelled(signal);
+      const ep = emptyPages[i];
+      fixNotice.setMessage(t.lintFillProgress.replace('{current}', String(i + 1)).replace('{total}', String(emptyPages.length)).replace('{page}', ep.path));
+      console.debug(`lintFix: fill empty page ${i + 1}/${emptyPages.length}: ${ep.path}`);
+      try {
+        const summary = await ctx.wikiEngine.fillEmptyPage(ep.path, ep.content);
+        filled++;
+        results.push(`- ${summary}`);
+      } catch (e) {
+        console.error(`Failed to expand empty page: ${ep.path}`, e);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        new Notice(t.lintFillFailed.replace('{page}', ep.path).replace('{error}', errMsg), NOTICE_ERROR);
+      }
     }
+  } finally {
+    fixNotice.hide();
   }
-  fixNotice.hide();
   return { filled, results };
 }
 
 export async function runOrphanFixes(
   ctx: LintContext,
+  signal: AbortSignal | undefined,
   orphans: string[],
 ): Promise<{ linked: number; results: string[] }> {
+  checkCancelled(signal);
   const t = TEXTS[ctx.settings.language];
   const results: string[] = [];
   const fixNotice = new Notice('', 0);
-  for (let i = 0; i < orphans.length; i++) {
-    const op = orphans[i];
-    const opRel = op.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
-    fixNotice.setMessage(t.lintLinkProgress.replace('{current}', String(i + 1)).replace('{total}', String(orphans.length)).replace('{page}', opRel));
-    console.debug(`lintFix: link orphan ${i + 1}/${orphans.length}: ${op}`);
-    try {
-      const linkedPages = await ctx.wikiEngine.linkOrphanPage(op);
-      if (linkedPages.length > 0) {
-        results.push(`- [[${opRel}]] linked from: ${linkedPages.map(p => `[[${p}]]`).join(', ')}`);
-      } else {
-        results.push(`- [[${opRel}]]: no suitable linking targets found`);
+  try {
+    for (let i = 0; i < orphans.length; i++) {
+      checkCancelled(signal);
+      const op = orphans[i];
+      const opRel = op.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
+      fixNotice.setMessage(t.lintLinkProgress.replace('{current}', String(i + 1)).replace('{total}', String(orphans.length)).replace('{page}', opRel));
+      console.debug(`lintFix: link orphan ${i + 1}/${orphans.length}: ${op}`);
+      try {
+        const linkedPages = await ctx.wikiEngine.linkOrphanPage(op);
+        if (linkedPages.length > 0) {
+          results.push(`- [[${opRel}]] linked from: ${linkedPages.map(p => `[[${p}]]`).join(', ')}`);
+        } else {
+          results.push(`- [[${opRel}]]: no suitable linking targets found`);
+        }
+      } catch (e) {
+        console.error(`Failed to link orphan: ${op}`, e);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        new Notice(t.lintLinkItemFailed.replace('{page}', opRel).replace('{error}', errMsg), NOTICE_ERROR);
       }
-    } catch (e) {
-      console.error(`Failed to link orphan: ${op}`, e);
-      const errMsg = e instanceof Error ? e.message : String(e);
-      new Notice(t.lintLinkItemFailed.replace('{page}', opRel).replace('{error}', errMsg), NOTICE_ERROR);
     }
+  } finally {
+    fixNotice.hide();
   }
-  fixNotice.hide();
   return { linked: results.length, results };
 }
 
 export async function runDuplicateMerges(
   ctx: LintContext,
+  signal: AbortSignal | undefined,
   duplicates: Array<{ target: string; source: string; reason: string }>,
 ): Promise<{ merged: number; results: string[] }> {
+  checkCancelled(signal);
   const t = TEXTS[ctx.settings.language];
   let merged = 0;
   const results: string[] = [];
   const fixNotice = new Notice('', 0);
-  for (let i = 0; i < duplicates.length; i++) {
-    const d = duplicates[i];
-    const sourceRel = d.source.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
-    const targetRel = d.target.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
-    fixNotice.setMessage(t.lintMergeProgress.replace('{current}', String(i + 1)).replace('{total}', String(duplicates.length)).replace('{source}', sourceRel).replace('{target}', targetRel));
-    console.debug(`lintFix: merge duplicates ${i + 1}/${duplicates.length}: ${d.source} → ${d.target}`);
-    try {
-      const result = await ctx.wikiEngine.mergeDuplicatePages(d.target, d.source);
-      merged++;
-      results.push(`- ${d.source} → ${d.target}: ${result}`);
-    } catch (e) {
-      console.error(`Failed to merge duplicates: ${d.source} → ${d.target}`, e);
-      const errMsg = e instanceof Error ? e.message : String(e);
-      new Notice(t.lintMergeItemFailed.replace('{source}', sourceRel).replace('{target}', targetRel).replace('{error}', errMsg), NOTICE_ERROR);
+  try {
+    for (let i = 0; i < duplicates.length; i++) {
+      checkCancelled(signal);
+      const d = duplicates[i];
+      const sourceRel = d.source.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
+      const targetRel = d.target.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
+      fixNotice.setMessage(t.lintMergeProgress.replace('{current}', String(i + 1)).replace('{total}', String(duplicates.length)).replace('{source}', sourceRel).replace('{target}', targetRel));
+      console.debug(`lintFix: merge duplicates ${i + 1}/${duplicates.length}: ${d.source} → ${d.target}`);
+      try {
+        const result = await ctx.wikiEngine.mergeDuplicatePages(d.target, d.source);
+        merged++;
+        results.push(`- ${d.source} → ${d.target}: ${result}`);
+      } catch (e) {
+        console.error(`Failed to merge duplicates: ${d.source} → ${d.target}`, e);
+        const errMsg = e instanceof Error ? e.message : String(e);
+        new Notice(t.lintMergeItemFailed.replace('{source}', sourceRel).replace('{target}', targetRel).replace('{error}', errMsg), NOTICE_ERROR);
+      }
     }
+  } finally {
+    fixNotice.hide();
   }
-  fixNotice.hide();
   return { merged, results };
 }

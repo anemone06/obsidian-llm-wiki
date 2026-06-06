@@ -4,16 +4,16 @@
 
 ---
 
-## Current Phase: v1.16.1 — Stability + UX hotfix (Anthropic CORS, lint false positives, settings UX)
+## Current Phase: v1.16.2 — P0 bug fix batch (Lint + Thinking + Stubs)
 
-### Completed (v1.16.1)
-- ✅ **Issue #95: Anthropic CORS regression**: Removed `@anthropic-ai/sdk` (1.3MB) and rewrote `AnthropicClient` on Obsidian's `requestUrl`. SDK's internal `fetch` from `app://obsidian.md` was intermittently blocked by CORS — community-standard fix used by other LLM plugins. Prompt caching (`cache_control: ephemeral`) preserved by emitting the same JSON structure in the raw request body.
-- ✅ **PR #88: Lint false positive fixes**: New `bodyWordSet()` with `BODY_STOPWORDS` (45 English function words) gates sharedLinks duplicate candidates by body-text similarity (threshold ≥ 0.2). Plus `scanDeadLinks` now normalizes space→hyphen in target basenames.
-- ✅ **PR #87: Lowercase slugs + case-variant detection**: `computeSlug()` now lowercases output, preventing case-variant duplicate page creation on case-sensitive filesystems. New `caseVariant` signal in `generateDuplicateCandidates` catches pages with case-colliding titles (e.g., `Unix` vs `unix`) as Tier 1 — no LLM verification needed.
-- ✅ **Settings UX: drop hardcoded model fallback**: Removed `defaultModel` from all 12 provider configs. `DEFAULT_SETTINGS.model: ''` (no auto-fill on new install). Switching providers clears model field — user must fetch models or enter manually.
-- ✅ **Settings UX: friendly fetch error classification**: New `classifyFetchError()` categorizes failures into `Auth` / `Endpoint` / `Server` / `Empty` / `Network`. Each category shows a specific Notice with the relevant action and always mentions manual entry as fallback.
-- ✅ **Settings UX: auto-switch to dropdown on successful fetch**: After Fetch Models succeeds, the model selector automatically switches from text input to dropdown.
-- ✅ **Performance Gate (Gate 5)**: Added to Three-No Principle review — CPU/memory/IO/network/token usage analysis required for every change.
+### Completed (v1.16.2)
+- ✅ **Issue #94: Lint cancellation**: AbortSignal propagated through 5 fix-runner functions. `try/finally` wraps all persistent Notices.
+- ✅ **Issue #96: Lint granularity**: `appendGranularityToPrompt` injects extractionGranularity into lint LLM analysis. 4 tests.
+- ✅ **Issue #99 + #86: Thinking token bleeding**: Three-layer defense — API `disableThinking` + `parseJsonResponse` strip + `cleanMarkdownResponse` Layer B2 preamble detection.
+- ✅ **ROADMAP P3 #11**: `parseJsonResponse` strips `<think>`/`<thinking>` before brace-counting.
+- ✅ **ROADMAP P3 #12**: `disableThinking` interface on `LLMClient` with `thinking.type='disabled'`, Test Connection probe + cache, 400 fallback.
+- ✅ **Issue #103: Delete empty stubs**: Lint modal button + 8-language i18n + try/finally.
+- ✅ **Tests**: 549/549 (+37 new tests). 4-Gate: lint 0/0, tsc 0, test 549, build clean.
 
 ### Completed (v1.16.0)
 - ✅ **Issue #81: Sources normalization**: 4 pure functions in `src/core/sources-normalizer.ts`, 22 tests, Lint integration (section 0.5), startup quick fixes. 6 pollution patterns → canonical `[[sources/X]]`. 572 files/1616 entries cleaned on reporter's ~3800-page vault.
@@ -199,6 +199,19 @@ to silence it. Re-run all four gates after each fix.
 ## 📦 Development Workflow
 
 1. `pnpm lint && pnpm test && npx tsc --noEmit && pnpm build` — all four must pass (Three-No Principle)
+
+### Build modes
+
+- `pnpm build` — **production** build (console.debug disabled, no sourcemap). Use for release.
+- `pnpm build:dev` — **debug** build (inline sourcemap + console.debug preserved). Use when the user requests a local test build.
+- `pnpm dev` — **watch** mode (rebuilds on file change, same as build:dev but stays running).
+
+When the user says "build local debug file for testing" or asks for manual testing files:
+1. Run `pnpm build:dev` to generate `main.js` (2MB+ with inline sourcemap)
+2. Verify `main.js` ends with `//# sourceMappingURL=data:application/json;base64,...`
+3. Confirm `console.debug` is NOT replaced (header should not contain `console.debug = function(){};`)
+4. The 3 output files are: `main.js`, `manifest.json`, `styles.css`
+5. Offer to zip them or tell the user the paths
 2. Update relevant docs and memory
 3. Present change summary for user review
 4. Commit locally after user approval (do NOT push directly to main)
@@ -274,6 +287,21 @@ git push origin X.Y.Z
 ## 📋 Git Commit Standards
 
 English, conventional commits. `feat:` `fix:` `docs:` `refactor:` `test:` `chore:`
+
+### Auto-close issues via commit message
+
+When a commit resolves tracked Issues, append `Closes #N` (or `Fixes #N` / `Resolves #N`) at the end of the commit body. This triggers GitHub to auto-close the issue when the commit hits the default branch.
+
+```bash
+git commit -m "fix: batch P0 fixes
+
+- #94: propagate AbortSignal to fix-runners
+- #96: inject extractionGranularity into lint
+
+Closes #94, #96, #99"
+```
+
+**NEVER** use `gh issue close` or the GitHub UI to close issues manually — let the commit message do it. This keeps the git history → issue link intact and avoids premature closure before the code reaches default branch.
 
 ## 🧪 Development Quality Closure (TDD + Planning)
 

@@ -336,4 +336,292 @@ describe('AnthropicClient.createMessage', () => {
     expect(Array.isArray(firstMsg.content)).toBe(true);
     expect((firstMsg.content as Array<unknown>)[0]).toHaveProperty('cache_control');
   });
+
+  // ROADMAP P3 #12: disableThinking parameter for thinking-capable models.
+  // Anthropic API: maps to `thinking: { type: 'disabled' }`.
+  it('sends thinking.type=disabled in body when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeAnthropicResponse('ok', 'end_turn')
+    );
+
+    const client = new AnthropicClient('test-key');
+    await client.createMessage({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('omits thinking field when disableThinking not set', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeAnthropicResponse('ok', 'end_turn')
+    );
+
+    const client = new AnthropicClient('test-key');
+    await client.createMessage({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: unknown };
+    expect(body.thinking).toBeUndefined();
+  });
+});
+
+describe('AnthropicCompatibleClient — disableThinking', () => {
+  beforeEach(() => {
+    mockRequestUrl.mockClear();
+  });
+
+  it('sends thinking.disabled in body when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      text: JSON.stringify({ content: [{ type: 'text', text: 'ok' }] }),
+      json: { content: [{ type: 'text', text: 'ok' }] },
+      headers: {},
+      arrayBuffer: async () => new ArrayBuffer(0),
+    } as unknown as Awaited<ReturnType<typeof requestUrl>>);
+
+    const client = new AnthropicCompatibleClient('test-key', 'https://example.com/v1');
+    await client.createMessage({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+});
+
+describe('OpenAICompatibleClient — disableThinking', () => {
+  beforeEach(() => {
+    mockRequestUrl.mockClear();
+  });
+
+  it('sends thinking.type=disabled for api.openai.com baseUrl when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'https://api.openai.com/v1');
+    await client.createMessage({
+      model: 'o1-mini',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('sends thinking.type=disabled for api.deepseek.com baseUrl when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'https://api.deepseek.com/v1');
+    await client.createMessage({
+      model: 'deepseek-reasoner',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('sends thinking.type=disabled for api.x.ai (xAI Grok) baseUrl when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'https://api.x.ai/v1');
+    await client.createMessage({
+      model: 'grok-4',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('sends thinking.type=disabled for openrouter.ai baseUrl when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'https://openrouter.ai/api/v1');
+    await client.createMessage({
+      model: 'anthropic/claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('omits thinking for Gemini (backward compat) OpenAI-compat baseUrl to avoid 400 errors', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'https://generativelanguage.googleapis.com/v1beta/openai');
+    await client.createMessage({
+      model: 'gemini-2.0-flash-thinking',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('sends thinking.type=disabled for local Ollama baseUrl (400 → fallback)', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'http://localhost:11434/v1');
+    await client.createMessage({
+      model: 'gemma4:26b',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+
+  it('sends thinking.type=disabled for LM Studio baseUrl (400 → fallback)', async () => {
+    mockRequestUrl.mockResolvedValueOnce(
+      makeOpenAIResponse('ok', 'stop')
+    );
+
+    const client = new OpenAICompatibleClient('test-key', 'http://localhost:1234/v1');
+    await client.createMessage({
+      model: 'qwen3-r1-32b',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+});
+
+// ── createMessageStream — disableThinking propagation (Simplify Phase 1 #1) ──
+// The interface declares disableThinking on createMessageStream, but the three
+// implementations were not updated alongside the createMessage changes.
+
+describe('AnthropicClient.createMessageStream — disableThinking', () => {
+  beforeEach(() => {
+    mockRequestUrl.mockClear();
+  });
+
+  it('sends thinking.disabled in stream body when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      text: 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}\n\n',
+      json: {} as never,
+      headers: {},
+      arrayBuffer: async () => new ArrayBuffer(0),
+    } as unknown as Awaited<ReturnType<typeof requestUrl>>);
+
+    const client = new AnthropicClient('test-key');
+    await client.createMessageStream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      onChunk: () => {},
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+});
+
+describe('AnthropicCompatibleClient.createMessageStream — disableThinking', () => {
+  beforeEach(() => {
+    mockRequestUrl.mockClear();
+  });
+
+  it('sends thinking.disabled in stream body when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      text: 'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}\n\n',
+      json: {} as never,
+      headers: {},
+      arrayBuffer: async () => new ArrayBuffer(0),
+    } as unknown as Awaited<ReturnType<typeof requestUrl>>);
+
+    const client = new AnthropicCompatibleClient('test-key', 'https://example.com/v1');
+    await client.createMessageStream({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      onChunk: () => {},
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
+});
+
+describe('OpenAICompatibleClient.createMessageStream — disableThinking', () => {
+  beforeEach(() => {
+    mockRequestUrl.mockClear();
+  });
+
+  it('sends thinking.type=disabled in stream body when disableThinking=true', async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      text: 'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
+      json: {} as never,
+      headers: {},
+      arrayBuffer: async () => new ArrayBuffer(0),
+    } as unknown as Awaited<ReturnType<typeof requestUrl>>);
+
+    const client = new OpenAICompatibleClient('test-key', 'https://api.openai.com/v1');
+    await client.createMessageStream({
+      model: 'o1-mini',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: 'hi' }],
+      onChunk: () => {},
+      disableThinking: true,
+    });
+
+    const callArgs = mockRequestUrl.mock.calls[0]?.[0] as { body: string };
+    const body = JSON.parse(callArgs.body) as { thinking?: { type: string } };
+    expect(body.thinking).toEqual({ type: 'disabled' });
+  });
 });

@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.16.2] - 2026-06-07
+
+### Fixed
+- **Issue #94 (Lint cancellation)**: `AbortSignal` now propagates through all 5 fix-runner functions (`runAliasCompletion`, `runDeadLinkFixes`, `runEmptyPageFixes`, `runOrphanFixes`, `runDuplicateMerges`) — clicking the status bar "click to cancel" during fix phases works as intended. All persistent Notices are wrapped in `try/finally` so they dismiss even on cancellation.
+- **Issue #96 (Lint granularity)**: LLM analysis step in lint now respects the user's `extractionGranularity` setting via `appendGranularityToPrompt` — previously it was unconstrained.
+- **Issue #99 (Thinking token bleeding)**: Three-layer defense against reasoning preamble leaking into wiki pages: (1) API-level `disableThinking` sends `thinking.type='disabled'` uniformly, with 400 fallback; (2) `parseJsonResponse` strips `<think>`/`<thinking>` before JSON extraction; (3) `cleanMarkdownResponse` discards preamble before `\n---\n` or `\n# ` structural markers. Test Connection probes and caches the result per provider.
+- **Issue #86 (Frontmatter dates)**: Root cause was preamble before frontmatter (shared with #99). Fixed by the `cleanMarkdownResponse` Layer B2 preamble detection.
+
+### Added
+- **Issue #103 (Delete empty stubs)**: New "Delete empty stubs" button in the Lint report modal, alongside the existing "Expand empty pages" button. Skips pages with `reviewed: true`. No configuration needed — appears when empty stubs exist. (8-language i18n.)
+
+### Changed
+- **LLM client interface**: `disableThinking?: boolean` added to `createMessage` and `createMessageStream`. `OpenAICompatibleClient` uses `thinking.type='disabled'` uniformly (Anthropic-style). Provider 400 errors trigger automatic fallback retry without the field.
+
+### Tests
+- 549/549 passing (was 512). 37 new tests: fix-runners signal propagation, granularity prompt injection, cleanMarkdownResponse Layer B2 preamble detection (8 cases), parseJsonResponse think-block stripping (3), disableThinking provider mapping (4), createMessageStream disableThinking (3), 400 fallback (2), fixNotice cleanup (2), appendGranularityToPrompt (4).
+
 ## [1.16.1] - 2026-06-05
 
 ### Fixed

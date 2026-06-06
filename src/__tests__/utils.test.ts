@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { slugify, computeSlug, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag, extractBody, getText, filterRedundantAliases, coerceToArray } from '../utils';
-import { getGranularityInstruction, getGranularityFixLimits } from '../wiki/system-prompts';
+import { getGranularityInstruction, getGranularityFixLimits, appendGranularityToPrompt } from '../wiki/system-prompts';
 import { LLMWikiSettings } from '../types';
 
 describe('slugify', () => {
@@ -360,6 +360,89 @@ describe('cleanMarkdownResponse', () => {
   it('trims whitespace', () => {
     expect(cleanMarkdownResponse('  \n  content  \n  ')).toBe('content');
   });
+
+  // Issue #99: Thinking-token bleeding (Layer B2: structural preamble detection)
+  // Some models (e.g. Gemma 4) emit reasoning as plain text without <think>
+  // wrappers. Layer 2 finds the first structural marker (frontmatter close or
+  // header) and discards everything before it.
+
+  it('strips reasoning preamble before frontmatter (Gemma 4 case)', () => {
+    const input = `�-mm-im-en-en-en-A-B-C-...
+
+Wait, I must write ALL content in Deutsch. The user provided the prompt in English but instructions state "You MUST write ALL content in Deutsch".
+
+Plan:
+1. Basic Information: Update type/sources/definition...
+2. Description: Merge existing...
+
+---
+type: entity
+updated: 2026-06-01
+---
+
+# Real content here
+This is the actual page body.`;
+    const result = cleanMarkdownResponse(input);
+    expect(result).toContain('# Real content here');
+    expect(result).toContain('type: entity');
+    expect(result).not.toContain('Wait, I must write');
+    expect(result).not.toContain('A-B-C');
+  });
+
+  it('strips reasoning preamble before header (no frontmatter)', () => {
+    const input = `Let me think about this carefully.
+
+# Concept Name
+Body content here.`;
+    const result = cleanMarkdownResponse(input);
+    expect(result).toContain('# Concept Name');
+    expect(result).not.toContain('Let me think about this');
+  });
+
+  it('strips reasoning preamble in append mode (no structural markers)', () => {
+    // No frontmatter, no header — but preamble still must go
+    const input = `Some preamble text I wrote to plan my response.
+
+This is the actual content the user wanted.`;
+    const result = cleanMarkdownResponse(input);
+    // No structural markers, fallback to original behavior
+    expect(result).toBe(input);
+  });
+
+  it('preserves content when no preamble (regression)', () => {
+    const input = '# Heading\n\nNormal content';
+    expect(cleanMarkdownResponse(input)).toBe('# Heading\n\nNormal content');
+  });
+
+  it('preserves <think> token stripping behavior (regression)', () => {
+    const input = '<think>reasoning</think>\n\n# Header';
+    const result = cleanMarkdownResponse(input);
+    expect(result).not.toContain('<think>');
+    expect(result).toContain('# Header');
+  });
+
+  it('handles reasoning text that contains ## subsection markers', () => {
+    // Reasoning text might mention markdown syntax; structural detection
+    // should still prefer the earliest real frontmatter / header
+    const input = `My reasoning: I should use ## Subsection A as a heading
+
+# Real Page
+Body`;
+    const result = cleanMarkdownResponse(input);
+    // Strict assertion: the entire reasoning line must be discarded, not
+    // just the "My reasoning: I should use" prefix. Inline `## ` in
+    // reasoning is preserved as plain text (Layer B2 only matches a `## `
+    // on its own line, so it stays on the same line as the prose).
+    expect(result).toBe('# Real Page\nBody');
+  });
+
+  it('handles empty input (regression)', () => {
+    expect(cleanMarkdownResponse('')).toBe('');
+  });
+
+  it('handles very short input without structural markers (regression)', () => {
+    expect(cleanMarkdownResponse('short')).toBe('short');
+  });
 });
 
 describe('enforceFrontmatterConstraints', () => {
@@ -506,6 +589,32 @@ describe('parseJsonResponse', () => {
   it('handles trailing comma in arrays', async () => {
     const result = await parseJsonResponse('{"items": [1, 2, 3,]}');
     expect(result).toEqual({ items: [1, 2, 3] });
+  });
+
+  // ROADMAP P3 #11: thinking models can output pseudocode JSON inside <think>
+  // blocks. extractBalancedJson otherwise grabs the first '{' inside the think
+  // block, ignoring the real JSON after </think>.
+  it('strips <think> blocks before extracting JSON', async () => {
+    const input = '<think>{ "pseudocode": "ignore me" }</think>\n{"real": "json"}';
+    const result = await parseJsonResponse(input);
+    expect(result).toEqual({ real: 'json' });
+  });
+
+  it('strips <thinking> blocks before extracting JSON', async () => {
+    const input = '<thinking>{ "pseudocode": "ignore me" }</thinking>\n{"real": "json"}';
+    const result = await parseJsonResponse(input);
+    expect(result).toEqual({ real: 'json' });
+  });
+
+  it('strips multiline <think> blocks with embedded nested braces', async () => {
+    const input = `<think>
+Let me analyze this carefully.
+{ "step": 1, "options": [{ "a": 1 }, { "b": 2 }] }
+The answer should be...
+</think>
+{"answer": "real"}`;
+    const result = await parseJsonResponse(input);
+    expect(result).toEqual({ answer: 'real' });
   });
 
   it('returns null for completely invalid input', async () => {
@@ -722,6 +831,58 @@ describe('getGranularityInstruction', () => {
       // Non-custom modes should not contain dynamically injected numbers
       expect(result).not.toContain('at most');
     }
+  });
+});
+
+// ── appendGranularityToPrompt ───────────────────────────────────
+// Issue #96: Lint LLM analysis ignored user's extractionGranularity setting.
+// Fix: append the granularity instruction to the lint analysis prompt so the
+// LLM respects the same constraints as the ingestion path.
+
+describe('appendGranularityToPrompt', () => {
+  const baseSettings: LLMWikiSettings = {
+    provider: 'anthropic', apiKey: '', baseUrl: '', model: 'claude-sonnet-4-6',
+    wikiFolder: 'wiki', language: 'en', wikiLanguage: 'en',
+    maxConversationHistory: 30, extractionGranularity: 'standard',
+    enableSchema: true, autoWatchSources: false, autoWatchMode: 'notify',
+    autoWatchDebounceMs: 5000, watchedFolders: [], periodicLint: 'off',
+    startupCheck: false, pageGenerationConcurrency: 3, batchDelayMs: 500,
+    llmReady: false,
+    maxTokensPerCall: 0,
+  };
+
+  it('appends granularity instruction to existing prompt', () => {
+    const settings: LLMWikiSettings = { ...baseSettings, extractionGranularity: 'minimal' };
+    const result = appendGranularityToPrompt('Base prompt', settings);
+    expect(result).toContain('Base prompt');
+    expect(result).toContain('most critical');
+  });
+
+  it('preserves base prompt content at the start', () => {
+    const settings: LLMWikiSettings = { ...baseSettings, extractionGranularity: 'fine' };
+    const result = appendGranularityToPrompt('You are a Wiki assistant', settings);
+    expect(result.startsWith('You are a Wiki assistant')).toBe(true);
+  });
+
+  it('works for all non-custom granularity modes', () => {
+    for (const mode of ['fine', 'standard', 'coarse', 'minimal'] as const) {
+      const settings: LLMWikiSettings = { ...baseSettings, extractionGranularity: mode };
+      const result = appendGranularityToPrompt('Base', settings);
+      expect(result.length).toBeGreaterThan('Base'.length);
+    }
+  });
+
+  it('works for custom mode with explicit limits', () => {
+    const settings: LLMWikiSettings = {
+      ...baseSettings,
+      extractionGranularity: 'custom',
+      customEntityLimit: 7,
+      customConceptLimit: 4,
+    };
+    const result = appendGranularityToPrompt('Base', settings);
+    expect(result).toContain('Base');
+    expect(result).toContain('7 entities');
+    expect(result).toContain('4 concepts');
   });
 });
 

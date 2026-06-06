@@ -14,6 +14,8 @@
 
 ---
 
+> **⚡ 素早い更新のお知らせ：** 本プロジェクトは急速に進化しており、バグ修正、パフォーマンス改善、新機能、UX の最適化を頻繁に行っています。Obsidian で常に最新バージョンに更新することをお勧めします（**設定 → コミュニティプラグイン → 更新を確認**）。プラグインの自動更新を有効にすることもできます。
+
 ## 📑 Contents
 
 - [💡 LLM-Wikiとは？](#-llm-wikiとは)
@@ -24,7 +26,7 @@
   - [🔑 LLM Providerを設定](#-llm-providerを設定)
   - [🎮 使用方法](#-使用方法)
   - [⚠️ 旧バージョンからアップグレードする場合](#️-旧バージョンからアップグレードする場合)
-- [⚡ v1.16.1 更新のポイント](#-v1161-更新のポイント)
+- [⚡ v1.16.2 更新のポイント](#-v1162-更新のポイント)
 - [✨ 特徴](#-特徴)
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -59,153 +61,23 @@
 
 ---
 
-## ⚡ Obsidian + LLM-Wikiを選ぶ理由
+## ⚡ v1.16.2 更新のポイント
 
-Obsidianはリンク思考に最適なツールです。しかし一つ落とし穴があります：リンクを作成しているのはあなた自身です。
+今回のリリースは **バグ修正バッチ** です。Lint のキャンセル機能の修復、メンテナンス時の抽出粒度の適用、推論モデルの思考トークン漏洩の防止、および「空のスタブを削除」機能の追加を含みます。破壊的な変更はなく、再設定も不要です。
 
-LLM-Wikiはこれを逆転させます。あなたが手作業でグラフを構築する代わりに、AIがあなたと共に成長します。新しい概念についてノートを追加すると、あなたが見逃す関連性を見つけます。質問をすると、あなた自身の知識グラフを探索し、引用を伴った回答をもたらします。
+**主な修正点：**
 
-- **🔗 Graph Viewが生きて動く。** 新しいノートはただ存在するだけでなく — Entity、Concept、Sourceへのリンクが芽生えます。グラフは有機的に成長し、プラグインが維持管理します：重複検出、dead link修正、aliasで言語間の架け橋を作成。
-- **💬 ノートが応答を学ぶ。** 検索が会話になります。「Xについて何を書いた？」が対話となり、ストリーミングレスポンスと`[[wiki-links]]`が breadcrumb（道しるべ）となります。すべての回答はあなた自身の知識への道です。
-- **🧠 Obsidianが思考パートナーになる。** ノートの保管庫を止め、*思考*を助けるツールになります — 隠れた関連性を表面化、矛盾をフラグ付け、忘れていたことを思い出させます。
+- **Lint キャンセル機能を修正（Issue #94）。** ステータスバーの「クリックしてキャンセル」が、修正フェーズ（デッドリンク、空ページ、孤立ページ、エイリアス、重複）でも正しく機能するようになりました — AbortSignal が 5 つすべての fix-runner 関数に伝播されます。永続的な Notice は try/finally でラップされ、キャンセル時にも確実に消えるようになりました。
 
----
+- **Lint が抽出粒度を尊重（Issue #96）。** Lint の LLM 分析ステップは以前は制約がありませんでした。extractionGranularity 設定を尊重するようになりました — "Minimal"ユーザーは制限付き分析、"Fine"ユーザーは完全な分析を受けられます。
 
-## 🚀 クイックスタート
+- **思考トークンの漏洩を解消（Issue #99 + #86）。** 実際の出力の前にプリアンブルテキストや <think> ブロックを出力する推論モデルが Wiki ページを汚染しなくなりました。3 層の防御：(1) API 層で thinking.type=disabled を統一送信 + 自動 400 フォールバック；(2) JSON 応答はパース前に think トークンを除去；(3) Markdown 応答は最初の --- または # 見出しより前のすべてを破棄。Test Connection 時にプロバイダー対応状況をプローブしてキャッシュします。
 
-### 📦 インストール
+- **「空のスタブを削除」を追加（Issue #103）。** Lint レポートモーダルに既存の「拡張」ボタンと並んで新しいボタンが追加されました — ワンクリックで空のスタブを削除し、完全な Lint パイプラインを実行する必要はありません。reviewed: true のページはスキップされます。設定は不要です。
 
-**🌟 推奨 — Obsidian Community Plugin Market:**
+**古いバージョンからのアップグレード？** 破壊的変更はゼロ、再設定は不要です。既存の Wiki、設定、ワークフローはすべて維持されます。
 
-1. Obsidianで、**Settings → Community plugins**に移動
-2. **Browse**をクリックし、「Karpathy LLM Wiki」を検索
-3. **Install**をクリック、その後**Enable**
-
-**🌐 または Community Pluginウェブサイトから —** [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki)を訪れ、**Add to Obsidian**をクリックして直接インストール。
-
-**⚙️ 手動（代替）:**
-
-1. [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases)から`main.js`、`manifest.json`、`styles.css`をダウンロード
-2. Obsidianで、Settings → Community pluginsに移動。**Installed plugins**タブで、フォルダアイコンをクリックしてプラグインディレクトリを開く
-3. `karpathywiki`というフォルダを作成、三つのファイルを内部にドロップ
-4. Obsidianに戻り、refreshアイコンをクリック — **Karpathy LLM Wiki**がInstalled pluginsに表示される
-5. Toggle onしてenable
-
-**🔨 開発:** `git clone`、`pnpm install`、`pnpm build`
-
-### 🔄 プラグインの更新
-
-このプロジェクトは急速に発展しており、新機能、修正、の改善が頻繁にリリースされます。常に最新の状態を保つことをお勧めします：
-
-**方法A — 手動更新（推奨）:**
-1. **設定 → コミュニティプラグイン**を開く
-2. **更新を確認**をクリック
-3. リストで **Karpathy LLM Wiki** を見つけ、**更新**をクリック
-
-**方法B — 自動更新を有効にする:**
-1. **設定 → コミュニティプラグイン**を開く
-2. **プラグインの更新を自動的に確認**をオンにする
-3. 新しいバージョンが検出されると、手動で更新できます
-
-> 💡 **なぜ更新を続けるべきなのか？** 各リリースには、新機能、パフォーマンスの改善、重要なバグ修正が含まれる可能性があります。私たちはこのプラグインを積極的にメンテナンスしています — 更新を逃すことは、より良い体験を逃すことを意味します。
-
-### 🔑 LLM Providerを設定
-
-1. Settings → Karpathy LLM Wikiを開く
-2. ドロップダウンからProviderを選択（Anthropic、Anthropic Compatible、Google Gemini、OpenAI、DeepSeek、Kimi、GLM、Ollama、OpenRouter、またはcustom）
-3. API keyを入力（Ollamaは不要）
-4. **Fetch Models**をクリックしてmodelドロップダウンをpopulate、またはmodel名を手動で入力
-5. **Test Connection**をクリック、その後**Save Settings**
-
-**🦙 Ollama（ローカル、API key不要）:** [Ollama](https://ollama.com)をインストール、modelをpull（`ollama pull gemma4`）、Providerドロップダウンで「Ollama (Local)」を選択。
-
-> 詳細は[Model推奨](#-model推奨)を参照してください。
-
-### 🎮 使用方法
-
-| 方法 | 操作 |
-|------|------|
-| **📥 単一ソースの取り込み** | `Cmd+P` → "単一ソースの取り込み" — 特定のノートを選択し、エンティティとコンセプトをWikiページとして抽出 |
-| **📂 フォルダーからの取り込み** | `Cmd+P` → "フォルダーからの取り込み" — フォルダを選択し、全ノートをバッチ処理 |
-| **🔍 Wikiに問い合わせ** | `Cmd+P` → "Wikiに問い合わせ" — 質問し、`[[wiki-links]]`付きのストリーミング回答を取得 |
-| **🛠️ WikiのLint** | `Cmd+P` → "WikiのLint" — 重複検出、dead links、orphans、空ページ、不足エイリアスの健全性スキャン |
-| **📋 インデックスの再生成** | `Cmd+P` → "インデックスの再生成" — `wiki/index.md`をエイリアス情報付きで再構築 |
-| **⏹️ 操作キャンセル** | `Cmd+P` → "Cancel current ingestion" またはステータスバークリック — バッチ境界で安全に停止し、完了済みの作業を保持 |
-| **🎯 ワンクリック取込** | 左サイドバーの `sticker` アイコンまたは `Cmd+P` → "Ingest current file" — 現在開いているファイルを直接取込 |
-| **💡 スキーマ更新の提案** | `Cmd+P` → "スキーマ更新の提案" — LLMがWikiを分析しスキーマ改善を提案 |
-
-同じSourceを再ingestすると、Entity/Conceptページは増分更新（新情報がmerge）。Summaryページはregenerateされる。
-
-**💡 Smart Batch Skip:** フォルダingest時、プラグインは既処理ファイルを自動検出・skipし、時間とAPI costを節約。Batch reportにskip countが表示される。
-
-### ⚠️ 旧バージョンからアップグレードする場合
-
-**本リリースは完全な後方互換性があります。** v1.14.0には破壊的変更は含まれていません — 既存のWikiページ、設定、ワークフローはすべて保持されます。再設定やデータ移行は不要です。
-
-**複数バージョンにわたって構築された既存のWiki**をお使いの場合、一部のページに最近の機能（aliases、alias-aware dedup、モダン化されたプロンプト）が欠けている可能性があります。**Lint Wiki** を実行して注意が必要な箇所を確認してください。**Smart Fix All** を使えば、最も一般的なクリーンアップをワンクリックで完了できます。
-
-**v1.14.0より前のバージョン**からアップグレードする場合は、**Lint Wiki** を1回実行して、過去の蓄積された問題を自動修正してください：
-- **二重入れ子リンク** `[[[[entities/Foo|Foo]]]]` がlog.mdに存在する場合 — LintがゼロLLMコストで検出・修正します
-- **クロスディレクトリスタブ重複** — `entities/` と `concepts/` の両方に同じslugで存在するページが、正しく照合・マージされます
-
-**複数バージョンにわたって構築されたWiki**の場合、以下の手順でWikiを最新基準に更新してください：
-
-**1️⃣ インデックスを再構築**
-`Cmd+P` → **"インデックスの再生成"** — これにより`wiki/index.md`が全ページのaliasエントリを含む形で再構築され、alias-aware検索が有効になります（例：「DSA」の検索で「DeepSeek-Sparse-Attention」が見つかる）。以前のインデックス形式はページタイトルしか表示していませんでした。
-
-**2️⃣ WikiのLintを実行**
-`Cmd+P` → **"WikiのLint"** — Wiki全体をスキャンし、以下を表示します：
-- **🏷️ Missing aliases**: Aliasがないページ（**Complete Aliases** を一度も実行していないすべてのバージョンが対象）。**"Complete Aliases"** をクリックすると、LLMが翻訳、acronym、別名を一括生成。重複検出に不可欠です。
-- **🔄 Duplicate pages**: 重複コンテンツを持つページ（例：alias-aware dedupがない旧バージョンで作成された「CoT」と「Chain of Thought」）。**"Merge Duplicates"** をクリックして統合し、すべてのaliasを保持します。
-- **Dead links / Empty pages / Orphans**: 標準的なWikiメンテナンス項目。
-
-**3️⃣ Smart Fix Allを使用**
-Lintレポートの **"Smart Fix All"** をクリックすると、因果関係順にワンクリック修復：aliases完了 → duplicates統合 → dead links修正 → orphansリンク → empty pages拡充。複数バージョンにわたって構築されたWikiをクリーンアップする最速の方法です。
-
-**4️⃣ 並列ページ生成を有効化**
-Settings → **Ingestion Acceleration**:
-- **⚡ Page Generation Concurrency**: ほとんどのProviderでは3に設定。10以上のEntityがあるSourceでingestionが2〜3倍高速化。
-- **⏱️ Batch Delay**: 300msから開始。rate limitに達した場合は500〜800msに増加。
-
-**5️⃣ 現在の設定を確認:**
-- **🌐 Wiki Output Language**: UI言語から独立 — Wikiを日本語で書きながらプラグインUIは英語のまま、またはその逆も可能。
-- **📊 抽出粒度**：5つのオプションでLLMがSourceからEntityを抽出する深さを制御：
-  - **精细**（約100項目）— 深層分析、端の言及も含む。高トークンコスト、重要Source向け。
-  - **標準**（約50項目）— バランス型抽出。日常ノートの推奨デフォルト。
-  - **粗め**（約10項目）— 簡易概要、核心Entityのみ。低コスト、高速インジェスト。
-  - **最小**（約5項目）— 本質項目のみ。100+ファイルのバッチ処理や新Sourceテストに最適。
-  - **カスタム**（1～300項目）— ユーザー定義Entity/Concept上限、特殊ワークフロー向け。
-  > 💡 **推奨**：大規模フォルダのバッチ処理では最小/粗めを使用し時間とAPIコストを節約。精细は選択的に深層分析に値する重要ドキュメントのみに使用。
-- **🔄 Auto-Maintenance**: オプションのファイル監視、定期Lint、起動時ヘルスチェック。すべてデフォルトOFF — 自動バックグラウンド処理が必要な場合のみ有効化。
-
-> **🛡️ Safety**: Parallel generationは`Promise.allSettled`を使用 — 一ページが失敗しても他は継続。失敗ページはexponential backoffで個別retry。Smart Batch Skipは既に取り込んだファイルを自動検出して時間とAPIコストを節約します。
-
----
----
-
-## ⚡ v1.16.1 更新のポイント
-
-
-今回のリリースは**安定性と UX のホットフィックス**で、Anthropic の CORS 問題を修正し、長年の Lint 誤検知にも対応しました。新機能なし、破壊的変更なし。
-
-**主な修正：**
-
-- **Anthropic CORS 問題を修正（Issue #95）**。`@anthropic-ai/sdk`（1.3MB）を削除し、`AnthropicClient` を Obsidian の `requestUrl` ベースに書き直しました。SDK の内部 `fetch` は `app://obsidian.md` オリジンから実行され、CORS で断続的にブロックされていました——他の LLM プラグインで採用されているコミュニティ標準の修正手法です。プロンプトキャッシュ（`cache_control: ephemeral`）は、生の request body 内の同じ JSON 構造を送信することで維持。
-
-- **Lint 誤検知の修正（PR #88）**。新しい `bodyWordSet()` と `BODY_STOPWORDS`（45 個の英語機能語）が、sharedLinks 重複候補を本文テキスト類似度（閾値 ≥ 0.2）でフィルタリング。3 ページ以上が同じハブページにリンクしているが異なる内容を持つケースでの誤検出を修正。`scanDeadLinks` はターゲットの basename でスペース→ハイフンを正規化するようになり、`[[entities/Claude Code]]` が `entities/Claude-Code.md` に正しくマッチ。
-
-- **小文字 slug + 大文字小文字変種検出（PR #87）**。`computeSlug()` が出力を小文字化、大文字小文字を区別するファイルシステムでの重複ページ生成を防止。`generateDuplicateCandidates` に新しい `caseVariant` シグナルを追加し、大文字小文字が衝突するタイトル（例：`Unix` vs `unix`）を Tier 1 として検出——LLM 検証不要。
-
-- **設定 UX：ハードコードされたモデルフォールバックを削除**。12 の全プロバイダ設定から `defaultModel` を削除。`DEFAULT_SETTINGS.model: ''`（新規インストール時の自動入力なし）。プロバイダ切り替え時に model フィールドをクリア——モデルを取得するか手動で入力する必要あり。
-
-- **設定 UX：親切な取得エラー分類**。新しい `classifyFetchError()` が失敗を `Auth` / `Endpoint` / `Server` / `Empty` / `Network` の 5 種類に分類。各カテゴリは特定の Notice を表示——例：「認証に失敗しました（HTTP 401/403）。API キーを確認するか、モデル ID を直接入力して「テスト接続」をクリックして検証してください。」すべてのパスで手動入力がフォールバックとして記載。
-
-- **設定 UX：取得成功時にドロップダウンへ自動切替**。Fetch Models 成功後、モデルセレクタはテキスト入力からドロップダウンへ自動切替。追加クリックなしでリストが表示される。
-
-**古いバージョンからのアップグレード？** そのままインストールして使用——破壊的変更なし、再設定不要。既存の Wiki、設定、ワークフローは保持。ハードコードされたデフォルト値を持っていたドロップダウンのモデルフィールドは空になりますが、**Fetch Models** をクリックすればプロバイダ API から取得可能。
-
-**本バージョンへの upgrade を強く推奨**——Anthropic CORS 修正により、macOS Tahoe および SDK の CORS 挙動でブロックされていた他の Electron バージョンでの機能が回復。
-
+**すべてのユーザーにこのバージョンへのアップグレードを強くお勧めします** — Lint キャンセル修正、粒度の適用、思考トークン保護により、日常のメンテナンスの信頼性が大幅に向上します。
 ---
 
 ---

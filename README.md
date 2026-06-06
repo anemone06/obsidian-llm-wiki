@@ -14,6 +14,7 @@
 
 ---
 
+> **⚡ Quick Update Reminder:** This project evolves rapidly with frequent bug fixes, performance improvements, new features, and UX optimizations. We recommend updating to the latest version regularly in Obsidian (**Settings → Community plugins → Check for updates**), or enabling automatic plugin updates to ensure the best experience.
 ## 📑 Contents
 
 - [💡 What is LLM-Wiki?](#-what-is-llm-wiki)
@@ -24,7 +25,7 @@
   - [🔑 Configure an LLM Provider](#-configure-an-llm-provider)
   - [🎮 Usage](#-usage)
   - [⚠️ Upgrading from an Older Version?](#️-upgrading-from-an-older-version)
-- [⚡ What's New in v1.16.1](#-whats-new-in-v1161)
+- [⚡ What's New in v1.16.2](#-whats-new-in-v1162)
 - [✨ Features](#-features)
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -183,31 +184,23 @@ Settings → **Ingestion Acceleration**:
 
 ---
 
-## ⚡ What's New in v1.16.1
+## ⚡ What's New in v1.16.2
 
-This is a **stability + UX hotfix** that closes the Anthropic CORS regression and addresses long-standing lint false positives — no new features, no breaking changes.
+This is a **bug-fix batch** that addresses Lint cancellation, extraction granularity enforcement in maintenance, thinking-token bleeding from reasoning models, and adds a "Delete empty stubs" convenience action — no breaking changes, no reconfiguration needed.
 
 **Key Fixes:**
 
-- **Anthropic CORS regression fixed (Issue #95).** Removed `@anthropic-ai/sdk` (1.3MB) and rewrote `AnthropicClient` on Obsidian's `requestUrl`. SDK's internal `fetch` from `app://obsidian.md` was intermittently blocked by CORS — community-standard fix used by other LLM plugins. Prompt caching (`cache_control: ephemeral`) preserved by emitting the same JSON structure in the raw request body.
+- **Lint cancellation fixed (Issue #94).** Clicking the status bar "click to cancel" during fix phases (dead links, orphans, empty pages, duplicates, aliases) now works as intended — the AbortSignal propagates through all fix-runner functions. All persistent Notices are wrapped in `try/finally` so they dismiss even on cancellation.
 
-- **Lint false positive fixes (PR #88).** New `bodyWordSet()` with `BODY_STOPWORDS` (45 English function words) gates sharedLinks duplicate candidates by body-text similarity (threshold ≥ 0.2). Fixes the case where 3+ pages linking to the same hub page were incorrectly flagged as duplicates despite different content. Plus `scanDeadLinks` now normalizes space→hyphen in target basenames, so `[[entities/Claude Code]]` correctly matches `entities/Claude-Code.md`.
+- **Lint respects extraction granularity (Issue #96).** The Lint LLM analysis step was previously unconstrained. It now honors your `extractionGranularity` setting — "Minimal" users get constrained analysis, "Fine" users get the full treatment.
 
-- **Lowercase slugs + case-variant detection (PR #87).** `computeSlug()` now lowercases output, preventing case-variant duplicate page creation on case-sensitive filesystems. New `caseVariant` signal in `generateDuplicateCandidates` catches pages with case-colliding titles (e.g., `Unix` vs `unix`) as Tier 1 — no LLM verification needed.
+- **Thinking-token bleeding eliminated (Issue #99 + #86).** Reasoning models that emit preamble text or `<think>` blocks before their actual output no longer corrupt wiki pages. Three-layer defense: (1) API-level `disableThinking` sends `thinking.type='disabled'` uniformly to all providers, with automatic 400 fallback; (2) JSON responses strip think tokens before parsing; (3) Markdown responses discard any preamble before the first `---` or `# ` header. Test Connection probes and caches the result per provider.
 
-- **Settings UX: drop hardcoded model fallback.** Removed `defaultModel` from all 12 provider configs. `DEFAULT_SETTINGS.model: ''` (no auto-fill on new install). Switching providers clears the model field — user must fetch models or enter manually.
+- **"Delete empty stubs" added (Issue #103).** New button in the Lint report modal alongside the existing "Expand" button — one click to clean up empty stubs without running the full lint pipeline. Skips pages with `reviewed: true`. No configuration needed.
 
-- **Settings UX: friendly fetch error classification.** New `classifyFetchError()` categorizes failures into `Auth` / `Endpoint` / `Server` / `Empty` / `Network`. Each category shows a specific Notice with the relevant action — e.g., "Authentication failed (HTTP 401/403). Verify your API Key, or enter a Model ID below and click Test Connection to validate." Manual entry is always mentioned as the fallback.
+**Upgrading from an older version?** Zero breaking changes, zero reconfiguration. Existing wikis, settings, and workflows are preserved.
 
-- **Settings UX: auto-switch to dropdown on successful fetch.** After Fetch Models succeeds, the model selector automatically switches from text input to dropdown, so users see the list right away without an extra click.
-
-**Upgrading from an older version?** Just install and use — zero breaking changes, zero reconfiguration. Existing wikis, settings, and workflows are preserved. The dropdown model field will be empty for users who previously had hardcoded defaults, but clicking **Fetch Models** will populate it from your provider's API.
-
-**We strongly recommend all users upgrade to this version** — the Anthropic CORS fix restores plugin functionality for users on macOS Tahoe and other Electron versions where the SDK's CORS behavior was previously blocking.
-
----
-
-## ✨ Features
+**We strongly recommend all users upgrade to this version** — the Lint cancellation fix, granularity enforcement, and thinking-token protection improve day-to-day maintenance reliability.
 
 ### 📊 Knowledge Quality
 

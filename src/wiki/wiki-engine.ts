@@ -867,6 +867,11 @@ export class WikiEngine {
     return this.lintFixer.fillEmptyPage(pagePath, existingContent);
   }
 
+  // Issue #103: delete empty stubs without running full lint pipeline
+  async deleteEmptyStubs(wikiFolder: string): Promise<number> {
+    return this.lintFixer.deleteEmptyStubs(wikiFolder);
+  }
+
   async linkOrphanPage(orphanPath: string): Promise<string[]> {
     return this.lintFixer.linkOrphanPage(orphanPath);
   }

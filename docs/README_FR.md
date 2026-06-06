@@ -14,6 +14,8 @@
 
 ---
 
+> **⚡ Avis de mise à jour rapide：** Ce projet évolue rapidement – corrections de bugs, améliorations de performances, nouvelles fonctionnalités et optimisations UX sont fréquentes. Nous vous recommandons de mettre à jour régulièrement dans Obsidian (**Paramètres → Plugins communautaires → Vérifier les mises à jour**) ou d'activer la mise à jour automatique des plugins.
+
 ## 📑 Contents
 
 - [💡 Présentation](#-présentation)
@@ -24,7 +26,7 @@
   - [🔑 Configuration d'un Provider LLM](#-configuration-dun-provider-llm)
   - [🎮 Utilisation](#-utilisation)
   - [⚠️ Mise à niveau depuis une version antérieure ?](#️-mise-à-niveau-depuis-une-version-antérieure-)
-- [⚡ Quoi de neuf dans la v1.16.1](#-quoi-de-neuf-dans-la-v1161)
+- [⚡ Quoi de neuf dans la v1.16.2](#-quoi-de-neuf-dans-la-v1162)
 - [✨ Fonctionnalités](#-fonctionnalités)
   - [📊 Qualité des connaissances](#-qualité-des-connaissances)
   - [🛠️ Maintenance](#️-maintenance)
@@ -59,152 +61,23 @@ Vous écrivez. L'IA organise. Vous interrogez. Rien de plus.
 
 ---
 
-## ⚡ Pourquoi Obsidian + LLM-Wiki ?
+## ⚡ Quoi de neuf dans la v1.16.2
 
-Obsidian excelle dans la pensée liée. Mais il présente une contrainte : vous devez établir tous les liens manuellement.
+Cette version est un **lot de corrections de bugs** qui résout l'annulation du Lint, l'application de la granularité d'extraction en maintenance, les fuites de tokens de raisonnement des modèles de raisonnement, et ajoute une action pratique "Supprimer les stubs vides" — aucune breaking change, aucune reconfiguration nécessaire.
 
-LLM-Wiki inverse cette logique. Au lieu de construire le graphe à la main, l'IA le fait évoluer avec vous. Ajoutez une note sur un nouveau concept — il découvre les connexions que vous auriez manquées. Posez une question — il explore votre graphe de connaissances et fournit les réponses avec citations.
+**Corrections principales：**
 
-- **🔗 Votre Graph View prend vie.** Les nouvelles notes ne restent pas inertes — elles établissent des liens vers des Entity, Concept et sources. Le graphe croît organiquement, et le plugin en assure la maintenance : détection des doublons, correction des liens morts, ponts entre langues via les alias.
-- **💬 Vos notes deviennent conversationnelles.** La recherche se transforme en dialogue. « Que sais-je sur X ? » devient une conversation, avec des réponses en streaming et des `[[Wiki-links]]` comme pistes. Chaque réponse ouvre un chemin plus profond dans vos connaissances.
-- **🧠 Obsidian devient un partenaire de réflexion.** Il cesse d'être un simple dépôt de notes pour devenir un outil qui vous aide à *penser* — révélant les connexions cachées, signalant les contradictions, évoquant ce que vous aviez oublié.
+- **Annulation du Lint corrigée (Issue #94).** Le clic sur "Annuler" dans la barre d'état fonctionne désormais correctement pendant les phases de correction (liens morts, pages vides, orphelines, alias, doublons) — le signal AbortSignal se propage à travers les 5 fonctions fix-runner. Toutes les notifications persistantes sont encapsulées dans des blocs try/finally pour qu'elles disparaissent même en cas d'annulation.
 
----
+- **Le Lint respecte la granularité d'extraction (Issue #96).** L'étape d'analyse LLM du Lint n'était auparavant pas contrainte. Elle respecte désormais votre paramètre extractionGranularity — les utilisateurs "Minimal" bénéficient d'une analyse restreinte, les utilisateurs "Fine" du traitement complet.
 
-## 🚀 Démarrage rapide
+- **Fuites de tokens de raisonnement éliminées (Issue #99 + #86).** Les modèles de raisonnement qui émettent du texte préliminaire ou des blocs <think> avant leur sortie réelle ne corrompent plus les pages Wiki. Triple défense : (1) la couche API envoie uniformément thinking.type=disabled avec repli automatique 400 ; (2) les réponses JSON suppriment les tokens think avant l'analyse ; (3) les réponses Markdown rejettent tout préambule avant le premier --- ou en-tête #. Test Connection détecte et met en cache le résultat par fournisseur.
 
-### 📦 Installation
+- **"Supprimer les stubs vides" ajouté (Issue #103).** Nouveau bouton dans la fenêtre du rapport Lint à côté du bouton "Développer" existant — un clic pour nettoyer les stubs vides sans exécuter l'intégralité du pipeline Lint. Ignore les pages avec reviewed: true. Aucune configuration nécessaire.
 
-**🌟 Méthode recommandée — Marché des plugins communautaires Obsidian :**
+**Mise à jour depuis une version antérieure ?** Aucune breaking change, aucune reconfiguration. Les wikis, paramètres et flux de travail existants sont préservés.
 
-1. Dans Obsidian, accédez à **Paramètres → Plugins communautaires**
-2. Cliquez sur **Parcourir** et recherchez « Karpathy LLM Wiki »
-3. Cliquez sur **Installer**, puis **Activer**
-
-**🌐 Ou depuis le site Web des plugins communautaires —** consultez [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki) et cliquez sur **Ajouter à Obsidian** pour installer directement.
-
-**⚙️ Installation manuelle (alternative) :**
-
-1. Téléchargez `main.js`, `manifest.json`, `styles.css` depuis [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases)
-2. Dans Obsidian, accédez à Paramètres → Plugins communautaires. Dans l'onglet **Plugins installés**, cliquez sur l'icône dossier pour ouvrir le répertoire des plugins
-3. Créez un dossier nommé `karpathywiki` et placez-y les trois fichiers
-4. De retour dans Obsidian, cliquez sur l'icône de rafraîchissement — **Karpathy LLM Wiki** apparaîtra sous Plugins installés
-5. Activez-le
-
-**🔨 Développement :** `git clone`, `pnpm install`, `pnpm build`.
-
-### 🔄 Mettre à jour le plugin
-
-Ce projet évolue rapidement — de nouvelles fonctionnalités, corrections de bugs et améliorations sont publiées fréquemment. Nous vous recommandons de rester à jour :
-
-**Option A — Mise à jour manuelle (recommandée) :**
-1. Ouvrez **Paramètres → Plugins communautaires**
-2. Cliquez sur **Rechercher les mises à jour**
-3. Trouvez **Karpathy LLM Wiki** dans la liste et cliquez sur **Mettre à jour**
-
-**Option B — Activer la mise à jour automatique :**
-1. Ouvrez **Paramètres → Plugins communautaires**
-2. Activez **Vérification automatique des mises à jour des plugins**
-3. Les nouvelles versions seront détectées automatiquement ; mettez à jour manuellement à votre convenance
-
-> 💡 **Pourquoi rester à jour ?** Chaque version peut inclure de nouvelles fonctionnalités, des améliorations de performances et des corrections de bugs importantes. Nous entretenons activement ce plugin — manquer une mise à jour signifie manquer une meilleure expérience.
-
-### 🔑 Configuration d'un Provider LLM
-
-1. Ouvrez Paramètres → Karpathy LLM Wiki
-2. Sélectionnez un provider dans le menu déroulant (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, Ollama, OpenRouter, ou personnalisé)
-3. Saisissez votre clé API (non requise pour Ollama)
-4. Cliquez sur **Fetch Models** pour peupler le menu déroulant des modèles, ou saisissez un nom de modèle manuellement
-5. Cliquez sur **Test Connection**, puis **Save Settings**
-
-**🦙 Ollama (local, sans clé API) :** Installez [Ollama](https://ollama.com), téléchargez un modèle (`ollama pull gemma4`), sélectionnez « Ollama (Local) » dans le menu déroulant des providers.
-
-> Consultez le [Guide de sélection de modèle](#-guide-de-sélection-de-modèle) pour plus de détails.
-
-### 🎮 Utilisation
-
-| Méthode | Action |
-|---------|--------|
-| **📥 Importer une source unique** | `Cmd+P` → « Importer une source unique » — sélectionnez une note spécifique pour extraire entités et concepts dans des pages Wiki |
-| **📂 Importer depuis un dossier** | `Cmd+P` → « Importer depuis un dossier » — choisissez un dossier, traitez toutes les notes par lot |
-| **🔍 Interroger le wiki** | `Cmd+P` → « Interroger le wiki » — posez des questions, obtenez des réponses en streaming avec `[[wiki-links]]` |
-| **🛠️ Vérifier le wiki** | `Cmd+P` → « Vérifier le wiki » — scan de santé : doublons, liens morts, pages orphelines, pages vides, alias manquants |
-| **📋 Régénérer l'index** | `Cmd+P` → « Régénérer l'index » — reconstruire `wiki/index.md` avec les pages actuelles et les alias |
-| **⏹️ Annuler opération** | `Cmd+P` → "Cancel current ingestion" ou clic barre de statut — arrêt propre aux limites de lot |
-| **🎯 Ingestion en un clic** | Icône `sticker` dans la barre latérale ou `Cmd+P` → "Ingest current file" — ingère directement le fichier actif |
-| **💡 Suggérer des mises à jour du schéma** | `Cmd+P` → « Suggérer des mises à jour du schéma » — le LLM analyse le Wiki et propose des améliorations du schéma |
-
-La ré-ingestion d'une même source effectue des mises à jour incrémentales sur les pages Entity/Concept (fusion des nouvelles informations). Les pages de résumé sont régénérées.
-
-**Smart Batch Skip :** Lors de l'ingestion d'un dossier, le plugin détecte automatiquement les fichiers déjà traités et les ignore pour économiser temps et coûts API. Le rapport de batch indique le nombre de fichiers ignorés.
-
-### ⚠️ Mise à niveau depuis une version antérieure ?
-
-**Cette version est entièrement rétrocompatible.** La v1.14.0 ne contient aucun changement cassant — vos pages Wiki existantes, vos paramètres et vos flux de travail sont préservés. Aucune reconfiguration ni migration de données n'est nécessaire.
-
-**Si votre Wiki existant a été construit au fil de nombreuses versions**, certaines pages peuvent manquer de fonctionnalités récentes (alias, déduplication par alias, prompts modernisés). Lancez **Vérifier le wiki** pour voir ce qui nécessite une attention. Smart Fix All gère les nettoyages les plus courants en un clic.
-
-**Si vous effectuez une mise à niveau depuis une version antérieure à la v1.14.0**, lancez **Vérifier le wiki** une fois pour corriger automatiquement les problèmes historiques :
-- **Liens doublement imbriqués** `[[[[entities/Foo|Foo]]]]` dans log.md — Lint détecte et corrige ces cas sans aucun coût LLM
-- **Doublons de stub inter-répertoires** — les pages existant à la fois dans `entities/` et `concepts/` sous le même slug sont désormais correctement appariées
-
-**Pour les Wikis construits au fil de nombreuses versions**, suivez ces étapes pour amener votre Wiki aux standards actuels :
-
-**1️⃣ Reconstruisez votre index**
-`Cmd+P` → **"Régénérer l'index"** — Cela reconstruit `wiki/index.md` avec les entrées d'alias pour chaque page, activant la recherche par alias dans Query (par ex., rechercher « DSA » trouve « DeepSeek-Sparse-Attention »). L'ancien format d'index ne listait que les titres de pages.
-
-**2️⃣ Exécutez Vérifier le wiki**
-`Cmd+P` → **"Vérifier le wiki"** — Cela scanne l'intégralité de votre Wiki et affiche :
-- **🏷️ Alias manquants** : Pages sans alias (toute version, si vous n'avez jamais lancé « Complete Aliases »). Cliquez sur **"Complete Aliases"** — le LLM génère traductions, acronymes et noms alternatifs en masse. C'est essentiel pour la détection des doublons.
-- **🔄 Pages en double** : Pages au contenu qui se chevauche (ex. « CoT » vs « chaîne de pensée » créées par des versions plus anciennes sans déduplication basée sur les alias). Cliquez sur **"Merge Duplicates"** pour les fusionner et préserver tous les alias.
-- **💀 Liens morts / Pages vides / Pages orphelines** : Problèmes classiques de maintenance Wiki.
-
-**3️⃣ Utilisez Smart Fix All**
-Cliquez sur **"Smart Fix All"** dans le rapport Lint pour une réparation en un clic, ordonnée par causalité : alias complétés → doublons fusionnés → liens morts réparés → pages orphelines liées → pages vides développées. C'est le moyen le plus rapide de nettoyer un Wiki construit à travers plusieurs versions.
-
-**4️⃣ Activez la génération parallèle de pages**
-Paramètres → **Ingestion Acceleration** :
-- **⚡ Page Generation Concurrency** : Réglez sur 3 pour la plupart des providers. Accélère l'ingestion de 2 à 3× sur les sources avec 10+ entités.
-- **⏱️ Batch Delay** : Commencez à 300 ms. Augmentez à 500–800 ms si vous rencontrez des limites de débit.
-
-**5️⃣ Passez en revue les paramètres actuels :**
-- **🌐 Wiki Output Language** : Indépendant de la langue de l'interface — votre Wiki peut être en chinois pendant que l'interface du plugin reste en anglais, ou vice versa.
-- **📊 Granularité d'extraction** : Cinq options contrôlent la profondeur d'extraction des entités par le LLM :
-  - **Fine** (~100 éléments) — Analyse approfondie, mentions marginales incluses. Coût en tokens élevé, idéal pour les sources clés.
-  - **Standard** (~50 éléments) — Extraction équilibrée. Bon choix par défaut pour les notes quotidiennes.
-  - **Grossière** (~10 éléments) — Aperçu rapide, entités principales uniquement. Coût faible, ingestion rapide.
-  - **Minimale** (~5 éléments) — Éléments essentiels uniquement. Idéal pour traiter par lot 100+ fichiers ou tester de nouvelles sources.
-  - **Personnalisée** (1–300 éléments) — Limites utilisateur pour entités/concepts, workflows spécialisés.
-  > 💡 **Recommandation** : Utilisez Minimale ou Grossière pour les grands dossiers afin d'économiser temps et coûts API. Fine uniquement pour les documents clés nécessitant une analyse approfondie.
-- **🔄 Auto-Maintenance** : Surveillance de fichiers optionnelle, Lint périodique et vérification de santé au démarrage. Tout est désactivé par défaut — activez uniquement si vous souhaitez un traitement automatique en arrière-plan.
-
-> **🛡️ Sécurité :** La génération parallèle utilise `Promise.allSettled` — si une page échoue, les autres poursuivent leur traitement. Les pages en échec sont réessayées individuellement avec backoff exponentiel. Smart Batch Skip détecte automatiquement les fichiers déjà ingérés pour économiser du temps et des coûts d'API.
-
----
----
-
-## ⚡ Quoi de neuf dans la v1.16.1
-
-Cette version est un **correctif de stabilité et d'UX** qui corrige la régression CORS d'Anthropic et les faux positifs de lint de longue date — aucune nouvelle fonctionnalité, aucun changement cassant.
-
-**Corrections principales :**
-
-- **Régression CORS Anthropic corrigée (Issue #95).** Suppression de `@anthropic-ai/sdk` (1,3 Mo) et réécriture de `AnthropicClient` sur le `requestUrl` d'Obsidian. Le `fetch` interne du SDK depuis l'origine `app://obsidian.md` était bloqué de façon intermittente par CORS — la correction standard de la communauté utilisée par d'autres plugins LLM. Le prompt caching (`cache_control: ephemeral`) est préservé en émettant la même structure JSON dans le corps de la requête brute.
-
-- **Corrections des faux positifs de lint (PR #88).** Nouveau `bodyWordSet()` avec `BODY_STOPWORDS` (45 mots fonctionnels anglais) filtre les candidats de doublons sharedLinks par similarité du texte du corps (seuil ≥ 0,2). Corrige le cas où 3+ pages pointant vers la même page hub étaient signalées à tort comme doublons malgré un contenu différent. `scanDeadLinks` normalise maintenant espace→tiret dans le nom de base cible, donc `[[entities/Claude Code]]` correspond correctement à `entities/Claude-Code.md`.
-
-- **Slugs en minuscules + détection des variantes de casse (PR #87).** `computeSlug()` met désormais la sortie en minuscules, évitant la création de pages en doublon sur les systèmes de fichiers sensibles à la casse. Nouveau signal `caseVariant` dans `generateDuplicateCandidates` détecte les pages avec des titres en collision de casse (par ex., `Unix` vs `unix`) en Tier 1 — pas de vérification LLM nécessaire.
-
-- **UX des paramètres : suppression du repli de modèle codé en dur.** `defaultModel` supprimé des 12 configurations de fournisseur. `DEFAULT_SETTINGS.model: ''` (pas de remplissage automatique à la nouvelle installation). Le changement de fournisseur vide le champ de modèle — l'utilisateur doit récupérer les modèles ou les saisir manuellement.
-
-- **UX des paramètres : classification amicale des erreurs de récupération.** Nouveau `classifyFetchError()` catégorise les échecs en `Auth` / `Endpoint` / `Server` / `Empty` / `Network`. Chaque catégorie affiche une notice spécifique avec l'action pertinente — par ex. « Échec d'authentification (HTTP 401/403). Vérifiez la clé API, ou entrez un ID de modèle puis cliquez sur Tester la connexion. » La saisie manuelle est toujours mentionnée comme solution de repli.
-
-- **UX des paramètres : basculement automatique vers le menu déroulant après récupération réussie.** Après le succès de Fetch Models, le sélecteur de modèle bascule automatiquement du champ de saisie vers le menu déroulant, pour que les utilisateurs voient la liste immédiatement sans clic supplémentaire.
-
-**Mise à niveau depuis une version plus ancienne ?** Il suffit d'installer et d'utiliser — zéro changement cassant, zéro reconfiguration. Les wikis, paramètres et workflows existants sont préservés. Le champ de modèle du menu déroulant sera vide pour les utilisateurs qui avaient des valeurs par défaut codées en dur, mais un clic sur **Fetch Models** le remplira à partir de l'API de votre fournisseur.
-
-**Nous recommandons vivement à tous les utilisateurs de mettre à niveau vers cette version** — la correction CORS d'Anthropic restaure la fonctionnalité du plugin pour les utilisateurs sur macOS Tahoe et d'autres versions d'Electron où le comportement CORS du SDK bloquait auparavant.
-
+**Nous recommandons vivement à tous les utilisateurs de mettre à jour vers cette version** — la correction de l'annulation du Lint, l'application de la granularité et la protection contre les tokens de raisonnement améliorent considérablement la fiabilité de la maintenance quotidienne.
 ---
 
 ## ✨ Fonctionnalités

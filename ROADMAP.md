@@ -91,8 +91,8 @@ Production-critical performance release. Extraction fundamentally rearchitected 
 | 8 | Split QueryModal → QueryEngine class | Model Audit B #4 | 2d | ⬜ Deferred |
 | 9 | Extensible SSE parser (reasoning events, etc.) | Issue #64 ext | 1d | ⬜ Deferred |
 | 10 | `source-analyzer.ts` 局部 `MAX_TOKENS` → `MAX_TOKENS_BATCH` | Second audit | 5min | ⬜ |
-| 11 | `parseJsonResponse` 内部 strip think blocks | Second audit | 15min | ⬜ |
-| 12 | `disable_thinking` interface + per-client implementation | Issue #72 | 2-3h | ⬜ |
+| 11 | `parseJsonResponse` 内部 strip think blocks | Second audit | 15min | ✅ **Done (v1.16.2)** |
+| 12 | `disable_thinking` interface + per-client implementation | Issue #72 | 2-3h | ✅ **Done (v1.16.2)** |
 | 13 | Restore true streaming for 3rd-party providers (fetch + ReadableStream or SDK option) | User UX feedback 2026-06-02 | 1-2d | ⬜ Deferred |
 | 14 | wiki-engine `ingestSource` full-path integration tests (deferred from P2 — requires heavy Obsidian App + 5 submodule mocks) | 7th audit repeat | 2-3d | ⬜ Deferred |
 | 15 | query-engine core flow tests (deferred from P2 — requires Modal + MarkdownRenderer + DOM + LLMWikiPlugin mocks) | Audit consensus | 1-2d | ⬜ Deferred |

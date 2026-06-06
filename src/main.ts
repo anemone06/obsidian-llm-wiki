@@ -32,6 +32,14 @@ function createLLMClient(settings: LLMWikiSettings): LLMClient {
     client = new OpenAICompatibleClient(apiKey, baseUrl);
   }
 
+  // Sync thinking control cache from settings to client
+  if (client instanceof OpenAICompatibleClient) {
+    const cacheKey = settings.baseUrl || PREDEFINED_PROVIDERS[settings.provider]?.baseUrl || '';
+    if (cacheKey && settings.thinkingControlCache?.[cacheKey] !== undefined) {
+      client.thinkingControlSupported = settings.thinkingControlCache[cacheKey];
+    }
+  }
+
   // Issue #75: wrap createMessage with token cap when configured
   if (settings.maxTokensPerCall > 0) {
     const originalCreate = client.createMessage.bind(client) as (params: Parameters<typeof client.createMessage>[0]) => ReturnType<typeof client.createMessage>;
@@ -583,6 +591,38 @@ export default class LLMWikiPlugin extends Plugin {
 
       console.debug('Test response:', testResponse);
       this.settings.llmReady = true;
+
+      // Probe: does this provider accept `thinking: { type: 'disabled' }`?
+      // The result is cached in settings so subsequent LLM calls can avoid a
+      // redundant 400 round-trip. The in-request fallback (retry without
+      // thinking control) handles any mismatch between probe and runtime.
+      if (testClient instanceof OpenAICompatibleClient || testClient instanceof AnthropicCompatibleClient || testClient instanceof AnthropicClient) {
+        try {
+          await testClient.createMessage({
+            model: this.settings.model,
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'think' }],
+            disableThinking: true,
+          });
+          if (testClient instanceof OpenAICompatibleClient) {
+            testClient.thinkingControlSupported = true;
+          }
+          this.settings.thinkingControlCache = {
+            ...this.settings.thinkingControlCache,
+            [this.settings.baseUrl]: true,
+          };
+          console.debug('Thinking control supported by', this.settings.baseUrl);
+        } catch {
+          if (testClient instanceof OpenAICompatibleClient) {
+            testClient.thinkingControlSupported = false;
+          }
+          this.settings.thinkingControlCache = {
+            ...this.settings.thinkingControlCache,
+            [this.settings.baseUrl]: false,
+          };
+          console.debug('Thinking control NOT supported by', this.settings.baseUrl);
+        }
+      }
       await this.saveSettings();
 
       // Auto-initialize wiki structure after first successful connection

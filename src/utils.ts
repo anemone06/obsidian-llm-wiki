@@ -105,6 +105,15 @@ export async function parseJsonResponse(
 
     let normalized = response.trim();
 
+    // Step 1.0: Strip reasoning/thinking blocks (ROADMAP P3 #11)
+    // Thinking models can output pseudocode JSON inside <think>{...}</think>.
+    // extractBalancedJson would otherwise grab the first '{' inside the think
+    // block and ignore the real JSON after </think>. Strip early, before
+    // brace-counting runs.
+    normalized = normalized.replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '');
+    normalized = normalized.replace(/<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi, '');
+    normalized = normalized.trim();
+
     // Step 1.1: Strip markdown code fences
     normalized = normalized.replace(/^```(?:json|markdown|md)?\s*\n?/, '');
     normalized = normalized.replace(/\n?```$/, '');
@@ -591,6 +600,23 @@ export function cleanMarkdownResponse(response: string): string {
   // other processing so downstream parsers see only the final response.
   cleaned = cleaned.replace(/<think\b[^>]*>[\s\S]*?<\/think>/gi, '');
   cleaned = cleaned.replace(/<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi, '');
+
+  // Layer B2 (Issue #99): model-agnostic structural preamble detection.
+  // Some models (e.g. Gemma 4) emit reasoning as plain text without
+  // recognizable <think> tokens. When the response has a `## /#` header
+  // but no frontmatter, the existing auto-prefix logic below cannot
+  // classify the leading prose as frontmatter-like, so we proactively
+  // discard it here. The `\n---\n` case is left to the existing
+  // "removed preamble text before frontmatter" path below.
+  if (cleaned.indexOf('\n---\n') === -1) {
+    const headerMatch = cleaned.match(/\n#{1,2} \S/);
+    if (headerMatch) {
+      const cutIdx = cleaned.indexOf(headerMatch[0]);
+      if (cutIdx > 0) {
+        cleaned = cleaned.slice(cutIdx + 1).replace(/^\s+/, '');
+      }
+    }
+  }
 
   // Remove markdown code block wrapping
   // Pattern 1: ```markdown ... ```

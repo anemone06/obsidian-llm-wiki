@@ -70,6 +70,7 @@ export interface LintFixCallbacks {
   onCompleteAliases?: () => void;
   onFixDeadLinks?: () => void;
   onFillEmptyPages?: () => void;
+  onDeleteEmptyStubs?: () => void;
   onLinkOrphans?: () => void;
   onAnalyzeSchema?: () => void;
   onMergeDuplicates?: () => void;
@@ -162,6 +163,7 @@ export class LintReportModal extends Modal {
       { count: this.counts.deadLinks, cb: this.fixCallbacks.onFixDeadLinks, text: t.lintModalFixDeadLinks },
       { count: this.counts.orphans, cb: this.fixCallbacks.onLinkOrphans, text: t.lintModalLinkOrphans },
       { count: this.counts.emptyPages, cb: this.fixCallbacks.onFillEmptyPages, text: t.lintModalExpandEmpty },
+      { count: this.counts.emptyPages, cb: this.fixCallbacks.onDeleteEmptyStubs, text: t.lintModalDeleteEmpty },
     ].filter(item => item.count > 0 && item.cb);
 
     if (fixableItems.length > 0) {

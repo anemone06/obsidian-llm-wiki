@@ -410,6 +410,30 @@ tags: [${stubType === 'entity' ? 'other' : 'term'}]
     return `${pageRel} (${beforeLen} → ${enforced.length} chars)`;
   }
 
+  // Issue #103: Delete empty stubs without running the full lint pipeline.
+  // Scans wiki pages, deletes those that `isPageEmpty` considers empty,
+  // and skips pages that have been manually reviewed (reviewed: true).
+  async deleteEmptyStubs(wikiFolder: string): Promise<number> {
+    const files = this.ctx.app.vault.getMarkdownFiles()
+      .filter(f => f.path.startsWith(wikiFolder) &&
+                   !f.path.endsWith('/index.md') &&
+                   !f.path.includes('/schema/') &&
+                   !f.path.includes('/sources/') &&
+                   !f.path.includes('/contradictions/') &&
+                   !f.path.includes('log.md'));
+
+    let deleted = 0;
+    for (const file of files) {
+      const content = await this.ctx.app.vault.read(file);
+      if (!isPageEmpty(content)) continue;
+      const fm = parseFrontmatter(content);
+      if (fm?.reviewed === true) continue;
+      await this.ctx.deleteFile(file.path);
+      deleted++;
+    }
+    return deleted;
+  }
+
   async linkOrphanPage(orphanPath: string): Promise<string[]> {
     const orphanContent = await this.ctx.tryReadFile(orphanPath);
     if (!orphanContent) return [];

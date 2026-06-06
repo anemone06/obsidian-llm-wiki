@@ -144,6 +144,16 @@ export function getGranularityInstruction(settings: LLMWikiSettings): string {
   return GRANULARITY_INSTRUCTIONS[granularity] || GRANULARITY_INSTRUCTIONS.standard;
 }
 
+// Issue #96: Lint LLM analysis previously ignored the user's
+// extractionGranularity setting. This helper appends the granularity
+// instruction to an existing prompt so the lint LLM respects the same
+// constraints as the ingestion path. Idempotent on empty instructions.
+export function appendGranularityToPrompt(prompt: string, settings: LLMWikiSettings): string {
+  const instruction = getGranularityInstruction(settings);
+  if (!instruction) return prompt;
+  return `${prompt}\n\n${instruction}`;
+}
+
 export function getGranularityFixLimits(settings: LLMWikiSettings): { maxEntities: number; maxConcepts: number } {
   const granularity = settings.extractionGranularity || 'standard';
   if (granularity === 'custom') {
