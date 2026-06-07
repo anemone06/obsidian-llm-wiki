@@ -117,9 +117,9 @@ Every change must pass all six gates before being considered complete. Gates 1-4
 | **1. Code correct** | `pnpm lint` 0/0 + `npx tsc --noEmit` 0/0 + `pnpm test` all pass + `pnpm build` clean | 4-Gate script | Developer |
 | **2. No side effects** | Call-site audit + data flow trace + state mutation check + error propagation check | Structured review | Developer |
 | **3. No breaking changes** | API/Schema/File format/Default behavior/Command IDs/Obsidian API all backward-compatible | Breaking-change matrix | Developer |
-| **4. No performance regression** | CPU/memory/IO/network/token usage — no regression for the change scope | simplify + Five-Gate review | Developer |
+| **4. No performance regression** | CPU/memory/IO/network/token usage — 5-dim walkthrough, written assessment table | simplify + code-review + Gate 4 table | Developer |
 | **5. Docs complete** | 8 READMEs + ROADMAP + CLAUDE.md + CHANGELOG + memory all updated | pre-release-gate | Gate |
-| **6. Release clean** | TOC anchors + localization + Release Notes + Contributors + git commit hygiene | pre-release-gate | Gate |
+| **6. Release clean (superset of 1-5)** | Gate 1-5 all green, PLUS TOC anchors + localization + Release Notes + Contributors + git hygiene + **Gate 4 perf re-verification** | pre-release-gate | Gate |
 
 ### Gate 1: Four-Gate automated
 
@@ -157,20 +157,65 @@ For each modified function, trace:
 
 **Deliverable**: "None detected" or specific migration plan.
 
-### Gate 4: No Performance Regression
+### Gate 4: No Performance Regression — structured procedure
 
-Check within the change scope:
-- **CPU**: new O(n²) loops? synchronous blocking in hot path?
-- **Memory**: unbounded arrays/caches? event listener leaks?
-- **IO**: redundant file reads? N+1 vault operations?
-- **Network**: extra LLM calls per operation? redundant API requests?
-- **Token usage**: increased prompt size? unnecessary context in LLM calls?
+Performance regressions in this plugin have a user-visible cost (the Lint
+phase on a 2000-page vault already runs 60+ seconds). Every change must
+explicitly clear five performance dimensions **within the change scope**.
 
-**Deliverable**: "No regression" or specific performance impact statement.
+**Procedure** (do not skip):
+
+1. **Run `simplify` skill** (3 parallel agents: Code Reuse / Code Quality / Efficiency). The Efficiency agent covers most of dimension 1-3 below.
+2. **Run `code-review` skill** (max effort). Catches performance foot-guns specific to this codebase (e.g., N+1 LLM calls, N+1 vault ops).
+3. **Walk through the 5 dimensions below** and produce a written assessment.
+4. **If a dimension shows regression** → propose a mitigation OR escalate to user for sign-off. Do NOT silently accept regressions.
+5. **If a dimension is N/A** (no code in that path) → state "N/A — no [hot path/IO/etc.] in change scope".
+
+#### Five dimensions to evaluate
+
+| # | Dimension | What to check | Project-specific signals |
+|---|-----------|---------------|--------------------------|
+| 1 | **CPU** | New O(n²) loops? Synchronous blocking in hot path? Hot loop allocating? | `O(n²) candidate generation` is the known risk — do not regress it. |
+| 2 | **Memory** | Unbounded arrays / caches? Event listener leaks? Map growing without eviction? | `thinkingControlCache` (Record per baseUrl) is bounded by user count. `Map<string, PageMeta>` in `generateDuplicateCandidates` holds all pages in memory at once. |
+| 3 | **IO** | Redundant file reads? N+1 vault operations? Unnecessary re-serialization? | `vault.read()` per page in loops is expensive. `vault.modify()` per page × N. Index regen on every fix call (was pre-fix). |
+| 4 | **Network** | Extra LLM calls per operation? Redundant API requests? Missing cache reuse? | `OpenAICompatibleClient.createMessage` should cache 400-fallback results (Issue #245). Lint dedup batches by 100 / budget 500 — overshooting is a real risk (Issue #99 followup). |
+| 5 | **Token usage** | Increased prompt size? Unnecessary context in LLM calls? Wrong model? | Ingest prompts are 1-3K tokens. Lint dedup prompt = 100 candidates × ~30 tokens = 3K per batch. Be especially alert to LLM retries (each retry consumes the full prompt again). |
+
+**Deliverable** (mandatory in commit body or PR description):
+```
+## Gate 4: Performance
+
+| Dim | Status | Notes |
+|-----|--------|-------|
+| CPU | ✅ / ⚠️ / N/A | ... |
+| Memory | ✅ / ⚠️ / N/A | ... |
+| IO | ✅ / ⚠️ / N/A | ... |
+| Network | ✅ / ⚠️ / N/A | ... |
+| Token | ✅ / ⚠️ / N/A | ... |
+```
+
+A bare "no regression" without the table is **not acceptable**.
+
+#### Anti-patterns that bypass Gate 4
+
+- "I didn't touch the slow path" — hot paths can be regressed by adjacent changes (e.g., adding an extra vault.read() inside a loop).
+- "simplify didn't flag it" — simplify's Efficiency agent is a starting point, not a complete audit. The 5-dim walkthrough is mandatory.
+- "Premature optimization" — true for speculative work, false when measuring the change you're about to ship.
 
 ### Gate 5 + Gate 6
 
-Automated by `pre-release-gate` skill before user approval. Run at release Step 5c.
+Gate 6 is a **superset of Gates 1-5**: re-verifies everything is still green
+*plus* release-specific hygiene. Automated by the `pre-release-gate`
+skill before user approval (release Step 5c). The skill's REPORT phase
+must include:
+
+- All Gate 1 mechanical checks (lint/tsc/test/build) — re-run, do not trust cached
+- All Gate 4 dimensions marked with explicit ✅ / ⚠️ / N/A based on the change scope
+- Gate 5 docs verification (checklist sweep)
+- Gate 6 release hygiene (TOC anchors, i18n completeness, Contributors policy, git commit format)
+
+If any dimension regresses between commit and release time, Gate 6
+**fails** even if Gate 1-4 passed at commit time.
 
 ### ⚠️ Anti-patterns
 
