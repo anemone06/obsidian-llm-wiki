@@ -30,7 +30,7 @@ describe('calculateBatchLimits', () => {
 
   it('custom granularity stays conservative for small caps (5+5)', () => {
     const result = calculateBatchLimits(100000, 'custom', { entityCap: 5, conceptCap: 5 });
-    // totalCap = 10 → not > 10, so no scaling
+    // totalCap = 10 → not > 10 threshold, stays at default config.initialBatchSize: 5
     expect(result.initialBatchSize).toBe(5);
   });
 

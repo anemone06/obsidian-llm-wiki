@@ -446,6 +446,7 @@ export default class LLMWikiPlugin extends Plugin {
       }
 
       if (ingestCount === 0) {
+        this.wikiEngine.setDoneCallback((report: IngestReport) => this.onIngestDone(report));
         const texts = TEXTS[this.settings.language];
         new Notice(texts.batchIngestAllIngested.replace('{total}', String(totalFiles)), NOTICE_NORMAL);
         return;

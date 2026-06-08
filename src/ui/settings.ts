@@ -430,9 +430,18 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           button.setButtonText(this.getText('testing'));
           button.setDisabled(true);
           const testSettings = { ...this.tempSettings };
+          const oldSettings = this.plugin.settings;
           this.plugin.settings = testSettings;
           this.plugin.initializeLLMClient();
+          this.plugin.wikiEngine?.updateSettings(testSettings);
           const result = await this.plugin.testLLMConnection();
+          if (!result.success) {
+            // Restore live settings on test failure — do not persist broken config
+            this.plugin.settings = oldSettings;
+            this.plugin.initializeLLMClient();
+            this.plugin.wikiEngine?.updateSettings(oldSettings);
+            await this.plugin.saveSettings();
+          }
           this.tempSettings.llmReady = result.success;
           button.setButtonText(this.getText('testButton'));
           button.setDisabled(false);

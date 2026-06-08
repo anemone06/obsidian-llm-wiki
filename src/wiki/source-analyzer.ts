@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { PROMPTS } from '../prompts';
 import { parseJsonResponse, matchExtractedToExisting, coerceToArray } from '../utils';
-import { MAX_TOKENS_BATCH } from '../constants';
+import { MAX_TOKENS_BATCH, TOKENS_PER_ITEM_BUDGET, SOURCE_ANALYZER_RETRY_MULTIPLIER } from '../constants';
 import { getExistingWikiPages } from './lint-fixes';
 import { getGranularityInstruction } from './system-prompts';
 import { calculateBatchLimits, adjustBatchSizeForResponse, getCustomTypeCaps } from '../core/batch-limits';
@@ -111,12 +111,17 @@ export class SourceAnalyzer {
 
     const customTypeCaps = getCustomTypeCaps(this.ctx.settings);
 
-    const maxTokens = MAX_TOKENS_BATCH;
+    // Dynamic max_tokens: scale with batch size to avoid truncation on large batches.
+    // Batch 1 with 50 items needs ~20K tokens; batch 2+ with dedup context may need more.
+    const baseMaxTokens = Math.max(MAX_TOKENS_BATCH, limits.initialBatchSize * TOKENS_PER_ITEM_BUDGET);
+    // Allow truncation retry to grow up to N× the base cap.
+    const retryCap = baseMaxTokens * SOURCE_ANALYZER_RETRY_MULTIPLIER;
 
-    console.debug(`[Batch limits] Initial size: ${limits.initialBatchSize}, Max batches: ${limits.maxBatches}, Max total: ${limits.maxTotalItems || 'none'}`);
+    console.debug(`[Batch limits] Initial size: ${limits.initialBatchSize}, Max batches: ${limits.maxBatches}, Max total: ${limits.maxTotalItems || 'none'}, baseMaxTokens: ${baseMaxTokens}, retryCap: ${retryCap}`);
 
     let currentBatchSize = limits.initialBatchSize;
     let batchSizeHalved = false;
+    let retryingBatch = false; // one retry on truncation: halve batch size
 
     // Initialize batch accumulation using pure function (Phase 3)
     const accumulation = createEmptyAccumulation();
@@ -187,14 +192,17 @@ export class SourceAnalyzer {
 
       try {
         const systemPrompt = await this.ctx.buildSystemPrompt('analyze');
-        console.debug(`[Batch ${batchNum + 1}] Provider:`, this.ctx.settings.provider, '| Model:', this.ctx.settings.model, '| Prompt:', finalPrompt.length, 'chars');
+        // Scale max_tokens with current batch size to avoid truncation.
+        const batchMaxTokens = Math.max(baseMaxTokens, currentBatchSize * TOKENS_PER_ITEM_BUDGET);
+        console.debug(`[Batch ${batchNum + 1}] Provider:`, this.ctx.settings.provider, '| Model:', this.ctx.settings.model, '| Prompt:', finalPrompt.length, 'chars', '| max_tokens:', batchMaxTokens);
         const response = await client.createMessage({
           model: this.ctx.settings.model,
-          max_tokens: maxTokens,
+          max_tokens: batchMaxTokens,
           system: systemPrompt,
           messages: [{ role: 'user', content: finalPrompt }],
           response_format: { type: 'json_object' },
-          cacheBreakpoint: staticPrefix.length
+          cacheBreakpoint: staticPrefix.length,
+          maxTokensPerCall: retryCap,
         });
 
         console.debug(`[Batch ${batchNum + 1}] Response length:`, response.length);
@@ -204,10 +212,11 @@ export class SourceAnalyzer {
           const repairPrompt = `Fix the following malformed JSON. Only fix JSON syntax errors (unescaped quotes, trailing commas, missing brackets). Do NOT change any values or content. Output ONLY the fixed JSON, no other text.\n\n${malformedJson}`;
           return await client.createMessage({
             model: this.ctx.settings.model,
-            max_tokens: maxTokens,
+            max_tokens: retryCap, // Repair may need full output if original was truncated at retryCap
             system: await this.ctx.buildSystemPrompt('analyze'),
             messages: [{ role: 'user', content: repairPrompt }],
-            response_format: { type: 'json_object' }
+            response_format: { type: 'json_object' },
+            maxTokensPerCall: retryCap,
           });
         }) as Partial<SourceAnalysis> | null;
 
@@ -307,12 +316,42 @@ export class SourceAnalyzer {
           const providerName = this.ctx.settings.provider;
           const modelName = this.ctx.settings.model;
           const errMsg = error instanceof Error ? error.message : String(error);
+          const lowerErr = errMsg.toLowerCase();
+
+          // Classify error by message content for targeted user guidance
+          let userHint: string;
+          if (lowerErr.includes('context') || lowerErr.includes('token') || lowerErr.includes('length') || lowerErr.includes('exceed')) {
+            userHint = 'The request was rejected because the source file is too large for this model\'s context window. ' +
+              'Try: (1) switch to a model with a larger context window (e.g. 1M tokens) in Settings, ' +
+              '(2) reduce the file size, or (3) use a provider that supports larger contexts.';
+          } else if (lowerErr.includes('max_tokens')) {
+            userHint = 'The model rejected the max_tokens value. Try reducing it in Settings → LLM Configuration → Context Window.';
+          } else if (lowerErr.includes('400')) {
+            userHint = 'The API returned a Bad Request error. Check that the model name is correct and supported by your provider.';
+          } else if (lowerErr.includes('401') || lowerErr.includes('403')) {
+            userHint = 'Authentication failed. Check your API key in Settings.';
+          } else if (lowerErr.includes('429')) {
+            userHint = 'Rate limit exceeded. Wait a moment and try again, or switch to a provider with higher limits.';
+          } else {
+            userHint = 'Check your network connection, API key, and provider URL in Settings. ' +
+              'If the error mentions SSL/TLS, try: (1) restart Obsidian, (2) check VPN/proxy settings, (3) verify the provider URL is correct.';
+          }
+
           throw new Error(
-            `Failed to connect to ${providerName} API (model: ${modelName}): ${errMsg}. ` +
-            `Check your network connection, API key, and provider URL in Settings. ` +
-            `If the error mentions SSL/TLS, try: (1) restart Obsidian, (2) check VPN/proxy settings, (3) verify the provider URL is correct.`
+            `Failed to connect to ${providerName} API (model: ${modelName}): ${errMsg}. ${userHint}`
           );
         }
+
+        const errMsg = error instanceof Error ? error.message : String(error);
+        const isTruncation = errMsg.toLowerCase().includes('truncated') || errMsg.toLowerCase().includes('max_tokens');
+        if (!retryingBatch && isTruncation && currentBatchSize > limits.minBatchSize) {
+          currentBatchSize = Math.max(limits.minBatchSize, Math.floor(currentBatchSize * 0.5));
+          console.warn(`[Batch ${batchNum + 1}] Truncation detected, halving batch size to ${currentBatchSize} and retrying`);
+          retryingBatch = true;
+          batchNum--;
+          continue;
+        }
+        retryingBatch = false;
         console.warn(`[Batch ${batchNum + 1}] Non-first-round failure, keeping extracted items`);
         break;
       }

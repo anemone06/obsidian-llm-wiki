@@ -63,7 +63,6 @@ export class WikiEngine {
   private pagesCacheTime = 0;
   private readonly PAGES_CACHE_TTL_MS = PAGES_CACHE_TTL_MS;
   private ctx: EngineContext;
-  private longSourceNotice: Notice | null = null;
 
   constructor(
     app: App,
@@ -229,12 +228,12 @@ export class WikiEngine {
     const lineCount = fileContent.split('\n').length;
     if (lineCount > LONG_SOURCE_LINE_THRESHOLD) {
       const sizeKB = Math.round(fileContent.length / 1024);
-      this.longSourceNotice = new Notice(
+      new Notice(
         getText(this.settings.language, 'longSourceNotice')
           .replace('{filename}', file.basename)
           .replace('{lines}', String(lineCount))
           .replace('{size}', sizeKB >= 1024 ? `${(sizeKB / 1024).toFixed(1)}MB` : `${sizeKB}KB`),
-        0
+        NOTICE_NORMAL
       );
       console.debug(`[Long Source] ${file.basename}: ${lineCount} lines, ${sizeKB}KB — long ingestion expected`);
     }
@@ -605,10 +604,6 @@ export class WikiEngine {
     } finally {
       this.abortController = null;
       this.onIngestionEnd?.();
-      if (this.longSourceNotice) {
-        this.longSourceNotice.hide();
-        this.longSourceNotice = null;
-      }
     }
   }
 
