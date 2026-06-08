@@ -2,6 +2,8 @@
 // Extracted from source-analyzer.ts::analyzeSource()
 // Zero side effects, fully unit-testable
 
+import { CUSTOM_BATCH_SIZE_MAX, CUSTOM_BATCH_SIZE_MIN } from '../constants';
+
 export interface GranularityConfig {
   initialBatchSize: number;
   maxBatchesBase: number;
@@ -44,6 +46,17 @@ export function calculateBatchLimits(
   customLimits?: { entityCap?: number; conceptCap?: number }
 ): BatchLimits {
   const config = { ...(GRANULARITY_CONFIG[granularity] || GRANULARITY_CONFIG.standard) };
+
+  // Custom granularity: scale batch parameters to match user's caps.
+  // Without this, custom (initialBatchSize:5, maxBatchesBase:1) maxes at 15 items
+  // regardless of customEntityLimit/customConceptLimit settings.
+  if (granularity === 'custom' && customLimits) {
+    const totalCap = (customLimits.entityCap ?? 5) + (customLimits.conceptCap ?? 5);
+    if (totalCap > 10) {
+      config.initialBatchSize = Math.min(CUSTOM_BATCH_SIZE_MAX, Math.max(CUSTOM_BATCH_SIZE_MIN, totalCap));
+      config.maxBatchesBase = Math.ceil(totalCap / config.initialBatchSize);
+    }
+  }
 
   // Auto-downgrade maxTotalItems for short content to avoid "hard digging"
   // A 6800-char source can't have 50 wiki-worthy items; cap at ~1 per 600 chars

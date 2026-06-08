@@ -1,4 +1,4 @@
-import { NOTICE_NORMAL, NOTICE_ERROR, NOTICE_SHORT } from '../constants';
+import { NOTICE_NORMAL, NOTICE_ERROR, NOTICE_SHORT, CUSTOM_LIMIT_MAX, CUSTOM_LIMIT_MIN } from '../constants';
 // Settings panel UI for LLM Wiki Plugin
 
 import { App, PluginSettingTab, Setting, Notice, TFile, requestUrl } from 'obsidian';
@@ -495,21 +495,21 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           .setValue(String(this.tempSettings.customEntityLimit ?? 5))
           .onChange((value) => {
             const parsed = parseInt(value);
-            if (parsed > 300) {
-              this.tempSettings.customEntityLimit = 300;
-              text.setValue('300');
-              new Notice(this.getText('numberRangeClamped').replace('{}', '300'), NOTICE_SHORT);
-            } else if (parsed < 1) {
-              this.tempSettings.customEntityLimit = 1;
-              text.setValue('1');
-              new Notice(this.getText('numberRangeClamped').replace('{}', '1'), NOTICE_SHORT);
+            if (parsed > CUSTOM_LIMIT_MAX) {
+              this.tempSettings.customEntityLimit = CUSTOM_LIMIT_MAX;
+              text.setValue(String(CUSTOM_LIMIT_MAX));
+              new Notice(this.getText('numberRangeClamped').replace('{}', String(CUSTOM_LIMIT_MAX)), NOTICE_SHORT);
+            } else if (parsed < CUSTOM_LIMIT_MIN) {
+              this.tempSettings.customEntityLimit = CUSTOM_LIMIT_MIN;
+              text.setValue(String(CUSTOM_LIMIT_MIN));
+              new Notice(this.getText('numberRangeClamped').replace('{}', String(CUSTOM_LIMIT_MIN)), NOTICE_SHORT);
             } else if (!isNaN(parsed)) {
               this.tempSettings.customEntityLimit = parsed;
             }
           });
         text.inputEl.type = 'number';
-        text.inputEl.min = '1';
-        text.inputEl.max = '300';
+        text.inputEl.min = String(CUSTOM_LIMIT_MIN);
+        text.inputEl.max = String(CUSTOM_LIMIT_MAX);
         text.inputEl.classList.add('llm-wiki-number-input');
       });
     customEntitySetting.settingEl.style.display =
@@ -525,21 +525,21 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           .setValue(String(this.tempSettings.customConceptLimit ?? 5))
           .onChange((value) => {
             const parsed = parseInt(value);
-            if (parsed > 300) {
-              this.tempSettings.customConceptLimit = 300;
-              text.setValue('300');
-              new Notice(this.getText('numberRangeClamped').replace('{}', '300'), NOTICE_SHORT);
-            } else if (parsed < 1) {
-              this.tempSettings.customConceptLimit = 1;
-              text.setValue('1');
-              new Notice(this.getText('numberRangeClamped').replace('{}', '1'), NOTICE_SHORT);
+            if (parsed > CUSTOM_LIMIT_MAX) {
+              this.tempSettings.customConceptLimit = CUSTOM_LIMIT_MAX;
+              text.setValue(String(CUSTOM_LIMIT_MAX));
+              new Notice(this.getText('numberRangeClamped').replace('{}', String(CUSTOM_LIMIT_MAX)), NOTICE_SHORT);
+            } else if (parsed < CUSTOM_LIMIT_MIN) {
+              this.tempSettings.customConceptLimit = CUSTOM_LIMIT_MIN;
+              text.setValue(String(CUSTOM_LIMIT_MIN));
+              new Notice(this.getText('numberRangeClamped').replace('{}', String(CUSTOM_LIMIT_MIN)), NOTICE_SHORT);
             } else if (!isNaN(parsed)) {
               this.tempSettings.customConceptLimit = parsed;
             }
           });
         text.inputEl.type = 'number';
-        text.inputEl.min = '1';
-        text.inputEl.max = '300';
+        text.inputEl.min = String(CUSTOM_LIMIT_MIN);
+        text.inputEl.max = String(CUSTOM_LIMIT_MAX);
         text.inputEl.classList.add('llm-wiki-number-input');
       });
     customConceptSetting.settingEl.style.display =

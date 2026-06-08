@@ -31,6 +31,22 @@ export const MIN_SUBSTANTIVE_CHARS = 50;
 export const PAGES_CACHE_TTL_MS = 5000;
 
 // ============================================================================
+// Custom Granularity Limits
+// ============================================================================
+
+/** Maximum custom entity/concept limit per type (settings UI cap). */
+export const CUSTOM_LIMIT_MAX = 500;
+
+/** Minimum custom entity/concept limit per type. */
+export const CUSTOM_LIMIT_MIN = 1;
+
+/** Maximum batch size for custom granularity (LLM quality ceiling). */
+export const CUSTOM_BATCH_SIZE_MAX = 50;
+
+/** Minimum batch size for custom granularity (below this, use default config). */
+export const CUSTOM_BATCH_SIZE_MIN = 10;
+
+// ============================================================================
 // LLM Token Budgets — semantic groups
 // ============================================================================
 

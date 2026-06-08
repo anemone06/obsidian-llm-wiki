@@ -63,6 +63,7 @@ export class WikiEngine {
   private pagesCacheTime = 0;
   private readonly PAGES_CACHE_TTL_MS = PAGES_CACHE_TTL_MS;
   private ctx: EngineContext;
+  private longSourceNotice: Notice | null = null;
 
   constructor(
     app: App,
@@ -228,7 +229,7 @@ export class WikiEngine {
     const lineCount = fileContent.split('\n').length;
     if (lineCount > LONG_SOURCE_LINE_THRESHOLD) {
       const sizeKB = Math.round(fileContent.length / 1024);
-      new Notice(
+      this.longSourceNotice = new Notice(
         getText(this.settings.language, 'longSourceNotice')
           .replace('{filename}', file.basename)
           .replace('{lines}', String(lineCount))
@@ -604,6 +605,10 @@ export class WikiEngine {
     } finally {
       this.abortController = null;
       this.onIngestionEnd?.();
+      if (this.longSourceNotice) {
+        this.longSourceNotice.hide();
+        this.longSourceNotice = null;
+      }
     }
   }
 
