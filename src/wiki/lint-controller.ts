@@ -165,6 +165,9 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
       //      a threshold AND no new entries appeared since the last lint.
       //
       // See ROADMAP.md "Lint performance" section for the larger picture.
+      ctx.wikiEngine.updateStatusBar(getText(ctx.settings.language, 'lintStatusDuplicates')
+        .replace('{current}', '…')
+        .replace('{total}', '…'));
       stageNotice.setMessage(t.lintCheckingDuplicates);
       try {
         const pagesForDedup: Array<{ path: string; content: string; title: string }> = [];
