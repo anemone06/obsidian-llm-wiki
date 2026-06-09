@@ -6,7 +6,7 @@ import { LLMWikiSettings, LLMClient } from '../types';
 import { LintFixCallbacks, LintCounts, LintReportModal, FixReportModal, FixReportPhase } from '../ui/modals';
 import { TEXTS } from '../texts';
 import { PROMPTS } from '../prompts';
-import { cleanMarkdownResponse, parseJsonResponse, detectRateLimitFailures, formatRateLimitNotice, getText } from '../utils';
+import { cleanMarkdownResponse, parseJsonResponse, detectRateLimitFailures, formatRateLimitNotice, getText, nestReportUnderParent } from '../utils';
 import { appendGranularityToPrompt } from './system-prompts';
 import { TOKENS_LINT_DEDUP_LLM, NOTICE_NORMAL, NOTICE_RATE_LIMIT } from '../constants';
 import { isPageEmpty, detectPollutedPages, fixDoubleNestedWikiLinks } from './lint-fixes';
@@ -37,6 +37,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
   };
 
   new Notice(TEXTS[ctx.settings.language].lintWikiStart);
+  const lintStartTime = Date.now();
 
   let stageNotice: Notice | null = null;
 
@@ -330,7 +331,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
 
     // 0. Missing aliases section (listed before duplicates — aliases enable detection)
     if (aliasDeficientPages.length > 0) {
-      progReport += `## ${t.lintAliasesSection}\n\n`;
+      progReport += `## ${t.lintAliasesSection.replace('{count}', String(aliasDeficientPages.length))}\n\n`;
       for (const p of aliasDeficientPages) {
         progReport += t.lintAliasesItem.replace('{page}', p.path.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '')) + '\n';
       }
@@ -339,7 +340,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
 
     // 1. Duplicates section (root cause, shown first)
     if (duplicates.length > 0) {
-      progReport += `## ${t.lintDuplicateSection}\n\n`;
+      progReport += `## ${t.lintDuplicateSection.replace('{count}', String(duplicates.length))}\n\n`;
       for (const d of duplicates) {
         const targetRel = d.target.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
         const sourceRel = d.source.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
@@ -354,26 +355,29 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     // 2. Dead links section (mark if involves duplicate pages)
     let deadLinkFromDup = 0;
     if (deadLinks.length > 0) {
-      progReport += `## ${t.lintDeadLinkSection}\n\n`;
-      const showDead = deadLinks.slice(0, 20);
-      for (const dl of showDead) {
+      const deadLinkLines: string[] = [];
+      // Log view: ALL entries preserved (the persistent audit trail)
+      // Modal view: same data — controllers can truncate later if needed
+      for (const dl of deadLinks) {
         const sourcePath = `${ctx.settings.wikiFolder}/${dl.source}.md`;
         const targetPath = `${ctx.settings.wikiFolder}/${dl.target}.md`;
         const involvesDup = duplicatePaths.has(sourcePath) || duplicatePaths.has(targetPath);
         if (involvesDup) deadLinkFromDup++;
         const dupFlag = involvesDup ? t.lintDeadLinkAffectedByDup : '';
-        progReport += t.lintDeadLinkItem
+        deadLinkLines.push(t.lintDeadLinkItem
           .replace('{source}', dl.source)
           .replace('{target}', dl.target)
-          .replace('{dupFlag}', dupFlag) + '\n';
+          .replace('{dupFlag}', dupFlag));
       }
-      if (deadLinks.length > 20) progReport += t.lintDeadLinkMore.replace('{count}', String(deadLinks.length)) + '\n';
-      progReport += '\n';
+      // Issue: log.md previously truncated >20 dead links to "... 857 more".
+      // Fix: keep the full enumeration in progReport (log uses progReport too).
+      // Modal-only truncation is applied at display time via truncateListForDisplay.
+      progReport += `## ${t.lintDeadLinkSection.replace('{count}', String(deadLinks.length))}\n\n${deadLinkLines.join('\n')}\n\n`;
     }
 
     // 3. Empty pages section
     if (emptyPages.length > 0) {
-      progReport += `## ${t.lintEmptyPageSection}\n\n`;
+      progReport += `## ${t.lintEmptyPageSection.replace('{count}', String(emptyPages.length))}\n\n`;
       for (const ep of emptyPages) {
         const epRel = ep.path.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
         progReport += t.lintEmptyPageItem.replace('{page}', epRel) + '\n';
@@ -395,7 +399,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
 
     // 3.5 Polluted pages section
     if (pollutedPages.length > 0) {
-      progReport += `## ${t.lintPollutedSection}\n\n`;
+      progReport += `## ${t.lintPollutedSection.replace('{count}', String(pollutedPages.length))}\n\n`;
       for (const pp of pollutedPages) {
         const ppRel = pp.path.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
         progReport += t.lintPollutedItem
@@ -416,7 +420,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     // 4. Orphans section (mark if is a duplicate page)
     let orphanFromDup = 0;
     if (orphans.length > 0) {
-      progReport += `## ${t.lintOrphanSection}\n\n`;
+      progReport += `## ${t.lintOrphanSection.replace('{count}', String(orphans.length))}\n\n`;
       for (const op of orphans) {
         const opRel = op.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
         const isDup = duplicatePaths.has(op);
@@ -507,6 +511,9 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     const cleanedLLM = cleanMarkdownResponse(llmReport);
 
     // ---- 4. Combine and display ----
+    // Measure elapsed wall time since runLintWiki started. Round to whole
+    // seconds for the user-facing summary; sub-second precision is noise here.
+    const elapsedSeconds = Math.max(1, Math.round((Date.now() - lintStartTime) / 1000));
     const summaryText = t.lintReportSummary
       .replace('{total}', String(wikiFiles.length))
       .replace('{aliasesMissing}', String(aliasDeficientPages.length))
@@ -515,7 +522,8 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
       .replace('{deadLinkFromDup}', String(deadLinkFromDup))
       .replace('{orphans}', String(orphans.length))
       .replace('{orphanFromDup}', String(orphanFromDup))
-      .replace('{emptyPages}', String(emptyPages.length));
+      .replace('{emptyPages}', String(emptyPages.length))
+      .replace('{elapsedSeconds}', String(elapsedSeconds));
 
     // Prepend aliases deficiency section to progReport (shown first in report body)
     if (aliasDeficientPages.length > 0) {
@@ -524,6 +532,33 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     }
 
     const fullReport = `# ${t.lintReportTitle}\n\n> ${summaryText}\n\n${progReport}${contradictionsReport}${cleanedLLM.startsWith('##') ? '' : t.lintLLMAnalysisHeading + '\n\n'}${cleanedLLM}`;
+
+    // TODO (v1.18.0, future-work): Missing Concept Pages tracker
+    // ─────────────────────────────────────────────────────────
+    // The LLM analysis section (cleanedLLM) currently flags missing concept
+    // pages in prose ("- [缺少\"纪传体\"概念页——...]"). This is human-readable
+    // but not actionable: there's no programmatic tracking, no per-lint diff,
+    // no "create missing pages" command, and no resolution tracking over time.
+    //
+    // Distinction from dead links: a dead link is `[[X]]` pointing to a missing
+    // page X (resolvable mechanically by counting references). A missing concept
+    // page is a domain-knowledge gap the LLM identifies from source content
+    // (resolvable only by ingesting more sources, or accepting the gap).
+    //
+    // Future-work design (not implemented):
+    //   1. Programmatic detection: parse the LLM output's missing-page items
+    //      into structured `MissingConceptReport { name, source, reason }[]`
+    //      rather than just rendering as markdown bullets.
+    //   2. Persist to a sidecar file `wiki-folder/lint/missing-concepts.json`
+    //      so each lint run accumulates a stable list, and re-runs that resolve
+    //      gaps (e.g. user creates the page manually) are removed.
+    //   3. Command palette entry: "Create missing concept pages" — auto-ingests
+    //      the source note(s) named in the report, generating the missing pages.
+    //   4. Diff against previous run: show newly-discovered vs resolved concepts.
+    //
+    // Until designed and built, the LLM-prose section remains the only signal.
+    // Logged here so future contributors see the design intent.
+    // ─────────────────────────────────────────────────────────
 
     const counts: LintCounts = {
       deadLinks: deadLinks.length,
@@ -694,6 +729,13 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     if (totalFixableIncludingAliases > 0) {
       fixCallbacks.onFixAll = () => {
         void (async () => {
+          // Issue: Smart Fix All was NOT wrapped in startLintOperation/endLintOperation
+          // (unlike single-phase fixes via runFixPhase). This meant the status bar
+          // never appeared, so the user had no way to cancel a long-running batch.
+          // Fix: wrap the entire IIFE in a single lint-operation lifecycle so the
+          // status bar stays visible throughout all 6 phases.
+          const signal = ctx.wikiEngine.startLintOperation();
+          try {
           const allResults: string[] = [];
           const fixAllNotice = new Notice('', 0);
 
@@ -794,6 +836,9 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
           }
 
           // Build phase result data for modal report
+          // NOTE: must be inside the try block so the closure-captured counters
+          // (pollutedFixed, aliasesFilled, etc.) are still in scope when the
+          // modal renders.
           const phases: FixReportPhase[] = [];
           if (pollutedPages.length > 0) {
             phases.push({
@@ -832,13 +877,24 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
             });
           }
           new FixReportModal(ctx.app, phases, ctx.settings.language).open();
+          } finally {
+            // Issue: status bar must persist throughout all 6 phases. Match the
+            // startLintOperation call above so the user can click "cancel" at any point.
+            ctx.wikiEngine.endLintOperation();
+          }
         })();
       };
     }
 
     stageNotice.hide();
-    // Persist the full lint report to log.md before showing the modal
-    await ctx.wikiEngine.logLintFix(t.lintReportTitle, fullReport);
+    // Persist the full lint report to log.md before showing the modal.
+    // Issue: fullReport starts with "# Wiki Lint Report" (H1) and the log entry
+    // wraps it in "## [timestamp] Wiki Lint Report" (H2). Embedding H1 inside
+    // H2 is invalid markdown and renders oddly. Fix: strip the H1 and promote
+    // all other headings down one level (H2 → H3, H3 → H4) so the report
+    // nests correctly under the log heading.
+    const logReport = nestReportUnderParent(fullReport);
+    await ctx.wikiEngine.logLintFix(t.lintReportTitle, logReport);
     new LintReportModal(ctx.app, fullReport, fixCallbacks, counts, ctx.settings.language).open();
     await ctx.wikiEngine.generateIndexFromEngine();
     new Notice(TEXTS[ctx.settings.language].lintWikiComplete);

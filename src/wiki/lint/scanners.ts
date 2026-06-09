@@ -60,6 +60,11 @@ export function scanDeadLinks(
   wikiFolder: string
 ): Array<{ source: string; target: string }> {
   const deadLinks: Array<{ source: string; target: string }> = [];
+  // Per-(source,target) dedup so a page referencing the same missing target
+  // 4 times shows up as 1 entry, not 4. Diff against (source, target) across
+  // pages intentionally stays (different source pages should each list the
+  // missing targets they reference, so users can see which sources are affected).
+  const seen = new Set<string>();
   const linkRegex = /\[\[([^\]|#]+)(?:[|#][^\]]+)?\]\]/g;
   for (const { path, content } of pageMap.values()) {
     let match: RegExpExecArray | null;
@@ -75,10 +80,12 @@ export function scanDeadLinks(
           sluggedTarget !== target &&
           (knownTargets.has(sluggedTarget) || knownTargetsLower.has(sluggedTarget.toLowerCase()));
         if (!isSlugMatch) {
-          deadLinks.push({
-            source: path.replace(wikiFolder + '/', '').replace('.md', ''),
-            target
-          });
+          const source = path.replace(wikiFolder + '/', '').replace('.md', '');
+          const key = `${source}::${target}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            deadLinks.push({ source, target });
+          }
         }
       }
     }

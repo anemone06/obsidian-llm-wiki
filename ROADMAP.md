@@ -50,6 +50,7 @@ Focused on closing technical debt and adding integration tests for previously un
 - Good First Issue tagging
 - Tag vocabulary ecosystem (Issues #85/#91) — design discussion pending
 - Restore true streaming for 3rd-party providers (requires Obsidian native streaming support)
+- **Missing Concept Pages tracker** (v1.18.0+): The LLM lint analysis currently flags missing concept pages ("缺少\"纪传体\"概念页") in prose. Future-work: parse these into structured reports, persist to `wiki-folder/lint/missing-concepts.json`, add a "Create missing concept pages" command, and diff against previous runs. Design intent documented in code (`lint-controller.ts` TODO marker).
 
 ### Evaluated & Rejected
 

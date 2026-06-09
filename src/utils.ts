@@ -869,6 +869,63 @@ export function formatRateLimitNotice(
     .replace('{suggestedDelay}', String(info.suggestedDelay));
 }
 
+/**
+ * Strip a leading "# " (H1) from a markdown title and promote all subsequent
+ * "#" headings down by one level (H1 → H2, H2 → H3, etc.). Used to nest a
+ * sub-report's title under a parent log entry heading.
+ *
+ * Example: "# Wiki Lint Report\n## Body\n### Detail" →
+ *          "## Body\n#### Detail" (H1 stripped, H2 → H3, H3 → H4)
+ */
+export function nestReportUnderParent(report: string): string {
+  const lines = report.split('\n');
+  let h1Stripped = false;
+  const out: string[] = [];
+  for (const line of lines) {
+    // ATX heading: one or more `#` chars at start, followed by space then text
+    const m = /^(#+)\s/.exec(line);
+    if (m) {
+      if (!h1Stripped && m[1].length === 1) {
+        // First H1: strip entirely (parent already provides title)
+        h1Stripped = true;
+        continue;
+      }
+      // Subsequent heading: promote one level (H2 → H3, H3 → H4, …)
+      out.push('#' + line);
+      h1Stripped = true; // defensive: any heading before first H1 should also strip-then-promote
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join('\n');
+}
+
+/**
+ * Truncate a list of items to a visible cap, with a "... N more" trailer
+ * for the Modal display, or return the full list for log persistence.
+ *
+ * Issue: lint report > 20 dead links was truncated to "... 857 more" in BOTH
+ * the modal AND the persisted log.md. Log should keep the full enumeration
+ * (it's the persistent audit trail). This helper returns a (modal, log) pair
+ * so the controller can write different content to each destination.
+ */
+export function truncateListForDisplay<T>(
+  items: T[],
+  formatItem: (item: T, index: number) => string,
+  visibleCap = 20,
+  moreTemplate = (n: number) => `- ... ${n} more`
+): { modalReport: string; logReport: string } {
+  const all = items.map(formatItem).join('\n');
+  if (items.length <= visibleCap) {
+    return { modalReport: all, logReport: all };
+  }
+  const visible = items.slice(0, visibleCap).map(formatItem).join('\n');
+  return {
+    modalReport: visible + '\n' + moreTemplate(items.length - visibleCap),
+    logReport: all, // log keeps every entry
+  };
+}
+
 // Truncate mentions to a reasonable token budget for merge/create prompts.
 export function truncateMentions(
   mentions: string[] | undefined,
