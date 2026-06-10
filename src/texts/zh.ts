@@ -269,10 +269,10 @@ export const ZH_TEXTS = {
     tagVocabularyModeCustom: '自定义 (用户定义)',
     customEntityTagsName: '自定义实体标签',
     customEntityTagsDesc: '按回车或逗号添加 chip, 点 × 删除。嵌套标签 "/" 会被保留。',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: '自定义概念标签',
     customConceptTagsDesc: '按回车或逗号添加 chip, 点 × 删除。嵌套标签 "/" 会被保留。',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: '重复标签已跳过',
 
     // 摄入加速

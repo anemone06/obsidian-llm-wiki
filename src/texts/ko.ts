@@ -269,10 +269,10 @@ export const KO_TEXTS = {
     tagVocabularyModeCustom: '사용자 지정 (사용자 정의)',
     customEntityTagsName: '사용자 지정 엔티티 태그',
     customEntityTagsDesc: 'Enter 또는 쉼표로 chip 추가, ×로 삭제. "/"가 있는 중첩 태그는 보존됩니다.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: '사용자 지정 컨셉 태그',
     customConceptTagsDesc: 'Enter 또는 쉼표로 chip 추가, ×로 삭제. "/"가 있는 중첩 태그는 보존됩니다.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: '중복 태그 건너뜀',
 
     // Ingestion Acceleration

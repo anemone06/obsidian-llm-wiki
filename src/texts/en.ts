@@ -275,10 +275,10 @@ export const EN_TEXTS = {
     tagVocabularyModeCustom: 'Custom (user-defined)',
     customEntityTagsName: 'Custom Entity Tags',
     customEntityTagsDesc: 'Press Enter or comma to add a chip. Click × to remove. Nested tags with "/" are preserved.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'Custom Concept Tags',
     customConceptTagsDesc: 'Press Enter or comma to add a chip. Click × to remove. Nested tags with "/" are preserved.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: 'Duplicate tag skipped',
 
     // Ingestion Acceleration

@@ -30,7 +30,7 @@ export const INGESTION_PROMPTS = {
   "entities": [
     {
       "name": "Entity name — MUST be in the source's original language, NEVER translate",
-      "type": "person|organization|project|product|event|location|other",
+      "type": "person|organization|project|product|event|place|other",
       "aliases": ["Optional: 1-2 alternative names, abbreviations, or translations. Helps prevent duplicate extractions in later rounds.", "If provided, these will seed the page aliases."],
       "summary": "Detailed 4-6 sentence description with concrete facts: identity, role/significance, key attributes",
       "mentions_in_source": ["Verbatim sentence from source: '...'.", "Another verbatim quote: '...'."],
@@ -41,7 +41,7 @@ export const INGESTION_PROMPTS = {
   "concepts": [
     {
       "name": "Concept name — MUST be in the source's original language, NEVER translate",
-      "type": "theory|method|technology|term|other",
+      "type": "theory|method|field|phenomenon|standard|term|other",
       "aliases": ["Optional: 1-2 alternative names, abbreviations, or translations. Helps prevent duplicate extractions in later rounds.", "If provided, these will seed the page aliases."],
       "summary": "Detailed 4-6 sentence description with concrete facts: definition, importance, relationships",
       "mentions_in_source": ["Verbatim sentence from source: '...'.", "Another verbatim quote: '...'."],

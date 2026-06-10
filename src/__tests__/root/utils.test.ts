@@ -472,7 +472,7 @@ describe('enforceFrontmatterConstraints', () => {
   });
 
   it('collects and preserves existing tags from inline array', () => {
-    // Entity valid tags: person, organization, project, product, event, location, other
+    // Entity valid tags: person, organization, project, product, event, place, other
     const input = '---\ntype: entity\ntags: [person, project]\n---\n\nBody';
     const result = enforceFrontmatterConstraints(input, 'entity');
     expect(result).toContain('tags:');
@@ -480,7 +480,7 @@ describe('enforceFrontmatterConstraints', () => {
   });
 
   it('collects and preserves concept tags from inline array', () => {
-    // Concept valid tags: theory, method, technology, term, other
+    // Concept valid tags: theory, method, field, term, other
     const input = '---\ntype: concept\ntags: [method, theory]\n---\n\nBody';
     const result = enforceFrontmatterConstraints(input, 'concept');
     expect(result).toContain('method');
@@ -1422,10 +1422,10 @@ describe('getActiveEntityTags / getActiveConceptTags', () => {
 
     const settings: Partial<LLMWikiSettings> = { tagVocabularyMode: 'default' };
     expect(getActiveEntityTags(settings as LLMWikiSettings)).toEqual([
-      'person', 'organization', 'project', 'product', 'event', 'location', 'other'
+      'person', 'organization', 'project', 'product', 'event', 'place', 'other'
     ]);
     expect(getActiveConceptTags(settings as LLMWikiSettings)).toEqual([
-      'theory', 'method', 'technology', 'term', 'other'
+      'theory', 'method', 'field', 'phenomenon', 'standard', 'term', 'other'
     ]);
   });
 
@@ -1465,10 +1465,10 @@ describe('getActiveEntityTags / getActiveConceptTags', () => {
 
     const settings: Partial<LLMWikiSettings> = { tagVocabularyMode: 'custom', customEntityTags: '', customConceptTags: '' };
     expect(getActiveEntityTags(settings as LLMWikiSettings)).toEqual([
-      'person', 'organization', 'project', 'product', 'event', 'location', 'other'
+      'person', 'organization', 'project', 'product', 'event', 'place', 'other'
     ]);
     expect(getActiveConceptTags(settings as LLMWikiSettings)).toEqual([
-      'theory', 'method', 'technology', 'term', 'other'
+      'theory', 'method', 'field', 'phenomenon', 'standard', 'term', 'other'
     ]);
   });
 
@@ -1485,7 +1485,7 @@ describe('getActiveEntityTags / getActiveConceptTags', () => {
 
     const settings: Partial<LLMWikiSettings> = {}; // no tagVocabularyMode, no customEntityTags
     expect(getActiveEntityTags(settings as LLMWikiSettings)).toEqual([
-      'person', 'organization', 'project', 'product', 'event', 'location', 'other'
+      'person', 'organization', 'project', 'product', 'event', 'place', 'other'
     ]);
   });
 });
@@ -1604,7 +1604,7 @@ describe('buildActiveTagVocabularySection (Issue #85 v6 — prompt injection)', 
     const section = buildActiveTagVocabularySection(baseSettings);
     expect(section).toContain('theory');
     expect(section).toContain('method');
-    expect(section).toContain('technology');
+    expect(section).toContain('field');
   });
 
   it('in custom mode, lists the user-defined entity tags (CSV)', () => {
@@ -1849,8 +1849,8 @@ describe('getActiveSourceTags (Issue #85 v7)', () => {
   it('returns the hardcoded VALID_SOURCE_TAGS list', () => {
     const tags = getActiveSourceTags(baseSettings);
     expect(tags).toEqual([
-      'paper', 'document', 'article', 'book', 'clippings',
-      'transcript', 'notes', 'other',
+      'paper', 'article', 'book', 'transcript', 'clippings',
+      'notes', 'other',
     ]);
   });
 

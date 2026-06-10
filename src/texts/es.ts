@@ -268,10 +268,10 @@ export const ES_TEXTS = {
     tagVocabularyModeCustom: 'Personalizado (definido por el usuario)',
     customEntityTagsName: 'Etiquetas de entidad personalizadas',
     customEntityTagsDesc: 'Enter o coma para añadir un chip, × para eliminar. Las etiquetas anidadas con «/» se conservan.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'Etiquetas de concepto personalizadas',
     customConceptTagsDesc: 'Enter o coma para añadir un chip, × para eliminar. Las etiquetas anidadas con «/» se conservan.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: 'Etiqueta duplicada omitida',
 
     // Ingestion Acceleration

@@ -122,7 +122,7 @@ Output JSON format:
   "entities": [
     {
       "name": "Short Reference Name",
-      "type": "person|organization|project|other",
+      "type": "person|organization|project|product|event|place|other",
       "summary": "Entity information summary",
       "mentions_in_source": ["Specific mentions in conversation"]
     }
@@ -130,7 +130,7 @@ Output JSON format:
   "concepts": [
     {
       "name": "Concept Name",
-      "type": "theory|method|technology|term|other",
+      "type": "theory|method|field|phenomenon|standard|term|other",
       "summary": "Concept definition",
       "mentions_in_source": ["Specific mentions in conversation"],
       "related_concepts": ["Related Concept 1", "Related Concept 2"]

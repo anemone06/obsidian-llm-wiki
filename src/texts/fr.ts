@@ -268,10 +268,10 @@ export const FR_TEXTS = {
     tagVocabularyModeCustom: 'Personnalisé (défini par l\'utilisateur)',
     customEntityTagsName: 'Tags d\'entité personnalisés',
     customEntityTagsDesc: 'Entrée ou virgule pour ajouter un chip, × pour retirer. Les tags imbriqués « / » sont conservés.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'Tags de concept personnalisés',
     customConceptTagsDesc: 'Entrée ou virgule pour ajouter un chip, × pour retirer. Les tags imbriqués « / » sont conservés.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: 'Tag en double ignoré',
 
     // Ingestion Acceleration

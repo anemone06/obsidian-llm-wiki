@@ -40,9 +40,9 @@ describe('buildDefaultSchemaBody', () => {
   });
 
   it('preserves entity and concept subtype valid lists', () => {
-    // Entity: person, organization, project, product, event, location, other
-    expect(body).toMatch(/person[\s\S]*?organization[\s\S]*?project[\s\S]*?product[\s\S]*?event[\s\S]*?location[\s\S]*?other/);
-    // Concept: theory, method, technology, term, other
-    expect(body).toMatch(/theory[\s\S]*?method[\s\S]*?technology[\s\S]*?term[\s\S]*?other/);
+    // Entity: person, organization, project, product, event, place, other
+    expect(body).toMatch(/person[\s\S]*?organization[\s\S]*?project[\s\S]*?product[\s\S]*?event[\s\S]*?place[\s\S]*?other/);
+    // Concept: theory, method, field, phenomenon, standard, term, other
+    expect(body).toMatch(/theory[\s\S]*?method[\s\S]*?field[\s\S]*?phenomenon[\s\S]*?standard[\s\S]*?term[\s\S]*?other/);
   });
 });

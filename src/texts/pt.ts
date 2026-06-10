@@ -268,10 +268,10 @@ export const PT_TEXTS = {
     tagVocabularyModeCustom: 'Personalizado (definido pelo usuário)',
     customEntityTagsName: 'Tags de entidade personalizadas',
     customEntityTagsDesc: 'Enter ou vírgula para adicionar um chip, × para remover. Tags aninhadas com "/" são preservadas.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'Tags de conceito personalizadas',
     customConceptTagsDesc: 'Enter ou vírgula para adicionar um chip, × para remover. Tags aninhadas com "/" são preservadas.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: 'Tag duplicada ignorada',
 
     // Ingestion Acceleration

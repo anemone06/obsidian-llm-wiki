@@ -268,10 +268,10 @@ export const DE_TEXTS = {
     tagVocabularyModeCustom: 'Benutzerdefiniert (eigene)',
     customEntityTagsName: 'Benutzerdefinierte Entitäts-Tags',
     customEntityTagsDesc: 'Enter oder Komma zum Hinzufügen eines Chips, × zum Entfernen. Verschachtelte Tags mit „/" bleiben erhalten.',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'Benutzerdefinierte Konzept-Tags',
     customConceptTagsDesc: 'Enter oder Komma zum Hinzufügen eines Chips, × zum Entfernen. Verschachtelte Tags mit „/" bleiben erhalten.',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: 'Doppeltes Tag übersprungen',
 
     // Ingestion Acceleration

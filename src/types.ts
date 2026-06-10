@@ -17,7 +17,7 @@ export interface SourceAnalysis {
 
 export interface EntityInfo {
   name: string;
-  type: 'person' | 'organization' | 'project' | 'product' | 'event' | 'location' | 'other';
+  type: 'person' | 'organization' | 'project' | 'product' | 'event' | 'place' | 'other';
   aliases?: string[];  // Pre-generated aliases from extraction (seeds for page generation)
   summary: string;
   mentions_in_source: string[];
@@ -27,7 +27,7 @@ export interface EntityInfo {
 
 export interface ConceptInfo {
   name: string;
-  type: 'theory' | 'method' | 'technology' | 'term' | 'other';
+  type: 'theory' | 'method' | 'field' | 'phenomenon' | 'standard' | 'term' | 'other';
   aliases?: string[];  // Pre-generated aliases from extraction (seeds for page generation)
   summary: string;
   mentions_in_source: string[];
@@ -221,8 +221,8 @@ export const WIKI_LANGUAGES: Record<string, string> = {
 // Valid frontmatter tag values per schema classification rules.
 // `type: entity` pages use entity subtypes as tags.
 // `type: concept` pages use concept subtypes as tags.
-export const VALID_ENTITY_TAGS = ['person', 'organization', 'project', 'product', 'event', 'location', 'other'];
-export const VALID_CONCEPT_TAGS = ['theory', 'method', 'technology', 'term', 'other'];
+export const VALID_ENTITY_TAGS = ['person', 'organization', 'project', 'product', 'event', 'place', 'other'];
+export const VALID_CONCEPT_TAGS = ['theory', 'method', 'field', 'phenomenon', 'standard', 'term', 'other'];
 export const DEFAULT_ENTITY_TAG = 'other';
 export const DEFAULT_CONCEPT_TAG = 'term';
 
@@ -232,8 +232,8 @@ export const DEFAULT_CONCEPT_TAG = 'term';
 // decision: source pages have a closed taxonomy that the user picks
 // from, and the lint audit + retag runner validates against this list.
 export const VALID_SOURCE_TAGS = [
-  'paper', 'document', 'article', 'book', 'clippings',
-  'transcript', 'notes', 'other',
+  'paper', 'article', 'book', 'transcript', 'clippings',
+  'notes', 'other',
 ] as const;
 export const DEFAULT_SOURCE_TAG = 'other';
 

@@ -268,10 +268,10 @@ export const JA_TEXTS = {
     tagVocabularyModeCustom: 'カスタム (ユーザー定義)',
     customEntityTagsName: 'カスタムエンティティタグ',
     customEntityTagsDesc: 'Enter またはカンマで chip 追加、× で削除。"/" を含むネストタグは保持されます。',
-    customEntityTagsPlaceholder: 'person, organization, project',
+    customEntityTagsPlaceholder: 'person, organization, project, place',
     customConceptTagsName: 'カスタム概念タグ',
     customConceptTagsDesc: 'Enter またはカンマで chip 追加、× で削除。"/" を含むネストタグは保持されます。',
-    customConceptTagsPlaceholder: 'theory, method, technology',
+    customConceptTagsPlaceholder: 'theory, method, field, phenomenon, term',
     chipDuplicateHint: '重複タグをスキップしました',
 
     // Ingestion Acceleration

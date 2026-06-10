@@ -120,7 +120,7 @@ type: concept  # MUST be exactly "concept" - do not change this value
 created: {{date}}
 updated: {{date}}
 sources: ["[[{{source_file}}]]"]
-tags: [{{concept_type}}]  # Use concept_type (e.g., theory, method, technology) as a tag
+tags: [{{concept_type}}]  # Use concept_type (e.g., theory, method, field) as a tag
 aliases: ["Alternative name or translation"]  # REQUIRED: at least 1 alias, must NOT be empty
 ---
 
