@@ -12,8 +12,8 @@ import { TOKENS_LINT_DEDUP_LLM, NOTICE_NORMAL, NOTICE_RATE_LIMIT } from '../cons
 import { isPageEmpty, detectPollutedPages, fixDoubleNestedWikiLinks } from './lint-fixes';
 import { fixPollutedSources, scanPollutedSources } from '../core/sources-normalizer';
 import { generateDuplicateCandidates, DuplicateCandidate } from './lint/duplicate-detection';
-import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges } from './lint/fix-runners';
-import { buildKnownTargets, detectAliasDeficiency, scanDeadLinks, scanOrphans } from './lint/scanners';
+import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges, runRetagViolations } from './lint/fix-runners';
+import { buildKnownTargets, detectAliasDeficiency, scanDeadLinks, scanOrphans, scanTagViolations } from './lint/scanners';
 import { WikiEngine } from './wiki-engine';
 
 export interface LintContext {
@@ -343,6 +343,12 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     // Orphan pages
     const orphans = scanOrphans(pageMap, ctx.settings.wikiFolder);
 
+    // Issue #85 v7: programmatic tag-vocabulary audit. Pure function,
+    // O(P × T) where P = page count and T = avg tags per page.
+    // <50ms even on 2000-page vaults, no token cost. Always runs
+    // (no opt-in checkbox).
+    const tagViolations = scanTagViolations(pageMap, ctx.settings);
+
     // ---- 2. Build programmatic findings report ----
 
     // Build report in causality-aware order: Duplicates → Dead Links → Empty Pages → Orphans
@@ -400,6 +406,18 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
       for (const ep of emptyPages) {
         const epRel = ep.path.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
         progReport += t.lintEmptyPageItem.replace('{page}', epRel) + '\n';
+      }
+      progReport += '\n';
+    }
+
+    // Issue #85 v7: out-of-vocabulary tag violations
+    if (tagViolations.length > 0) {
+      progReport += `## ${t.lintTagViolationSection.replace('{count}', String(tagViolations.length))}\n\n`;
+      for (const v of tagViolations) {
+        const pathRel = v.path.replace(ctx.settings.wikiFolder + '/', '').replace('.md', '');
+        progReport += t.lintTagViolationItem
+          .replace('{path}', pathRel)
+          .replace('{tags}', v.invalidTags.join(', ')) + '\n';
       }
       progReport += '\n';
     }
@@ -611,7 +629,8 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
       pollutedPages: pollutedPages.length,
       orphans: orphans.length,
       duplicates: duplicates.length,
-      pagesMissingAliases: aliasDeficientPages.length
+      pagesMissingAliases: aliasDeficientPages.length,
+      tagViolations: tagViolations.length,
     };
 
     // ---- Build callbacks ----
@@ -769,6 +788,28 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
       };
     }
 
+    // Issue #85 v7: LLM-assisted retag of pages whose tags fall outside
+    // the active vocabulary. The user gets a single bulk button "Retag
+    // N page(s) with LLM" — no per-page approval. Each violation's
+    // frontmatter tags: line is rewritten in place; the body is
+    // untouched. Defensive: every LLM-returned tag is re-validated
+    // against the active vocabulary before write (runRetagViolations).
+    if (tagViolations.length > 0) {
+      fixCallbacks.onRetagViolations = () => {
+        void runFixPhase(async (signal) => {
+          const { fixed, results } = await runRetagViolations(ctx, signal, tagViolations);
+          if (fixed > 0) {
+            await ctx.wikiEngine.generateIndexFromEngine();
+            await ctx.wikiEngine.logLintFix('Retag Tag Violations', results.join('\n'));
+          }
+          const msg = fixed > 0
+            ? t.lintTagViolationFixed.replace('{fixed}', String(fixed)).replace('{total}', String(tagViolations.length))
+            : t.lintTagViolationFixedNone;
+          new Notice(msg, 0);
+        });
+      };
+    }
+
     const totalFixable = deadLinks.length + emptyPages.length + orphans.length + duplicates.length;
     const totalFixableIncludingAliases = totalFixable + aliasDeficientPages.length + pollutedPages.length;
     if (totalFixableIncludingAliases > 0) {
@@ -791,6 +832,7 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
           let deadLinksFixed = 0;
           let orphansLinked = 0;
           let emptyPagesFilled = 0;
+          let tagsRetagged = 0;
 
           // Smart fix strategy: follow causality chain with aliases as foundation
           // Phase -1: Fix polluted pages (structural root cause before everything else)
@@ -874,6 +916,20 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
             }
           }
 
+          // Issue #85 v7 — Phase 5: retag out-of-vocabulary tag pages.
+          // LLMs may invent types that don't match the active
+          // vocabulary; this phase asks the LLM to re-emit valid
+          // tags using only values from the active vocabulary.
+          fixAllNotice.setMessage('Smart fix: Phase 5 — Retagging out-of-vocabulary tag pages...');
+          if (tagViolations.length > 0) {
+            const { fixed, results } = await runRetagViolations(ctx, signal, tagViolations);
+            tagsRetagged = fixed;
+            if (fixed > 0) {
+              allResults.push(`## Retag Tag Violations\n${results.join('\n')}`);
+              console.debug(`Smart fix: Retagged ${fixed} tag violations`);
+            }
+          }
+
           fixAllNotice.hide();
           if (allResults.length > 0) {
             await ctx.wikiEngine.generateIndexFromEngine();
@@ -907,6 +963,13 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
             phases.push({
               label: t.lintModalFixDeadLinks.replace('{count}', String(deadLinks.length)),
               detail: `${deadLinksFixed}/${deadLinks.length}`
+            });
+          }
+          // Issue #85 v7: tag-violation retag phase summary
+          if (tagViolations.length > 0) {
+            phases.push({
+              label: t.lintTagViolationRetagBtn.replace('{count}', String(tagViolations.length)),
+              detail: `${tagsRetagged}/${tagViolations.length}`
             });
           }
           if (orphans.length > 0) {

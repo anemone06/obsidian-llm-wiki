@@ -226,6 +226,17 @@ export const VALID_CONCEPT_TAGS = ['theory', 'method', 'technology', 'term', 'ot
 export const DEFAULT_ENTITY_TAG = 'other';
 export const DEFAULT_CONCEPT_TAG = 'term';
 
+// Issue #85 v7: source pages use a separate, static "form" vocabulary
+// (describing the type of the source artifact — paper, document, etc.)
+// rather than a topic. NOT user-configurable per Issue #85 design
+// decision: source pages have a closed taxonomy that the user picks
+// from, and the lint audit + retag runner validates against this list.
+export const VALID_SOURCE_TAGS = [
+  'paper', 'document', 'article', 'book', 'clippings',
+  'transcript', 'notes', 'other',
+] as const;
+export const DEFAULT_SOURCE_TAG = 'other';
+
 // EngineContext — shared dependencies injected into sub-modules.
 // Functions (getClient, tryReadFile) return the latest state at call time,
 // not a snapshot at construction time. This is intentional: the LLM client

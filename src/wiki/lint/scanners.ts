@@ -1,7 +1,8 @@
 // Lint scanner functions — extracted from lint-controller.ts for testability.
 // These have no Obsidian API dependencies and can be unit tested directly.
 
-import { parseFrontmatter } from '../../utils';
+import { parseFrontmatter, getActiveEntityTags, getActiveConceptTags, getActiveSourceTags } from '../../utils';
+import { LLMWikiSettings } from '../../types';
 
 export interface ScannerPage {
   path: string;
@@ -128,4 +129,81 @@ export function scanOrphans(
     if (!hasIncoming) orphans.push(path);
   }
   return orphans;
+}
+
+// ── Tag vocabulary violation scanner (Issue #85 v7) ───────────
+
+export type TagViolationPageType = 'entity' | 'concept' | 'source';
+
+export interface TagViolation {
+  path: string;
+  pageType: TagViolationPageType;
+  title: string;
+  currentTags: string[];
+  invalidTags: string[];   // subset of currentTags that are NOT in the active vocabulary
+}
+
+/**
+ * Issue #85 v7: programmatic tag-vocabulary audit. Pure function. Walks
+ * the same pageMap used by the other Lint scanners and reports every
+ * entity / concept / source page whose frontmatter `tags` array
+ * contains at least one value that is not in the active vocabulary.
+ *
+ * Active vocabulary is resolved via the existing getActive*Tags
+ * helpers so this scanner automatically tracks Issue #85 v6 settings
+ * (default vs custom mode, plus the new static source-page taxonomy
+ * VALID_SOURCE_TAGS).
+ *
+ * Returns an empty array when everything is clean. No file IO, no LLM.
+ * Sort: by path, so the Lint report is deterministic.
+ */
+export function scanTagViolations(
+  pageMap: Map<string, ScannerPage>,
+  settings: LLMWikiSettings,
+): TagViolation[] {
+  const validEntity = new Set(getActiveEntityTags(settings));
+  const validConcept = new Set(getActiveConceptTags(settings));
+  const validSource = new Set(getActiveSourceTags(settings));
+  const violations: TagViolation[] = [];
+
+  for (const [path, page] of pageMap) {
+    const fm = parseFrontmatter(page.content);
+    if (!fm) continue;
+    const pageType = fm.type as TagViolationPageType | 'comparison' | 'overview' | undefined;
+    if (pageType !== 'entity' && pageType !== 'concept' && pageType !== 'source') continue;
+
+    const validSet =
+      pageType === 'entity' ? validEntity :
+      pageType === 'concept' ? validConcept :
+      validSource;
+
+    // tags can be a string (YAML scalar) or array. parseFrontmatter
+    // returns a string for scalar and string[] for array. Accept both.
+    // (The runtime type is broad; tsc narrows it to never here, so we
+    // explicitly cast to unknown then back to the union we actually
+    // handle below.)
+    const rawTags: unknown = (fm as Record<string, unknown>).tags;
+    let currentTags: string[];
+    if (Array.isArray(rawTags)) {
+      currentTags = rawTags.map(t => String(t).trim()).filter(t => t.length > 0);
+    } else if (typeof rawTags === 'string' && rawTags.length > 0) {
+      currentTags = [rawTags.trim()];
+    } else {
+      continue; // empty / no tags → not a violation
+    }
+
+    const invalidTags = currentTags.filter(t => !validSet.has(t));
+    if (invalidTags.length > 0) {
+      violations.push({
+        path,
+        pageType,
+        title: typeof fm.title === 'string' ? fm.title : page.basename.replace(/\.md$/, ''),
+        currentTags,
+        invalidTags,
+      });
+    }
+  }
+
+  violations.sort((a, b) => a.path.localeCompare(b.path));
+  return violations;
 }

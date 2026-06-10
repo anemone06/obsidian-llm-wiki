@@ -1,6 +1,6 @@
 // Utility functions for Wiki processing
 
-import { VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG, LLMWikiSettings } from './types';
+import { VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, VALID_SOURCE_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG, DEFAULT_SOURCE_TAG, LLMWikiSettings } from './types';
 import { TEXTS } from './texts';
 
 // Type-safe i18n accessor. Falls back to EN_TEXTS when key is missing in target language.
@@ -812,11 +812,16 @@ export function enforceFrontmatterConstraints(
     // console.debug so the divergence is visible. Previously the
     // validator silently dropped out-of-vocab tags, which erased
     // legitimate LLM output when the user's vocabulary was too narrow.
-    const validSubtypes = (pageType === 'entity' || pageType === 'concept')
-      ? (pageType === 'entity'
-          ? (settings ? getActiveEntityTags(settings) : VALID_ENTITY_TAGS)
-          : (settings ? getActiveConceptTags(settings) : VALID_CONCEPT_TAGS))
-      : [];
+    // Issue #85 v7: source pages now go through the same validation
+    // pipeline as entity/concept, against the static VALID_SOURCE_TAGS
+    // taxonomy (paper / document / article / …).
+    const validSubtypes: readonly string[] = pageType === 'entity'
+      ? (settings ? getActiveEntityTags(settings) : VALID_ENTITY_TAGS)
+      : pageType === 'concept'
+        ? (settings ? getActiveConceptTags(settings) : VALID_CONCEPT_TAGS)
+        : pageType === 'source'
+          ? (settings ? getActiveSourceTags(settings) : VALID_SOURCE_TAGS)
+          : [];
     const dedupedTags: string[] = [];
     const outOfVocab: string[] = [];
     for (const tag of collectedTags) {
@@ -838,7 +843,13 @@ export function enforceFrontmatterConstraints(
     if (dedupedTags.length > 0) {
       result.push(`tags: [${dedupedTags.join(', ')}]`);
     } else {
-      const fallback = pageType === 'entity' ? DEFAULT_ENTITY_TAG : pageType === 'concept' ? DEFAULT_CONCEPT_TAG : '';
+      const fallback = pageType === 'entity'
+        ? DEFAULT_ENTITY_TAG
+        : pageType === 'concept'
+          ? DEFAULT_CONCEPT_TAG
+          : pageType === 'source'
+            ? DEFAULT_SOURCE_TAG
+            : '';
       result.push(`tags: [${fallback}]`);
     }
   }
@@ -1043,6 +1054,18 @@ export function getActiveConceptTags(settings: LLMWikiSettings): string[] {
     return Array.from(new Set(userTags));
   }
   return [...VALID_CONCEPT_TAGS];
+}
+
+/**
+ * Issue #85 v7: source-page active vocabulary. Per design decision,
+ * the source vocabulary is NOT user-configurable — it is a static
+ * "form" taxonomy (paper / document / article / …) baked into
+ * `VALID_SOURCE_TAGS`. This function exists for shape parity with
+ * getActiveEntityTags / getActiveConceptTags so the audit + retag
+ * runner can call `getActiveSourceTags(settings)` uniformly.
+ */
+export function getActiveSourceTags(settings: LLMWikiSettings): string[] {
+  return [...VALID_SOURCE_TAGS];
 }
 
 /**

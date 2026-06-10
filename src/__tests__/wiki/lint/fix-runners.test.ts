@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Notice } from 'obsidian';
-import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges } from '../../../wiki/lint/fix-runners';
+import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges, runRetagViolations } from '../../../wiki/lint/fix-runners';
 import type { LintContext } from '../../../wiki/lint-controller';
 
 // NoticeMock in setup.ts adds a static `instances` array. Cast the imported
@@ -149,5 +149,92 @@ describe('fix-runners — AbortSignal propagation', () => {
     // Entry-aborted means no work — no fixNotice should have been created
     // (avoids a stuck persistent Notice on the status bar).
     expect(NoticeMock.instances).toHaveLength(0);
+  });
+});
+
+// ── runRetagViolations (Issue #85 v7) ───────────────────────────
+
+import type { TagViolation } from '../../../wiki/lint/scanners';
+
+describe('runRetagViolations (Issue #85 v7)', () => {
+  const baseViolation: TagViolation = {
+    path: 'wiki/entities/Alice.md',
+    pageType: 'entity',
+    title: 'Alice',
+    currentTags: ['person', 'bogus', 'Medical_Arzneimittel'],
+    invalidTags: ['bogus', 'Medical_Arzneimittel'],
+  };
+
+  function makeRetagCtx(opts: {
+    fileContent?: string | null;
+    llmResponse?: string;
+  }): LintContext {
+    const content = opts.fileContent !== undefined
+      ? opts.fileContent
+      : '---\ntype: entity\ntitle: Alice\ntags: [person, bogus, Medical_Arzneimittel]\n---\n\nBody of Alice.';
+    const fileMock = opts.fileContent === null ? null : { path: baseViolation.path, read: vi.fn().mockResolvedValue(content) };
+    return makeCtx({
+      app: {
+        vault: {
+          adapter: { write: vi.fn().mockResolvedValue(undefined) },
+          getAbstractFileByPath: vi.fn().mockReturnValue(fileMock),
+        },
+      } as unknown as LintContext['app'],
+      llmClient: { createMessage: vi.fn().mockResolvedValue(opts.llmResponse ?? '{"tags":["person","organization"]}') } as unknown as LintContext['llmClient'],
+    });
+  }
+
+  it('throws DOMException when signal is already aborted', async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const ctx = makeRetagCtx({});
+    await expect(
+      runRetagViolations(ctx, controller.signal, [baseViolation])
+    ).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('returns 0 fixed when LLM client is null', async () => {
+    const ctx = makeCtx({ llmClient: null });
+    const result = await runRetagViolations(ctx, undefined, [baseViolation]);
+    expect(result.fixed).toBe(0);
+    expect(result.results[0]).toContain('LLM client not initialized');
+  });
+
+  it('rewrites frontmatter tags via LLM response (happy path)', async () => {
+    const ctx = makeRetagCtx({});
+    const writeSpy = (ctx.app.vault.adapter as unknown as { write: ReturnType<typeof vi.fn> }).write;
+    const result = await runRetagViolations(ctx, undefined, [baseViolation]);
+    expect(result.fixed).toBe(1);
+    expect(result.results[0]).toContain('Alice.md');
+    // Verify write was called with updated tags: line
+    const writtenContent = writeSpy.mock.calls[0][1] as string;
+    expect(writtenContent).toContain('tags: [person, organization]');
+    // body is preserved
+    expect(writtenContent).toContain('Body of Alice.');
+  });
+
+  it('filters LLM-returned tags not in active vocabulary (defensive)', async () => {
+    // LLM hallucinates "bogus" and "Medical_Arzneimittel" — both are
+    // out-of-vocab, so they must be filtered out. The runner
+    // explicitly re-validates against validVocab before writing.
+    const ctx = makeRetagCtx({
+      llmResponse: '{"tags":["person","bogus","Medical_Arzneimittel"]}',
+    });
+    const writeSpy = (ctx.app.vault.adapter as unknown as { write: ReturnType<typeof vi.fn> }).write;
+    const result = await runRetagViolations(ctx, undefined, [baseViolation]);
+    expect(result.fixed).toBe(1);
+    const writtenContent = writeSpy.mock.calls[0][1] as string;
+    // Only the in-vocab tag survives the filter.
+    expect(writtenContent).toContain('tags: [person]');
+    expect(writtenContent).not.toContain('bogus');
+  });
+
+  it('does not write when LLM returns empty tags (safety)', async () => {
+    const ctx = makeRetagCtx({ llmResponse: '{"tags":[]}' });
+    const writeSpy = (ctx.app.vault.adapter as unknown as { write: ReturnType<typeof vi.fn> }).write;
+    const result = await runRetagViolations(ctx, undefined, [baseViolation]);
+    expect(result.fixed).toBe(0);
+    expect(writeSpy).not.toHaveBeenCalled();
+    expect(result.results[0]).toContain('LLM kept no tags');
   });
 });

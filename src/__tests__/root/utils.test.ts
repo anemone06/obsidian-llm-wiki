@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { slugify, computeSlug, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag, extractBody, getText, filterRedundantAliases, coerceToArray, truncateMentions, extractSourceTags, truncateListForDisplay, nestReportUnderParent, getActiveEntityTags, getActiveConceptTags, normalizeVocabularyCsv } from '../../utils';
+import { slugify, computeSlug, parseFrontmatter, detectRateLimitFailures, formatRateLimitNotice, cleanMarkdownResponse, enforceFrontmatterConstraints, parseJsonResponse, mergeFrontmatter, preserveFrontmatterReviewTag, extractBody, getText, filterRedundantAliases, coerceToArray, truncateMentions, extractSourceTags, truncateListForDisplay, nestReportUnderParent, getActiveEntityTags, getActiveConceptTags, getActiveSourceTags, normalizeVocabularyCsv } from '../../utils';
 import { getGranularityInstruction, getGranularityFixLimits, appendGranularityToPrompt, buildActiveTagVocabularySection, appendTagVocabularyToPrompt } from '../../wiki/system-prompts';
 import { LLMWikiSettings } from '../../types';
 import { TEXTS } from '../../texts';
@@ -1828,5 +1828,41 @@ tags: []
 Body`;
     const result = enforceFrontmatterConstraints(content, 'entity', baseSettings);
     expect(result).toContain('tags: [other]'); // DEFAULT_ENTITY_TAG
+  });
+});
+
+describe('getActiveSourceTags (Issue #85 v7)', () => {
+  const baseSettings: LLMWikiSettings = {
+    provider: 'anthropic', apiKey: '', baseUrl: '', model: 'claude-sonnet-4-6',
+    wikiFolder: 'wiki', language: 'en', wikiLanguage: 'en',
+    maxConversationHistory: 30, extractionGranularity: 'standard',
+    enableSchema: true, autoWatchSources: false, autoWatchMode: 'notify',
+    autoWatchDebounceMs: 5000, watchedFolders: [], periodicLint: 'off',
+    startupCheck: false, pageGenerationConcurrency: 3, batchDelayMs: 500,
+    llmReady: false,
+    maxTokensPerCall: 0,
+    tagVocabularyMode: 'default',
+    customEntityTags: '',
+    customConceptTags: '',
+  };
+
+  it('returns the hardcoded VALID_SOURCE_TAGS list', () => {
+    const tags = getActiveSourceTags(baseSettings);
+    expect(tags).toEqual([
+      'paper', 'document', 'article', 'book', 'clippings',
+      'transcript', 'notes', 'other',
+    ]);
+  });
+
+  it('does NOT honor customEntityTags / customConceptTags (source vocab is static)', () => {
+    const customSettings: LLMWikiSettings = { ...baseSettings,
+      tagVocabularyMode: 'custom',
+      customEntityTags: 'Medical_Arzneimittel, Kardiologie',
+    };
+    const tags = getActiveSourceTags(customSettings);
+    // Source vocab is intentionally closed — no user override.
+    expect(tags).not.toContain('Medical_Arzneimittel');
+    expect(tags).not.toContain('Kardiologie');
+    expect(tags).toContain('paper');
   });
 });

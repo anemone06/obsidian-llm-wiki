@@ -32,6 +32,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated 5 legacy tests to reflect the new "preserve LLM intent" behavior.
 - 654 tests passing (605 → 654, +49), 0 regressions.
 
+- **🔴 v7: Programmatic tag audit + LLM-assisted retag.** New `scanTagViolations()` (pure function in `src/wiki/lint/scanners.ts`) walks every entity/concept/source page in the wiki at Lint time and reports any page whose `frontmatter.tags` array contains at least one value not in the active vocabulary. Zero token cost, <50ms on 2000-page vaults. The Lint Report Modal gets a new "🏷️ Retag N page(s) with LLM" button that calls `runRetagViolations()` (in `src/wiki/lint/fix-runners.ts`): the LLM is given the page's first-paragraph summary + the active vocabulary section (via `appendTagVocabularyToPrompt()` from v6), and returns a new `tags: string[]`. The runner re-validates every returned tag against the active vocabulary (defensive), and only the `tags:` line of the frontmatter is rewritten — the body is byte-identical. Source pages get a static `VALID_SOURCE_TAGS` vocabulary (paper / document / article / book / clippings / transcript / notes / other) — NOT user-configurable per Issue #85 v7 design decision. Smart Fix All now runs retag as Phase 5 (after duplicates / orphans / empty pages).
+- **`enforceFrontmatterConstraints` source-page branch** now validates against `VALID_SOURCE_TAGS` (previously: `[]` = no validation). Page writes still succeed even with out-of-vocab tags thanks to v6's preserve-LLM-intent behavior (only a `console.debug` note when divergence is detected).
+
+### Tests
+- +2 `getActiveSourceTags` (constant + closed-taxonomy enforcement).
+- +11 `scanTagViolations` scanner tests (empty pageMap, all-valid entity, single out-of-vocab tag, custom-vocab override, entity-vs-concept cross-type leak, source-form validation, empty-tags no-false-positive, non-tagged-type skip, sorted output, title extraction).
+- +5 `runRetagViolations` runner tests (already-aborted signal, null client, happy path with body preservation, defensive out-of-vocab filtering, empty-tags safety).
+- 672 tests passing (654 → 672, +18 new), 0 regressions.
+
 ## [1.17.0] - 2026-06-08
 
 ### Added
