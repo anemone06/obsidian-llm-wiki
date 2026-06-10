@@ -1,6 +1,6 @@
 // Utility functions for Wiki processing
 
-import { VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, VALID_SOURCE_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG, DEFAULT_SOURCE_TAG, LLMWikiSettings } from './types';
+import { VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, VALID_SOURCE_TAGS, LLMWikiSettings } from './types';
 import { TEXTS } from './texts';
 
 // Type-safe i18n accessor. Falls back to EN_TEXTS when key is missing in target language.
@@ -869,14 +869,10 @@ export function enforceFrontmatterConstraints(
     if (dedupedTags.length > 0) {
       result.push(`tags: [${dedupedTags.join(', ')}]`);
     } else {
-      const fallback = pageType === 'entity'
-        ? DEFAULT_ENTITY_TAG
-        : pageType === 'concept'
-          ? DEFAULT_CONCEPT_TAG
-          : pageType === 'source'
-            ? DEFAULT_SOURCE_TAG
-            : '';
-      result.push(`tags: [${fallback}]`);
+      // Preserve empty tags field rather than forcing a default — user intent must win.
+      // Domain tags (e.g. "Mikrobiologie") survive here; they are outside the subtype
+      // whitelist but are not wrong. Configurable vocabulary is tracked in Issue #85.
+      result.push('tags:');
     }
   }
 
