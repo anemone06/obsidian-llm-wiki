@@ -19,6 +19,7 @@
 
 import { TFile } from 'obsidian'; // mocked in setup.ts
 import { EngineContext, LLMClient, LLMWikiSettings } from '../../types';
+import { parseFrontmatter } from '../../core/frontmatter';
 
 // ── Mock File ────────────────────────────────────────────────────
 
@@ -178,17 +179,14 @@ export function createMockContext(opts: MockContextOptions = {}): { ctx: EngineC
             !path.includes('/schema/') &&
             !path.includes('/contradictions/')) {
           const content = vault.read(path) ?? '';
-          const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
-          let aliases: string[] | undefined;
-          if (fmMatch) {
-            const aliasesLine = fmMatch[1].split('\n').find(l => l.startsWith('aliases:'));
-            if (aliasesLine) {
-              const match = aliasesLine.match(/aliases:\s*\[([^\]]*)\]/);
-              if (match && match[1].trim()) {
-                aliases = match[1].split(',').map(a => a.trim().replace(/^["']|["']$/g, '')).filter(Boolean);
-              }
-            }
-          }
+          // Use the production frontmatter parser so the mock recognizes
+          // both inline `[A, B]` and multi-line `aliases:` formats. The
+          // previous inline-only regex diverged from production and
+          // could hide bugs in lint tests that rely on aliases.
+          const fm = parseFrontmatter(content);
+          const aliases = Array.isArray(fm?.aliases) && fm.aliases.length > 0
+            ? fm.aliases
+            : undefined;
           const relPath = path.replace('wiki/', '').replace('.md', '');
           const title = path.split('/').pop()?.replace('.md', '') || '';
           pages.push({
