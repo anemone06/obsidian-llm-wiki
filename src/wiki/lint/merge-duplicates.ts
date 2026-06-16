@@ -175,10 +175,23 @@ export async function mergeDuplicatePages(
   );
   for (const file of allWikiFiles) {
     const content = await ctx.app.vault.read(file);
-    if (content.includes(`[[${sourceRel}]]`) || content.includes(`[[${sourceRel}|`)) {
+    // Obsidian wiki-link shapes to rewrite:
+    //   [[path]]             bare
+    //   [[path|alias]]       aliased
+    //   [[path#anchor]]      anchored (heading reference)
+    //   [[path#anchor|alias]] anchored + aliased
+    // The previous code only matched bare + aliased, leaving anchored
+    // links as dead references after a merge.
+    const linkShapes = [
+      `[[${sourceRel}]]`,
+      `[[${sourceRel}|`,
+      `[[${sourceRel}#`,
+    ];
+    if (linkShapes.some(s => content.includes(s))) {
       const updated = content
         .replace(new RegExp(`\\[\\[${escapeRegex(sourceRel)}\\]\\]`, 'g'), `[[${targetRel}]]`)
-        .replace(new RegExp(`\\[\\[${escapeRegex(sourceRel)}\\|`, 'g'), `[[${targetRel}|`);
+        .replace(new RegExp(`\\[\\[${escapeRegex(sourceRel)}\\|`, 'g'), `[[${targetRel}|`)
+        .replace(new RegExp(`\\[\\[${escapeRegex(sourceRel)}#`, 'g'), `[[${targetRel}#`);
       if (updated !== content) {
         await ctx.createOrUpdateFile(file.path, updated);
       }
