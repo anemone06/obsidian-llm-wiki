@@ -95,6 +95,11 @@ export async function generateDuplicateCandidates(
     const links = new Set<string>();
     const body = page.content.replace(/---[\s\S]*?---/, '');
     let match: RegExpExecArray | null;
+    // Reset lastIndex explicitly: `g`-flag regexes carry state across
+    // iterations. While `exec()` returning null already resets it, an
+    // exception or early return inside the loop body could leak state
+    // into the next page.
+    linkRegex.lastIndex = 0;
     while ((match = linkRegex.exec(body)) !== null) {
       links.add(match[1].trim().toLowerCase());
     }
