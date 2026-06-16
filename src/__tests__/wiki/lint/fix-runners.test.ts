@@ -265,6 +265,47 @@ describe('runRetagViolations (Issue #85 v7)', () => {
     expect(result.results[0]).toContain('LLM kept no tags');
   });
 
+  // ── Regression guard: multi-line tags format ──────────────────
+  // The retag runner uses a regex to replace the `tags:` line in the
+  // post-enforceFrontmatterConstraints output. The regex
+  // `/tags:\s*\[[^\]]*\]/` only matches the INLINE `tags: [A, B]`
+  // format. This works in practice because runRetagViolations calls
+  // enforceFrontmatterConstraints FIRST (which normalizes multi-line
+  // `tags:` blocks into inline form via line 274-280 of
+  // core/frontmatter.ts) before applying the regex at line 473 of
+  // fix-runners.ts.
+  //
+  // This test pins that invariant: if a future refactor either
+  // (a) bypasses enforceFrontmatterConstraints, or (b) breaks its
+  // multi-line → inline normalization, the retag will silently
+  // produce fixed=1 with the file unchanged. The test fails loudly
+  // if the tags block is not actually rewritten.
+
+  it('rewrites multi-line tags format (regression: pre-enforce normalization)', async () => {
+    const multiLineContent = [
+      '---',
+      'type: entity',
+      'title: Alice',
+      'tags:',
+      '  - "person"',
+      '  - "bogus"',
+      '---',
+      '',
+      'Body of Alice.',
+    ].join('\n');
+    const ctx = makeRetagCtx({ fileContent: multiLineContent });
+    const writeSpy = (ctx.app.vault.adapter as unknown as { write: ReturnType<typeof vi.fn> }).write;
+    const result = await runRetagViolations(ctx, undefined, [baseViolation]);
+    expect(result.fixed).toBe(1);
+    const writtenContent = writeSpy.mock.calls[0][1] as string;
+    // The retag must actually replace the multi-line tags block with
+    // a clean inline form, removing the bogus out-of-vocab tag.
+    expect(writtenContent).not.toContain('bogus');
+    expect(writtenContent).toMatch(/tags:\s*\[person/);
+    // body is preserved
+    expect(writtenContent).toContain('Body of Alice.');
+  });
+
   // ── Regression guard (Issue #85 v7.7) ─────────────────────────
   // Earlier commit (ebf58f2) shipped with a SHELL TEST: the mock
   // provided `{ path, read }` and the production code called
