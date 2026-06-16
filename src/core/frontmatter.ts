@@ -107,7 +107,8 @@ function yamlStringify(value: unknown): string {
     return '\n' + value.map(v => `  - "${v}"`).join('\n');
   }
   if (typeof value === 'string') {
-    if (/[":[]{}\n]/.test(value)) {
+    // eslint-disable-next-line no-useless-escape -- [ and ] must both be escaped for clarity; ] terminates the class if unescaped
+    if (/[":\[\]{}\n]/.test(value)) {
       return `"${value.replace(/"/g, '\\"')}"`;
     }
     return value;
