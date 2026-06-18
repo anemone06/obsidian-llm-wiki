@@ -19,12 +19,13 @@
 ## 📑 Contents
 
 - [💡 LLM-Wiki란?](#-llm-wiki란)
-- [💡 LLM-Wiki란?](#-llm-wiki란)
+- [⚡ 왜 Obsidian + LLM-Wiki인가?](#-왜-obsidian--llm-wiki인가)
+- [🚀 빠른 시작](#-빠른-시작)
   - [📦 설치](#-설치)
-  - [🔄 플러그인 업데이트](#-플러그인-업데이트)
-  - [🔑 LLM Provider 설정](#-llm-provider-설정)
+  - [🔄 업데이트](#-업데이트)
+  - [🔑 LLM 프로바이더 설정](#-llm-프로바이더-설정)
   - [🎮 사용법](#-사용법)
-  - [⚠️ 이전 버전에서 업그레이드하시나요?](#️-이전-버전에서-업그레이드하시나요)
+  - [⚠️ 이전 버전에서 업그레이드?](#️-이전-버전에서-업그레이드)
 - [⚡ v1.20.0 업데이트 하이라이트](#-v1200-업데이트-하이라이트)
 - [✨ 주요 기능](#-주요-기능)
   - [📊 지식 품질](#-지식-품질)
@@ -57,6 +58,100 @@
 **📚 당신은 더 이상 사서가 아닙니다.** 어떤 내용을 페이지로 만들지 결정할 필요도, 교차 링크를 유지할 필요도, 정보가 오래되었는지 걱정할 필요도 없습니다. 노트를 `sources/`에 넣으면 LLM이 읽고, 추출하고, 작성하고, 연결하며, 심지어 모순까지 표시합니다 — 당신은 몰입을 유지하면서 작업을 계속합니다.
 
 **🤖 그리고 이것은 또 다른 챗봇이 아닙니다.** ChatGPT는 인터넷을 알고 있습니다. LLM-Wiki는 *당신*을 압니다 — 정확히 말하자면 당신이 가르친 내용을 압니다. 모든 답변은 `[[wiki-links]]`를 통해 지식 그래프로 연결됩니다. 모든 응답은 끝이 아닌 탐색의 시작점입니다.
+
+---
+
+## ⚡ 왜 Obsidian + LLM-Wiki인가?
+
+Obsidian은 연결된 사고에 탁월합니다. 하지만 한 가지 문제가 있습니다: 모든 연결을 직접 만들어야 한다는 점입니다.
+
+LLM-Wiki는 이 구조를 뒤집습니다. 직접 그래프를 수작업으로 만드는 대신, AI가 여러분과 함께 그래프를 키워줍니다. 새로운 개념에 대한 노트를 추가하면 놓쳤을 연결을 찾아주고, 질문을 던지면 여러분만의 지식 그래프를 탐색하여 인용과 함께 답변을 가져다줍니다.
+
+- **🔗 그래프 뷰가 살아납니다.** 새로운 노트는 단순히 저장되는 것이 아니라 Entity, 개념, 소스로의 링크를 뻗어냅니다. 그래프는 유기적으로 성장하고, 플러그인이 이를 관리합니다: 중복 감지, 데드 링크 수정, 에이リア스를 통한 언어 간 연결.
+- **💬 노트가 대화하기 시작합니다.** 검색이 대화가 됩니다. "X에 대해 무엇을 썼지?"가 스트리밍 응답과 `[[wiki-links]]`라는 빵조각과 함께 하나의 대화가 됩니다. 모든 답변은 여러분의 지식 속으로 더 깊이 들어가는 길입니다.
+- **🧠 Obsidian이 사고의 파트너가 됩니다.** 더 이상 노트의 창고가 아니라, 여러분이 *생각*하는 것을 돕는 존재가 됩니다. 숨겨진 연결을 발견하고, 모순을 표시하고, 잊고 있던 것을 기억해줍니다.
+
+---
+
+## 🚀 빠른 시작
+
+### 📦 설치
+
+**🌟 권장 — Obsidian 커뮤니티 플러그인 마켓:**
+
+1. Obsidian에서 **설정 → 커뮤니티 플러그인**으로 이동
+2. **찾아보기**를 클릭하고 "Karpathy LLM Wiki"를 검색
+3. **설치**를 클릭한 다음 **활성화**
+
+**🌐 커뮤니티 플러그인 웹사이트에서 —** [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki)에 방문하여 **Obsidian에 추가**를 클릭하면 직접 설치할 수 있습니다.
+
+**⚙️ 수동 설치 (대안):**
+
+1. [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases)에서 `main.js`, `manifest.json`, `styles.css`를 다운로드
+2. Obsidian에서 설정 → 커뮤니티 플러그인으로 이동. **설치된 플러그인** 탭에서 폴더 아이콘을 클릭하여 플러그인 디렉토리를 엽니다
+3. `karpathywiki`라는 이름의 폴더를 만들고 세 파일을 넣습니다
+4. Obsidian으로 돌아가 새로고침 아이콘을 클릭 — **Karpathy LLM Wiki**가 설치된 플러그인에 나타납니다
+5. 켜기 토글을 눌러 활성화
+
+**🔨 개발용:** `git clone`, `pnpm install`, `pnpm build`
+
+### 🔄 업데이트
+
+이 프로젝트는 빠르게 진화하며 새로운 기능, 버그 수정, 개선 사항이 자주 제공됩니다. 최신 상태를 유지하는 것을 권장합니다:
+
+**옵션 A — 수동 업데이트 (권장):**
+1. **설정 → 커뮤니티 플러그인**으로 이동
+2. **업데이트 확인** 클릭
+3. 목록에서 **Karpathy LLM Wiki**를 찾아 **업데이트** 클릭
+
+**옵션 B — 자동 업데이트 활성화:**
+1. **설정 → 커뮤니티 플러그인**으로 이동
+2. **플러그인 자동 업데이트 확인** 켜기
+3. 새 버전이 자동으로 감지됩니다. 편리한 때에 수동으로 업데이트하세요
+
+> 💡 **왜 업데이트를 유지해야 하나요?** 각 릴리즈에는 새로운 기능, 성능 개선, 중요한 버그 수정이 포함될 수 있습니다.
+
+### 🔑 LLM 프로바이더 설정
+
+1. 설정 → Karpathy LLM Wiki 열기
+2. 드롭다운에서 프로바이더 선택 (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, Ollama, OpenRouter 또는 커스텀)
+3. API 키 입력 (Ollama는 불필요)
+4. **Fetch Models**를 클릭하여 모델 목록을 가져오거나 모델 이름을 수동 입력
+5. **Test Connection** 클릭 후 **Save Settings** 저장
+
+**🦙 Ollama (로컬, API 키 불필요):** [Ollama](https://ollama.com)를 설치하고 모델을 pull(`ollama pull gemma4` 또는 `ollama pull qwen3.5:27b`)한 다음 프로바이더 드롭다운에서 "Ollama (Local)"을 선택하세요.
+
+**🎛️ LM Studio (로컬, API 키 불필요):** [LM Studio](https://lmstudio.ai)를 설치하고 로컬 서버(기본 `http://localhost:1234/v1`)를 시작한 다음 프로바이더 드롭다운에서 "LM Studio (Local)"을 선택하세요.
+
+### 🎮 사용법
+
+| 방법 | 사용법 |
+|------|--------|
+| **📥 단일 소스 수집** | `Cmd+P` → "Ingest single source" — 노트를 선택하여 Entity와 Concept를 추출 |
+| **📂 폴더에서 수집** | `Cmd+P` → "Ingest from folder" — 폴더를 선택하여 Wiki를 일괄 생성 |
+| **🔍 위키 질의** | `Cmd+P` → "Query wiki" — 질문하고 스트리밍 답변을 받기 |
+| **🛠️ 위키 린트** | `Cmd+P` → "Lint wiki" — 상태 검사: 중복, dead link, 빈 페이지, 고아 페이지 |
+| **📋 인덱스 재생성** | `Cmd+P` → "Regenerate index" — `wiki/index.md`를 다시 빌드 |
+| **💡 스키마 업데이트 제안** | `Cmd+P` → "Suggest schema updates" — LLM이 스키마 개선을 제안 |
+| **🎯 원클릭 수집** | 사이드바 아이콘 클릭 또는 `Cmd+P` → "Ingest current file" |
+
+### ⚠️ 이전 버전에서 업그레이드?
+
+**이 릴리즈는 완전히 하위 호환됩니다.** v1.0.0 이후 파괴적 변경이 없습니다.
+
+**v1.16.0 이전 버전에서 업그레이드하는 경우**, 한 번 **Lint Wiki**를 실행하여 이전 문제를 자동으로 수정하세요.
+
+**여러 버전에 걸쳐 구축된 Wiki의 경우:**
+
+**1️⃣ 인덱스 재구축** — `Cmd+P` → "Regenerate index"
+
+**2️⃣ Lint Wiki 실행** — `Cmd+P` → "Lint wiki" — 누락된 alias, 중복, dead link, 고아 페이지 스캔
+
+**3️⃣ Smart Fix All 사용** — Lint 보고서에서 원클릭 수리
+
+**4️⃣ 병렬 페이지 생성 활성화** — 설정 → Page Generation Concurrency: 3, Batch Delay: 300ms
+
+**5️⃣ 현재 설정 확인** — Wiki Output Language, Extraction Granularity, Auto-Maintenance
 
 ---
 

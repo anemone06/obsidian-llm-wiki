@@ -53,6 +53,7 @@ src/
 ├── types.ts             # Shared types + EngineContext
 ├── constants.ts         # Centralized constants (token budgets, notice durations, WIKI_SUBFOLDERS)
 ├── texts.ts             # i18n texts (barrel, 8 languages)
+├── prompts.ts           # Prompt barrel (8 languages)
 ├── llm-client.ts        # LLM clients (Anthropic via requestUrl, OpenAI-compatible)
 ├── llm-client-wrapper.ts # Advanced settings injection wrapper
 ├── core/                # Pure function modules (zero IO, fully testable)
@@ -65,7 +66,7 @@ src/
 │   ├── rate-limit.ts           # Rate-limit detection + notice formatting
 │   ├── report.ts               # Report truncation + heading nesting
 │   ├── arrays.ts               # Array coercion + source tag extraction
-│   ├── markdown.ts             # Markdown response cleanup
+│   ├── markdown.ts             # Markdown cleanup + thinking block extraction/encoding
 │   ├── conflict-resolver.ts    # Conflict detection
 │   ├── dead-link-detector.ts   # Dead link identification
 │   ├── orphan-matcher.ts       # Orphan page matching
@@ -79,7 +80,7 @@ src/
 │   └── convergence-detector.ts # Early-stop on low-yield batches
 ├── wiki/                # Wiki engine modules
 │   ├── wiki-engine.ts   # Orchestrator (ingest, lint, log)
-│   ├── query-engine.ts  # Conversational query with streaming
+│   ├── query-engine.ts  # Conversational query with streaming + thinking UI
 │   ├── source-analyzer.ts # Iterative batch extraction
 │   ├── page-factory.ts  # Entity/concept CRUD + merge
 │   ├── conversation-ingest.ts # Chat → wiki knowledge

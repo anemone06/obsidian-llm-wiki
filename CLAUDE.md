@@ -82,13 +82,14 @@ All v1.18.x P0 items closed. Next window opens with post-v1.19.0 feedback.
 src/
 ├── main.ts                         # Plugin entry point
 ├── types.ts                        # Shared types + EngineContext
-├── utils.ts                        # Utilities (slugify, parseJson, etc.)
+├── constants.ts                    # Centralized constants (token budgets, notice durations)
+├── prompts.ts                      # Prompt barrel (8 languages)
 ├── texts.ts                        # i18n texts (barrel, 8 languages)
-├── llm-client.ts                   # LLM clients
-├── llm-client-wrapper.ts           # Advanced settings injection
+├── llm-client.ts                   # LLM clients (Anthropic, AnthropicCompat, OpenAICompat)
+├── llm-client-wrapper.ts           # Advanced settings injection wrapper
 ├── wiki/                           # Wiki engine
 │   ├── wiki-engine.ts              # Orchestrator
-│   ├── query-engine.ts             # Conversational query
+│   ├── query-engine.ts             # Conversational query (streaming + thinking UI)
 │   ├── source-analyzer.ts          # Iterative batch extraction
 │   ├── page-factory.ts             # Entity/concept CRUD + merge
 │   ├── conversation-ingest.ts      # Chat → wiki knowledge
@@ -96,16 +97,23 @@ src/
 │   ├── system-prompts.ts           # Language directive + labels
 │   ├── lint/                       # Lint subsystem
 │   │   ├── controller.ts           # Lint orchestration
-│   │   ├── fixer.ts                # Fix logic (LintFixer class)
 │   │   ├── fix-runners.ts          # Batch fix execution helpers
 │   │   ├── scanners.ts             # Scanners (dead links, orphans, aliases, quote grounding)
 │   │   ├── duplicate-detection.ts  # Programmatic candidate generation
 │   │   ├── report-builder.ts       # Pure-function report markdown builder
 │   │   ├── types.ts                # LintContext, LintPhaseContext, findings
+│   │   ├── fill-empty-page.ts      # Empty page fill logic
+│   │   ├── fix-dead-link.ts        # Dead link fix logic
+│   │   ├── fix-polluted-page.ts    # Polluted sources fix
+│   │   ├── link-orphan.ts          # Orphan page linking
+│   │   ├── merge-duplicates.ts     # Duplicate page merge
+│   │   ├── delete-empty-stubs.ts   # Empty stub deletion
+│   │   ├── get-existing-pages.ts   # Wiki page index reader
+│   │   ├── utils.ts                # Shared lint helpers
 │   │   └── phases/
 │   │       ├── preparation.ts      # Page read, link fix, sources normalize
 │   │       └── programmatic.ts     # Fast programmatic scanners
-│   └── prompts/                    # LLM prompt templates
+│   └── prompts/                    # LLM prompt templates (ingestion, generation, merge, fixes, lint, conversation)
 ├── schema/                         # Schema co-evolution
 │   ├── manager.ts                  # SchemaManager (read/write schema config)
 │   ├── auto-maintain.ts            # File watcher, periodic lint, startup quick fixes
@@ -113,19 +121,29 @@ src/
 ├── ui/
 │   ├── settings.ts                 # Settings panel
 │   └── modals.ts                   # Lint/Ingest/Query modals
-├── core/                           # Pure function modules
+├── core/                           # Pure function modules (zero IO, fully testable)
+│   ├── i18n.ts                     # Type-safe i18n accessor
+│   ├── slug.ts                     # Slug computation + alias filtering
+│   ├── json.ts                     # JSON response parsing + repair
+│   ├── frontmatter.ts              # Frontmatter parse/merge/constraints
+│   ├── tag-vocab.ts                # Active tag vocabulary helpers
+│   ├── index-search.ts             # Index parsing + local keyword match
+│   ├── rate-limit.ts               # Rate-limit detection + notice formatting
+│   ├── report.ts                   # Report truncation + heading nesting
+│   ├── arrays.ts                   # Array coercion + source tag extraction
+│   ├── markdown.ts                 # Markdown cleanup + thinking block extraction/encoding
 │   ├── sources-normalizer.ts       # Sources field normalization
 │   ├── truncation-retry.ts         # Token truncation retry policy
 │   ├── dead-link-detector.ts       # Dead link identification
 │   ├── orphan-matcher.ts           # Orphan page matching
-│   ├── prompt-builders.ts          # Prompt template builders
+│   ├── prompt-builders.ts          # Prompt template builders + path normalization
 │   ├── batch-limits.ts             # Adaptive batch sizing
 │   ├── batch-merger.ts             # Multi-batch result merging
 │   ├── convergence-detector.ts     # Early-stop on low-yield batches
-│   ├── sse-parser.ts               # SSE event parser
+│   ├── sse-parser.ts               # SSE event parser (anthropic + openai formats)
 │   ├── token-cap.ts                # max_tokens cap helper
 │   └── conflict-resolver.ts        # Conflict detection
-└── __tests__/                      # Unit tests (vitest, 728 tests)
+└── __tests__/                      # Unit tests (vitest, 771 tests)
 ```
 
 ---

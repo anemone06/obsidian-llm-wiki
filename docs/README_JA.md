@@ -19,13 +19,14 @@
 ## 📑 Contents
 
 - [💡 LLM-Wikiとは？](#-llm-wikiとは)
-- [💡 LLM-Wikiとは？](#-llm-wikiとは)
+- [⚡ なぜ Obsidian + LLM-Wiki？](#-なぜ-obsidian--llm-wiki)
+- [🚀 クイックスタート](#-クイックスタート)
   - [📦 インストール](#-インストール)
-  - [🔄 プラグインの更新](#-プラグインの更新)
-  - [🔑 LLM Providerを設定](#-llm-providerを設定)
-  - [🎮 使用方法](#-使用方法)
-  - [⚠️ 旧バージョンからアップグレードする場合](#️-旧バージョンからアップグレードする場合)
-- [⚡ What's New in v1.20.0](#-whats-new-in-v1200)
+  - [🔄 アップデート](#-アップデート)
+  - [🔑 LLMプロバイダーの設定](#-llmプロバイダーの設定)
+  - [🎮 使い方](#-使い方)
+  - [⚠️ 旧バージョンからのアップグレード](#️-旧バージョンからのアップグレード)
+- [⚡ v1.20.0 更新のポイント](#-v1200-更新のポイント)
 - [✨ 特徴](#-特徴)
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -60,7 +61,101 @@
 
 ---
 
-## ⚡ What's New in v1.20.0
+## ⚡ なぜ Obsidian + LLM-Wiki？
+
+Obsidianはリンク思考において卓越しています。しかし、すべてのリンクを自分で作らなければならないという課題があります。
+
+LLM-Wikiはその構造を反転させます。あなたが手作業でグラフを構築する代わりに、AIが一緒にグラフを育ててくれます。新しい概念についてノートを追加すれば、見落としていたつながりを見つけてくれます。質問をすれば、あなた自身の知識グラフを辿り、引用付きの回答を返してくれます。
+
+- **🔗 グラフビューが動き出す。** 新しいノートはただ置かれるだけでなく、Entity、Concept、ソースへのリンクを芽吹かせます。グラフは有機的に成長し、プラグインがそれを維持します——重複の検出、リンク切れの修正、エイリアスによる言語間の橋渡し。
+- **💬 ノートが会話できるように。** 検索が対話になります。「Xについて何を書いた？」がダイアログになり、ストリーミングレスポンスと`[[wiki-links]]`がパンくずリストとなります。すべての回答は、あなた自身の知識へと深く踏み込む道です。
+- **🧠 Obsidianが思考パートナーに。** ノートの保管庫から、あなたが*考える*のを助けるものへと変わります——隠れたつながりを浮き彫りにし、矛盾を指摘し、自分が忘れていたことを思い出させてくれます。
+
+---
+
+## 🚀 クイックスタート
+
+### 📦 インストール
+
+**🌟 推奨 — Obsidianコミュニティプラグインマーケット：**
+
+1. Obsidianで **設定 → コミュニティプラグイン** を開く
+2. **ブラウズ** をクリックして「Karpathy LLM Wiki」を検索
+3. **インストール** をクリックし、**有効化** する
+
+**🌐 コミュニティプラグインのWebサイトから —** [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki) にアクセスし、**Obsidianに追加** をクリックして直接インストールできます。
+
+**⚙️ 手動インストール（代替方法）：**
+
+1. [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases) から `main.js`、`manifest.json`、`styles.css` をダウンロード
+2. Obsidianで 設定 → コミュニティプラグイン を開く。**インストール済みプラグイン** タブでフォルダアイコンをクリックし、プラグインディレクトリを開く
+3. `karpathywiki` という名前のフォルダを作成し、3つのファイルを配置
+4. Obsidianに戻り、更新アイコンをクリック — **Karpathy LLM Wiki** がインストール済みプラグインに表示される
+5. トグルをオンにして有効化
+
+**🔨 開発用：** `git clone`、`pnpm install`、`pnpm build`
+
+### 🔄 アップデート
+
+本プロジェクトは急速に進化しており、新機能、バグ修正、改善が頻繁にリリースされます。最新の状態に保つことをお勧めします：
+
+**オプションA — 手動アップデート（推奨）：**
+1. **設定 → コミュニティプラグイン** を開く
+2. **更新を確認** をクリック
+3. **Karpathy LLM Wiki** を見つけ、**更新** をクリック
+
+**オプションB — 自動更新を有効にする：**
+1. **設定 → コミュニティプラグイン** を開く
+2. **プラグインの自動更新を確認** をオンにする
+3. 新しいバージョンが自動的に検出されます。都合の良いタイミングで手動で更新してください
+
+> 💡 **なぜ最新版を保つべき？** 各リリースには新機能、パフォーマンス改善、重要なバグ修正が含まれている場合があります。
+
+### 🔑 LLMプロバイダーの設定
+
+1. 設定 → Karpathy LLM Wiki を開く
+2. ドロップダウンからプロバイダーを選択（Anthropic、Anthropic Compatible、Google Gemini、OpenAI、DeepSeek、Kimi、GLM、MiniMax、LM Studio、Ollama、OpenRouter、またはカスタム）
+3. APIキーを入力（Ollamaは不要）
+4. **Fetch Models** をクリックしてモデルリストを取得するか、モデル名を手動入力
+5. **Test Connection** をクリックし、**Save Settings** を保存
+
+**🦙 Ollama（ローカル、APIキー不要）：** [Ollama](https://ollama.com) をインストールし、モデルをpull（`ollama pull gemma4` または `ollama pull qwen3.5:27b`）、プロバイダードロップダウンで「Ollama (Local)」を選択。
+
+**🎛️ LM Studio（ローカル、APIキー不要）：** [LM Studio](https://lmstudio.ai) をインストールし、ローカルサーバーを起動（デフォルト `http://localhost:1234/v1`）、プロバイダードロップダウンで「LM Studio (Local)」を選択。
+
+### 🎮 使い方
+
+| 方法 | 使い方 |
+|------|--------|
+| **📥 単一ソースの取り込み** | `Cmd+P` → "Ingest single source" — ノートを選択してEntityとConceptを抽出 |
+| **📂 フォルダーからの取り込み** | `Cmd+P` → "Ingest from folder" — フォルダを選択し、Wikiを一括生成 |
+| **🔍 Wikiに問い合わせ** | `Cmd+P` → "Query wiki" — 質問をし、ストリーミング回答を取得 |
+| **🛠️ WikiのLint** | `Cmd+P` → "Lint wiki" — 健康スキャン：重複、dead links、空ページ、孤立ページ |
+| **📋 インデックスの再生成** | `Cmd+P` → "Regenerate index" — `wiki/index.md` を再構築 |
+| **💡 スキーマ更新の提案** | `Cmd+P` → "Suggest schema updates" — LLMがスキーマの改善を提案 |
+| **🎯 ワンクリック取り込み** | サイドバーのアイコンをクリック、または `Cmd+P` → "Ingest current file" |
+
+### ⚠️ 旧バージョンからのアップグレード
+
+**本リリースは完全に後方互換性があります。** v1.0.0以降、破壊的変更はありません。
+
+**v1.16.0以前のバージョンからアップグレードする場合**、一度 **Lint Wiki** を実行して過去の問題を自動修正してください。
+
+**複数バージョンにわたって構築されたWikiの場合：**
+
+**1️⃣ インデックスを再構築** — `Cmd+P` → "Regenerate index"
+
+**2️⃣ Lint Wikiを実行** — `Cmd+P` → "Lint wiki" — 欠落alias、重複、dead links、孤立ページをスキャン
+
+**3️⃣ Smart Fix Allを使用** — Lintレポートでワンクリック修復
+
+**4️⃣ 並列ページ生成を有効化** — 設定 → Page Generation Concurrency: 3、Batch Delay: 300ms
+
+**5️⃣ 現在の設定を確認** — Wiki Output Language、Extraction Granularity、Auto-Maintenance
+
+---
+
+## ⚡ v1.20.0 更新のポイント
 
 v1.20.0は、LLMの思考/推論処理方法を再設計した**マイナーリリース**です。プラグインはデフォルトでプロバイダー固有の思考制御フィールドを送信しません——プロバイダーが独自の動作を決定します。思考コンテンツが表示された場合（DeepSeekのreasoningなど）、回答の上にChatGPT/Claude.aiスタイルの折りたたみ可能なパネルで表示されます。
 

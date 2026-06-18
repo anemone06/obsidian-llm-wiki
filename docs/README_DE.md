@@ -18,12 +18,13 @@
 
 ## 📑 Contents
 
-- [💡 Über LLM Wiki](#-Über-llm-wiki)
-- [💡 Über LLM Wiki](#-Über-llm-wiki)
+- [💡 Über LLM Wiki](#-über-llm-wiki)
+- [⚡ Warum Obsidian + LLM-Wiki?](#-warum-obsidian--llm-wiki)
+- [🚀 Schnellstart](#-schnellstart)
   - [📦 Installation](#-installation)
-  - [🔄 Plugin aktualisieren](#-plugin-aktualisieren)
-  - [🔑 LLM Provider konfigurieren](#-llm-provider-konfigurieren)
-  - [🎮 Nutzung](#-nutzung)
+  - [🔄 Aktualisierung](#-aktualisierung)
+  - [🔑 LLM-Provider konfigurieren](#-llm-provider-konfigurieren)
+  - [🎮 Verwendung](#-verwendung)
   - [⚠️ Upgrade von einer älteren Version?](#️-upgrade-von-einer-älteren-version)
 - [⚡ Was ist neu in v1.20.0](#-was-ist-neu-in-v1200)
 - [✨ Funktionen](#-funktionen)
@@ -64,6 +65,100 @@ Notizen schreiben. KI organisiert. Fragen stellen. Das ist alles.
 **📚 Keine Bibliotheksarbeit mehr.** Keine Bewertung des Seitenwerts. Keine Pflege von Querverweisen. Keine Angst vor veraltetem Content. Notizen in `sources/` ablegen — der LLM liest, extrahiert, schreibt, verlinkt und markiert Widersprüche, während Sie im Flow bleiben.
 
 **🤖 Kein weiterer Chatbot.** ChatGPT kennt das Internet. LLM Wiki kennt *Sie* — genauer: das, was Sie ihm beigebracht haben. Jede Antwort enthält `[[wiki-links]]` zurück in den Knowledge Graph. Jede Antwort ist ein Wegweiser, kein Dead End.
+
+---
+
+## ⚡ Warum Obsidian + LLM-Wiki?
+
+Obsidian ist brillant im vernetzten Denken. Aber das Problem: Sie selbst müssen alle Verbindungen herstellen.
+
+LLM-Wiki dreht das um. Statt dass Sie den Graphen von Hand aufbauen, wächst die KI ihn mit Ihnen. Fügen Sie eine Notiz über ein neues Konzept hinzu — sie findet Zusammenhänge, die Sie übersehen hätten. Stellen Sie eine Frage — sie durchsucht Ihren eigenen Wissensgraphen und liefert Antworten mit Quellenbelegen.
+
+- **🔗 Ihr Graph View wird lebendig.** Neue Notizen stehen nicht einfach nur da — sie sprießen Verbindungen zu Entities, Konzepten und Quellen. Der Graph wächst organisch, und das Plugin pflegt ihn: erkennt Duplikate, repariert tote Links, überbrückt Sprachen mit Aliases.
+- **💬 Ihre Notizen lernen, mit Ihnen zu sprechen.** Suche wird zum Gespräch. „Was habe ich über X geschrieben?" wird zum Dialog mit Streaming-Antworten und `[[wiki-links]]` als Wegmarken. Jede Antwort ist ein Pfad tiefer in Ihr eigenes Wissen.
+- **🧠 Obsidian wird zum Denkpartner.** Es hört auf, eine Ablage für Notizen zu sein, und wird zu etwas, das Ihnen beim *Denken* hilft — verborgene Zusammenhänge aufdeckt, Widersprüche markiert, sich an das erinnert, was Sie vergessen hatten.
+
+---
+
+## 🚀 Schnellstart
+
+### 📦 Installation
+
+**🌟 Empfohlen — Obsidian Community Plugin Market:**
+
+1. Gehe in Obsidian zu **Einstellungen → Community-Plugins**
+2. Klicke auf **Durchsuchen** und suche nach "Karpathy LLM Wiki"
+3. Klicke auf **Installieren**, dann **Aktivieren**
+
+**🌐 Oder über die Community Plugin Website —** besuche [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki) und klicke auf **Zu Obsidian hinzufügen**, um direkt zu installieren.
+
+**⚙️ Manuell (Alternative):**
+
+1. Lade `main.js`, `manifest.json`, `styles.css` von [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases) herunter
+2. Gehe in Obsidian zu Einstellungen → Community-Plugins. Auf dem Tab **Installierte Plugins** klicke auf das Ordnersymbol, um das Plugin-Verzeichnis zu öffnen
+3. Erstelle einen Ordner namens `karpathywiki` und lege die drei Dateien hinein
+4. Zurück in Obsidian klicke auf das Aktualisierungssymbol — **Karpathy LLM Wiki** erscheint unter Installierte Plugins
+5. Schalte es ein, um es zu aktivieren
+
+**🔨 Entwicklung:** `git clone`, `pnpm install`, `pnpm build`
+
+### 🔄 Aktualisierung
+
+Dieses Projekt entwickelt sich rasch — neue Funktionen, Fehlerbehebungen und Verbesserungen werden häufig veröffentlicht. Wir empfehlen, auf dem aktuellen Stand zu bleiben:
+
+**Option A — Manuelle Aktualisierung (empfohlen):**
+1. Gehe zu **Einstellungen → Community-Plugins**
+2. Klicke auf **Nach Updates suchen**
+3. Finde **Karpathy LLM Wiki** in der Liste und klicke auf **Aktualisieren**
+
+**Option B — Automatische Aktualisierung aktivieren:**
+1. Gehe zu **Einstellungen → Community-Plugins**
+2. Schalte **Automatisch nach Plugin-Updates suchen** ein
+3. Neue Versionen werden automatisch erkannt; aktualisieren Sie nach Bedarf manuell
+
+> 💡 **Warum aktualisieren?** Jedes Release kann neue Funktionen, Leistungsverbesserungen und wichtige Fehlerbehebungen enthalten.
+
+### 🔑 LLM-Provider konfigurieren
+
+1. Öffne Einstellungen → Karpathy LLM Wiki
+2. Wähle einen Provider aus dem Dropdown (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, Ollama, OpenRouter oder Custom)
+3. Gib deinen API-Key ein (für Ollama nicht erforderlich)
+4. Klicke auf **Fetch Models**, um die Modellliste zu befüllen, oder gib einen Modellnamen manuell ein
+5. Klicke auf **Test Connection**, dann **Save Settings**
+
+**🦙 Ollama (lokal, kein API-Key):** Installiere [Ollama](https://ollama.com), pulle ein Modell (`ollama pull gemma4` oder `ollama pull qwen3.5:27b`), wähle "Ollama (Local)" im Provider-Dropdown.
+
+**🎛️ LM Studio (lokal, kein API-Key):** Installiere [LM Studio](https://lmstudio.ai), starte den lokalen Server (Standard `http://localhost:1234/v1`), wähle "LM Studio (Local)" im Provider-Dropdown.
+
+### 🎮 Verwendung
+
+| Methode | Anleitung |
+|---------|-----------|
+| **📥 Einzelne Quelle aufnehmen** | `Cmd+P` → "Ingest single source" — wähle eine Note, um Entities und Concepts zu extrahieren |
+| **📂 Aus Ordner aufnehmen** | `Cmd+P` → "Ingest from folder" — wähle einen Ordner, um Wiki im Batch zu generieren |
+| **🔍 Wiki anfragen** | `Cmd+P` → "Query wiki" — stelle Fragen und erhalte Streaming-Antworten |
+| **🛠️ Wiki prüfen** | `Cmd+P` → "Lint wiki" — Health Scan: Duplikate, tote Links, leere Seiten, Orphans |
+| **📋 Index neu generieren** | `Cmd+P` → "Regenerate index" — erstelle `wiki/index.md` neu |
+| **💡 Schema-Aktualisierungen vorschlagen** | `Cmd+P` → "Suggest schema updates" — LLM schlägt Schema-Verbesserungen vor |
+| **🎯 Ein-Klick-Aufnahme** | Klicke auf das Seitenleisten-Symbol oder `Cmd+P` → "Ingest current file" |
+
+### ⚠️ Upgrade von einer älteren Version?
+
+**Dieses Release ist vollständig abwärtskompatibel.** Keine Breaking Changes seit v1.0.0.
+
+**Bei einem Upgrade von einer Version vor v1.16.0**, führe einmal **Lint Wiki** aus, um historische Probleme automatisch zu beheben.
+
+**Für Wikis, die über viele Versionen aufgebaut wurden:**
+
+**1️⃣ Index neu aufbauen** — `Cmd+P` → "Regenerate index"
+
+**2️⃣ Lint Wiki ausführen** — `Cmd+P` → "Lint wiki" — Scannt auf fehlende Aliases, Duplikate, tote Links, Orphans
+
+**3️⃣ Smart Fix All verwenden** — Ein-Klick-Reparatur im Lint-Bericht
+
+**4️⃣ Parallele Seitengenerierung aktivieren** — Einstellungen → Page Generation Concurrency: 3, Batch Delay: 300ms
+
+**5️⃣ Aktuelle Einstellungen prüfen** — Wiki Output Language, Extraction Granularity, Auto-Maintenance
 
 ---
 
