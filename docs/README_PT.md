@@ -19,12 +19,13 @@
 ## 📑 Contents
 
 - [💡 O que é LLM-Wiki?](#-o-que-é-llm-wiki)
-- [💡 O que é LLM-Wiki?](#-o-que-é-llm-wiki)
+- [⚡ Por que Obsidian + LLM-Wiki?](#-por-que-obsidian--llm-wiki)
+- [🚀 Início rápido](#-início-rápido)
   - [📦 Instalação](#-instalação)
-  - [🔄 Atualizar o plugin](#-atualizar-o-plugin)
-  - [🔑 Configurar um LLM Provider](#-configurar-um-llm-provider)
+  - [🔄 Atualização](#-atualização)
+  - [🔑 Configurar um provedor LLM](#-configurar-um-provedor-llm)
   - [🎮 Uso](#-uso)
-  - [⚠️ Atualizando de uma Versão Anterior?](#️-atualizando-de-uma-versão-anterior)
+  - [⚠️ Atualizando de uma versão anterior?](#️-atualizando-de-uma-versão-anterior)
 - [⚡ Novidades da v1.20.0](#-novidades-da-v1200)
 - [✨ Funcionalidades](#-funcionalidades)
   - [📊 Qualidade do Conhecimento](#-qualidade-do-conhecimento)
@@ -57,6 +58,90 @@ Você escreve. A IA organiza. Você pergunta. Simples assim.
 **📚 Você não precisa ser o bibliotecário.** Não decidir o que merece uma página. Não manter links cruzados. Não questionar se algo está desatualizado. Coloque notas em `sources/` e o LLM lê, extrai, escreve, vincula e sinaliza contradições — enquanto você permanece no fluxo.
 
 **🤖 Não é apenas outro chatbot.** O ChatGPT conhece a internet. O LLM-Wiki conhece *você* — ou melhor, o que você lhe ensinou. Cada resposta inclui `[[wiki-links]]` de volta ao seu knowledge graph. Cada resposta é um ponto de partida, não um beco sem saída.
+
+---
+
+## ⚡ Por que Obsidian + LLM-Wiki?
+
+Obsidian é brilhante no pensamento conectado. Mas há um problema: quem faz todas as conexões é você.
+
+O LLM-Wiki inverte isso. Em vez de você construir o grafo manualmente, a IA o desenvolve junto com você. Adicione uma nota sobre um novo conceito — ela encontra as conexões que você perderia. Faça uma pergunta — ela percorre seu próprio grafo de conhecimento e retorna respostas com citações.
+
+- **🔗 Seu Graph View ganha vida.** Novas notas não ficam apenas paradas — elas germinam links para entidades, conceitos e fontes. O grafo cresce organicamente, e o plugin o mantém: detectando duplicatas, corrigindo links mortos, conectando idiomas por meio de aliases.
+- **💬 Suas notas aprendem a conversar.** A busca se torna conversa. "O que eu escrevi sobre X?" vira um diálogo, com respostas em streaming e `[[wiki-links]]` como migalhas de pão. Cada resposta é um caminho mais profundo em seu próprio conhecimento.
+- **🧠 Obsidian se torna um parceiro de pensamento.** Ele deixa de ser um armário de notas e passa a ser algo que ajuda você a *pensar* — revelando conexões ocultas, sinalizando contradições, lembrando o que você esqueceu que sabia.
+
+---
+
+## 🚀 Início rápido
+
+### 📦 Instalação
+
+**🌟 Recomendado — Mercado de plugins comunitários do Obsidian:**
+1. No Obsidian, vá em **Configurações → Plugins da comunidade**
+2. Clique em **Procurar** e pesquise por "Karpathy LLM Wiki"
+3. Clique em **Instalar**, depois **Ativar**
+
+**🌐 Ou pelo site de plugins comunitários —** visite [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki) e clique em **Add to Obsidian**.
+
+**⚙️ Manual (alternativa):**
+1. Baixe `main.js`, `manifest.json`, `styles.css` nas [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases)
+2. No Obsidian, vá em Configurações → Plugins da comunidade. Clique no ícone de pasta para abrir o diretório de plugins
+3. Crie uma pasta chamada `karpathywiki`, coloque os três arquivos dentro
+4. De volta ao Obsidian, clique no ícone de atualizar — **Karpathy LLM Wiki** aparecerá
+5. Ative-o para habilitar
+
+**🔨 Desenvolvimento:** `git clone`, `pnpm install`, `pnpm build`.
+
+### 🔄 Atualização
+
+Este projeto evolui rapidamente. Recomendamos manter-se atualizado:
+
+**Opção A — Atualização manual (recomendada):**
+1. Vá em **Configurações → Plugins da comunidade**
+2. Clique em **Verificar atualizações**
+3. Encontre **Karpathy LLM Wiki** e clique em **Atualizar**
+
+**Opção B — Ativar atualização automática:**
+1. Vá em **Configurações → Plugins da comunidade**
+2. Ative **Verificar automaticamente atualizações de plugins**
+
+> 💡 **Por que manter-se atualizado?** Cada versão pode incluir novos recursos, melhorias de desempenho e correções de bugs importantes.
+
+### 🔑 Configurar um provedor LLM
+
+1. Abra Configurações → Karpathy LLM Wiki
+2. Escolha um provedor no menu suspenso
+3. Insira sua chave API (não necessária para Ollama)
+4. Clique em **Fetch Models**, ou digite o nome de um modelo manualmente
+5. Clique em **Test Connection**, depois **Salvar configurações**
+
+**🦙 Ollama (local):** Instale o [Ollama](https://ollama.com), baixe um modelo, selecione "Ollama (Local)".
+
+**🎛️ LM Studio (local):** Instale o [LM Studio](https://lmstudio.ai), inicie o servidor local, selecione "LM Studio (Local)".
+
+### 🎮 Uso
+
+| Método | Como |
+|--------|------|
+| **📥 Ingerir fonte individual** | `Cmd+P` → "Ingerir fonte individual" |
+| **📂 Ingerir de pasta** | `Cmd+P` → "Ingerir de pasta" |
+| **🔍 Consultar Wiki** | `Cmd+P` → "Consultar Wiki" |
+| **🛠️ Verificar Wiki** | `Cmd+P` → "Verificar Wiki" |
+| **📋 Regenerar índice** | `Cmd+P` → "Regenerar índice" |
+| **💡 Sugerir atualizações de Schema** | `Cmd+P` → "Sugerir atualizações de Schema" |
+| **🎯 Ingestão com um clique** | Ícone da barra lateral ou `Cmd+P` → "Ingerir arquivo atual" |
+
+### ⚠️ Atualizando de uma versão anterior?
+
+**Esta versão é totalmente retrocompatível.** Sem mudanças incompatíveis desde v1.0.0.
+
+**Para wikis construídos com múltiplas versões:**
+1️⃣ Reconstrua seu índice — "Regenerar índice"
+2️⃣ Execute Verificar Wiki — escaneia problemas
+3️⃣ Use Smart Fix All — reparação com um clique
+4️⃣ Ative geração paralela de páginas — Concorrência: 3, Atraso: 300ms
+5️⃣ Revise as configurações — Idioma, Granularidade, Auto-Manutenção
 
 ---
 
