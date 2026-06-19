@@ -283,9 +283,7 @@ export class AnthropicCompatibleClient implements LLMClient {
         const noPrefillBody: Record<string, unknown> = {
           model: params.model,
           max_tokens: params.max_tokens,
-          messages: params.system
-            ? [{ role: 'system' as const, content: params.system }, ...params.messages]
-            : [...params.messages],
+          messages: [...params.messages],
         };
         if (params.system) noPrefillBody.system = params.system;
         if (params.temperature !== undefined) noPrefillBody.temperature = params.temperature;
@@ -301,10 +299,9 @@ export class AnthropicCompatibleClient implements LLMClient {
         const fallbackBody: Record<string, unknown> = {
           model: params.model,
           max_tokens: params.max_tokens,
-          messages: params.system
-            ? [{ role: 'system' as const, content: params.system }, ...params.messages]
-            : params.messages,
+          messages: [...params.messages],
         };
+        if (params.system) fallbackBody.system = params.system;
         if (params.response_format?.type === 'json_object') {
           fallbackBody.messages = [...(fallbackBody.messages as Array<Record<string, unknown>>), { role: 'assistant', content: '{' }];
         }
@@ -591,9 +588,7 @@ export class AnthropicClient implements LLMClient {
         const noPrefillBody: Record<string, unknown> = {
           model: params.model,
           max_tokens: params.max_tokens,
-          messages: params.system
-            ? [{ role: 'system' as const, content: params.system }, ...params.messages]
-            : [...params.messages],
+          messages: [...params.messages],
         };
         if (params.system) noPrefillBody.system = params.system;
         if (params.temperature !== undefined) noPrefillBody.temperature = params.temperature;
@@ -609,9 +604,7 @@ export class AnthropicClient implements LLMClient {
         const fallbackBody: Record<string, unknown> = {
           model: params.model,
           max_tokens: params.max_tokens,
-          messages: params.system
-            ? [{ role: 'system' as const, content: params.system }, ...params.messages]
-            : [...params.messages],
+          messages: [...params.messages],
         };
         if (params.system) fallbackBody.system = params.system;
         if (params.temperature !== undefined) fallbackBody.temperature = params.temperature;
