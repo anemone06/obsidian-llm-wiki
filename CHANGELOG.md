@@ -8,10 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.20.2] - 2026-06-19
 
 ### Fixed
-- **AnthropicClient prefill fallback did not trigger (v1.20.1 regression).** Obsidian's `requestUrl` throws on HTTP 4xx WITHOUT including the response body — so the "Prefilling assistant messages is not supported" specific error string is never available in the catch block. v1.20.1's regex-based detection always failed. Fix: detect "400 + was using prefill" (no specific message needed), cache the rejection, retry without prefill. Applied to both `AnthropicClient` and `AnthropicCompatibleClient`. Test mock corrected to simulate `requestUrl`'s real throw behavior (not return).
+- **Anthropic fallback retry injected `{role: 'system'}` into messages array (PR #151).** Anthropic Messages API only accepts `user`/`assistant` roles in messages — system instructions must be a top-level field. The no-prefill retry and thinking-control fallback paths both incorrectly put `system` into `messages`, causing a second 400 that masked the real fix. Fix: all 4 Anthropic fallback paths now use `messages: [...params.messages]` with `body.system = params.system` at top level. Contributed by @Indexed-Apogrypha.
+- **AnthropicClient prefill fallback did not trigger (v1.20.1 regression).** Obsidian's `requestUrl` throws on HTTP 4xx WITHOUT the response body. v1.20.1's regex-based detection always failed. Fix: detect "400 + was using prefill", cache the rejection, retry without prefill.
 
 ### Tests
-- **775 tests passing** (no change; test mock corrected to match real `requestUrl` behavior).
+- **779 tests passing** (was 775; +4 from PR #151's Anthropic API simulator tests).
 
 ## [1.20.1] - 2026-06-18
 

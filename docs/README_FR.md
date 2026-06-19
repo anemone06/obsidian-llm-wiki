@@ -26,7 +26,7 @@
   - [🔑 Configurer un fournisseur LLM](#-configurer-un-fournisseur-llm)
   - [🎮 Utilisation](#-utilisation)
   - [⚠️ Mise à niveau depuis une ancienne version ?](#️-mise-à-niveau-depuis-une-ancienne-version-)
-- [⚡ Nouveautés de la v1.20.0](#-nouveautés-de-la-v1200)
+- [⚡ Nouveautés de la v1.20.2](#-nouveautés-de-la-v1202)
 - [✨ Fonctionnalités](#-fonctionnalités)
   - [📊 Qualité des connaissances](#-qualité-des-connaissances)
   - [🛠️ Maintenance](#️-maintenance)
@@ -145,19 +145,19 @@ Ce projet évolue rapidement. Nous vous recommandons de rester à jour :
 
 ---
 
-## ⚡ Nouveautés de la v1.20.0
+## ⚡ Nouveautés de la v1.20.2
 
-v1.20.0 est une **version mineure** qui repense la gestion du raisonnement LLM. Le plugin n'envoie plus de champ de contrôle de réflexion par défaut — le fournisseur décide.
+v1.20.2 est un **correctif** qui résout la compatibilité API Anthropic pour les modèles Claude les plus récents (Opus 4.8, Sonnet 4.6, Fable 5, Mythos 5). Combiné avec le contrôle de réflexion fournisseur-prioritaire de v1.20.0 et la détection prefill de v1.20.1, cette version garantit un support Anthropic complet.
 
-- **🧠 Contrôle de réflexion par fournisseur.** Par défaut, aucun champ de contrôle envoyé. "Désactiver la réflexion" active un fallback à 3 niveaux.
-- **💭 UI de réflexion pliable.** Contenu de raisonnement dans un panneau pliable. 8 langues supportées.
-- **🔧 Correction baseUrl Anthropic (#141, #134).** Normalisation `/v1` empêche les erreurs 404.
-- **🔧 gpt-5 max_completion_tokens (#143).** Paramètres de token corrects pour GPT-5.
-- **💬 Query Wiki UX.** Respecte `wikiFolder`, défilement automatique, bulles utilisateur à droite.
-- **🛡️ 10 corrections de revue de code.** Retry de troncature préserve le raisonnement, cohérence `enableThinking`, etc.
+- **🔧 Correction du fallback Anthropic (PR #151).** L'API Messages d'Anthropic n'accepte que les rôles user/assistant dans les messages — system doit être au niveau supérieur. Les chemins de fallback précédents injectaient `{role: 'system'}` dans les messages, provoquant un second 400. Correction par @Indexed-Apogrypha.
+- **🧠 Contrôle de réflexion fournisseur-prioritaire (v1.20.0).** Par défaut, aucun champ de contrôle envoyé. Le fournisseur décide.
+- **💭 UI de réflexion pliable (v1.20.0).** Contenu de raisonnement dans un panneau pliable au-dessus de la réponse. 8 langues.
+- **🔧 Correction baseUrl Anthropic (v1.20.0, #141, #134).** Empêche les erreurs 404 lors du test de connexion.
+- **🔧 gpt-5 max_completion_tokens (v1.20.0, #143).** Paramètres de token corrects.
+- **💬 Query Wiki UX (v1.20.0).** Respecte wikiFolder, défilement automatique, bulles utilisateur à droite.
 - **🔄 Migration automatique.** `disableThinking` réinitialisé automatiquement à `false`.
 
-Nous recommandons vivement la mise à jour vers cette version.
+Nous recommandons vivement la mise à jour vers cette version pour une compatibilité Anthropic complète et toutes les dernières fonctionnalités.
 
 Détails dans [CHANGELOG.md](../CHANGELOG.md).
 

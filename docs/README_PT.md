@@ -26,7 +26,7 @@
   - [🔑 Configurar um provedor LLM](#-configurar-um-provedor-llm)
   - [🎮 Uso](#-uso)
   - [⚠️ Atualizando de uma versão anterior?](#️-atualizando-de-uma-versão-anterior)
-- [⚡ Novidades da v1.20.0](#-novidades-da-v1200)
+- [⚡ Novidades da v1.20.2](#-novidades-da-v1202)
 - [✨ Funcionalidades](#-funcionalidades)
   - [📊 Qualidade do Conhecimento](#-qualidade-do-conhecimento)
   - [🛠️ Manutenção](#️-manutenção)
@@ -145,19 +145,19 @@ Este projeto evolui rapidamente. Recomendamos manter-se atualizado:
 
 ---
 
-## ⚡ Novidades da v1.20.0
+## ⚡ Novidades da v1.20.2
 
-v1.20.0 é uma **versão menor** que repensa o tratamento de raciocínio LLM. O plugin não envia campos de controle de pensamento por padrão — o provedor decide.
+v1.20.2 é uma **correção** que resolve a compatibilidade com a API da Anthropic para os modelos Claude mais recentes (Opus 4.8, Sonnet 4.6, Fable 5, Mythos 5). Combinado com o controle de pensamento provedor-prioritário da v1.20.0 e a deteção prefill da v1.20.1, esta versão garante suporte completo à Anthropic.
 
-- **🧠 Controle de pensamento por provedor.** Por padrão não envia campos de controle. "Desativar pensamento" ativa fallback de 3 níveis.
-- **💭 UI de pensamento recolhível.** Conteúdo de raciocínio em painel recolhível. 8 idiomas suportados.
-- **🔧 Correção baseUrl Anthropic (#141, #134).** Normalização `/v1` previne erros 404.
-- **🔧 gpt-5 max_completion_tokens (#143).** Parâmetros de token corretos para GPT-5.
-- **💬 Query Wiki UX.** Respeita `wikiFolder`, auto-scroll, bolhas de usuário à direita.
-- **🛡️ 10 correções de revisão de código.** Retry de truncamento preserva raciocínio, consistência `enableThinking`, etc.
+- **🔧 Correção de fallback Anthropic (PR #151).** A API Messages da Anthropic aceita apenas funções user/assistant nos messages — system deve estar no nível superior. Os caminhos de fallback anteriores injetavam `{role: 'system'}` nos messages, causando um segundo erro 400. Correção por @Indexed-Apogrypha.
+- **🧠 Controle de pensamento provedor-prioritário (v1.20.0).** Por padrão, nenhum campo de controle enviado. O provedor decide.
+- **💭 UI de pensamento recolhível (v1.20.0).** Conteúdo de raciocínio em painel recolhível acima da resposta. 8 idiomas.
+- **🔧 Correção baseUrl Anthropic (v1.20.0, #141, #134).** Previne erros 404 ao testar conexão.
+- **🔧 gpt-5 max_completion_tokens (v1.20.0, #143).** Parâmetros de token corretos.
+- **💬 Query Wiki UX (v1.20.0).** Respeita wikiFolder, auto-scroll, bolhas de usuário à direita.
 - **🔄 Migração automática.** `disableThinking` é redefinido automaticamente para `false`.
 
-Recomendamos fortemente atualizar para esta versão.
+Recomendamos fortemente atualizar para esta versão para compatibilidade completa com a Anthropic e todos os recursos mais recentes.
 
 Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 

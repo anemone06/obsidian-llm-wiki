@@ -25,7 +25,7 @@
   - [🔑 Configure an LLM Provider](#-configure-an-llm-provider)
   - [🎮 Usage](#-usage)
   - [⚠️ Upgrading from an Older Version?](#️-upgrading-from-an-older-version)
-- [⚡ What's New in v1.20.0](#-whats-new-in-v1200)
+- [⚡ What's New in v1.20.2](#-whats-new-in-v1202)
 
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -186,19 +186,19 @@ Settings → **LLM Configuration**:
 
 ---
 
-## ⚡ What's New in v1.20.0
+## ⚡ What's New in v1.20.2
 
-v1.20.0 is a **MINOR release** that rethinks how the plugin handles LLM thinking/reasoning. The plugin no longer sends provider-specific thinking-control fields by default — the provider decides its own behavior. When thinking content does appear (e.g. DeepSeek reasoning), it's displayed in a collapsible panel above the answer, ChatGPT/Claude.ai style. Multiple provider compatibility fixes and UX improvements round out the release.
+v1.20.2 is a **PATCH release** that fixes Anthropic API compatibility for newer Claude models (Opus 4.8, Sonnet 4.6, Fable 5, Mythos 5). Combined with v1.20.0's provider-first thinking control and v1.20.1's prefill detection, this release ensures full Anthropic support across all current models.
 
-- **🧠 Provider-first thinking control.** Default mode sends NO thinking-control field — the provider decides whether to reason. Users who explicitly want to suppress thinking can enable "Disable thinking" in Custom Advanced Settings, which triggers a 3-tier dialect fallback (thinking.type → reasoning_effort → none).
-- **💭 Collapsible thinking UI.** When a thinking-capable model (DeepSeek, etc.) returns reasoning content, it appears in a collapsed `💭 Thinking process` panel above the answer. Users can expand to inspect the reasoning steps. Fully localized in 8 languages.
-- **🔧 Anthropic baseUrl fix (Issues #141, #134).** `AnthropicClient` now normalizes `/v1` in the base URL, preventing 404 errors on Test Connection. Custom Anthropic-compatible endpoints work correctly.
-- **🔧 gpt-5 max_completion_tokens (Issue #143).** GPT-5 series models now use `max_completion_tokens` instead of `max_tokens`. Truncation retry also preserves the correct token key.
-- **💬 Query Wiki UX.** Respects user's configured `wikiFolder` (not hardcoded `wiki/`). Chat auto-scrolls to bottom on open. User message bubbles are right-aligned.
-- **🛡️ 10 code-review fixes.** Truncation retry preserves reasoning content, `enableThinking` spread consistency across all call sites, `activeDocument` null guard, `unsupportedFields` whitelist for core fields, `wrapReasoningContent` escaping, and more.
-- **🔄 Automatic migration.** Old users upgrading from v1.19.x get `disableThinking` automatically reset to `false` — no manual reconfiguration needed. Custom Advanced Settings also reset to Default mode.
+- **🔧 Anthropic fallback fix (PR #151).** Anthropic Messages API only accepts `user`/`assistant` roles in the messages array — system instructions must be a top-level field. Previous fallback retry paths incorrectly injected `{role: 'system'}` into messages, causing a second 400. Fix contributed by @Indexed-Apogrypha.
+- **🧠 Provider-first thinking control (v1.20.0).** Default mode sends NO thinking-control field — the provider decides whether to reason. Users who explicitly want to suppress thinking can enable "Disable thinking" in Custom Advanced Settings.
+- **💭 Collapsible thinking UI (v1.20.0).** When a thinking-capable model (DeepSeek, etc.) returns reasoning content, it appears in a collapsed panel above the answer. Fully localized in 8 languages.
+- **🔧 Anthropic baseUrl fix (v1.20.0, Issues #141, #134).** `AnthropicClient` normalizes `/v1` in the base URL, preventing 404 errors.
+- **🔧 gpt-5 max_completion_tokens (v1.20.0, Issue #143).** GPT-5 series models use the correct token parameter.
+- **💬 Query Wiki UX (v1.20.0).** Respects `wikiFolder`, auto-scrolls, user messages right-aligned.
+- **🔄 Automatic migration.** Old users upgrading from v1.19.x get `disableThinking` automatically reset to `false`.
 
-We strongly recommend all users upgrade to this version for better provider compatibility and the new thinking UI.
+We strongly recommend all users upgrade to this version, especially if you use Anthropic Claude models.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 

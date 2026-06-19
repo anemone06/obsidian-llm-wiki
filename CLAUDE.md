@@ -1,10 +1,14 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-18
+**Last Updated:** 2026-06-19
 
 ---
 
 ## Current Phase: v1.21.0 — Schema Coherence Phase 1 (Planned)
+
+### Completed (v1.20.2) — Hotfix 2026-06-19
+- ✅ **Anthropic fallback system-role fix (#141, #147, PR #151).** All 4 Anthropic fallback retry paths now keep system as top-level field. Contributed by @Indexed-Apogrypha.
+- ✅ **Tests: 779 passing.** +4 tests from Anthropic API simulator suite.
 
 ### Completed (v1.20.1) — Hotfix 2026-06-18
 - ✅ **AnthropicClient prefill rejection fix (#141, #147).** Newer Claude models (Opus 4.8+, Sonnet 4.6+, Fable 5, Mythos 5) reject assistant prefill messages. Auto-fallback to no-prefill retry with caching. 4 regression tests.

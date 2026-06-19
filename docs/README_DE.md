@@ -26,7 +26,7 @@
   - [🔑 LLM-Provider konfigurieren](#-llm-provider-konfigurieren)
   - [🎮 Verwendung](#-verwendung)
   - [⚠️ Upgrade von einer älteren Version?](#️-upgrade-von-einer-älteren-version)
-- [⚡ Was ist neu in v1.20.0](#-was-ist-neu-in-v1200)
+- [⚡ Was ist neu in v1.20.2](#-was-ist-neu-in-v1202)
 - [✨ Funktionen](#-funktionen)
   - [📊 Knowledge Quality](#-knowledge-quality)
   - [🛠️ Maintenance](#️-maintenance)
@@ -162,19 +162,19 @@ Dieses Projekt entwickelt sich rasch — neue Funktionen, Fehlerbehebungen und V
 
 ---
 
-## ⚡ Was ist neu in v1.20.0
+## ⚡ Was ist neu in v1.20.2
 
-v1.20.0 ist ein **Minor-Release**, das die Verarbeitung von LLM-Denken/Reasoning grundlegend überarbeitet. Das Plugin sendet standardmäßig keine provider-spezifischen Thinking-Control-Felder — der Provider entscheidet selbst.
+v1.20.2 ist ein **Patch-Release**, das die Anthropic-API-Kompatibilität für neuere Claude-Modelle (Opus 4.8, Sonnet 4.6, Fable 5, Mythos 5) behebt. In Kombination mit v1.20.0s Provider-first Thinking-Control und v1.20.1s Prefill-Erkennung stellt dieses Release vollständigen Anthropic-Support sicher.
 
-- **🧠 Provider-first Thinking-Control.** Standardmodus sendet keine Thinking-Control-Felder. "Denken deaktivieren" aktiviert 3-Stufen-Dialekt-Fallback.
-- **💭 Ausklappbare Thinking-UI.** Reasoning-Inhalt in ausklappbarem Panel. 8 Sprachen unterstützt.
-- **🔧 Anthropic baseUrl-Fix (#141, #134).** `/v1`-Normalisierung verhindert 404-Fehler.
-- **🔧 gpt-5 max_completion_tokens (#143).** Korrekte Token-Parameter für GPT-5-Serie.
-- **💬 Query Wiki UX.** Respektiert `wikiFolder`, Auto-Scroll, Benutzer-Nachrichten rechtsbündig.
-- **🛡️ 10 Code-Review-Fixes.** Truncation-Retry bewahrt Reasoning, `enableThinking`-Konsistenz usw.
+- **🔧 Anthropic-Fallback-Fix (PR #151).** Die Anthropic Messages API akzeptiert nur user/assistant-Rollen in messages — system muss auf oberster Ebene sein. Vorherige Fallback-Pfade injizierten `{role: 'system'}` in messages, was einen zweiten 400-Fehler verursachte. Fix von @Indexed-Apogrypha.
+- **🧠 Provider-first Thinking-Control (v1.20.0).** Standardmodus sendet kein Thinking-Control-Feld. Der Provider entscheidet.
+- **💭 Ausklappbare Thinking-UI (v1.20.0).** Reasoning-Inhalt im ausklappbaren Panel über der Antwort. 8 Sprachen.
+- **🔧 Anthropic baseUrl-Fix (v1.20.0, #141, #134).** Verhindert 404-Fehler bei Testverbindung.
+- **🔧 gpt-5 max_completion_tokens (v1.20.0, #143).** Korrekte Token-Parameter.
+- **💬 Query Wiki UX (v1.20.0).** Respektiert wikiFolder, Auto-Scroll, Benutzer-Nachrichten rechtsbündig.
 - **🔄 Automatische Migration.** `disableThinking` wird automatisch auf `false` zurückgesetzt.
 
-Wir empfehlen allen Nutzern dringend ein Upgrade auf diese Version.
+Wir empfehlen allen Nutzern dringend ein Upgrade auf diese Version für vollständige Anthropic-Kompatibilität und alle neuesten Funktionen.
 
 Details unter [CHANGELOG.md](../CHANGELOG.md).
 
