@@ -824,6 +824,21 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           }
         }));
 
+    // Ingestion History (#122) — sits inside Wiki Configuration (next to Schema
+    // Management) because it reads wiki/log.md, a wiki-internal artifact. Same
+    // visual style as its neighbors: name + desc + button, no emoji on the name.
+    new Setting(containerEl)
+      .setName(this.getText('historyButton'))
+      .setDesc(this.getText('historyButtonDesc'))
+      .addButton(button => button
+        .setButtonText(this.getText('historyButtonOpen'))
+        .onClick(() => {
+          new HistoryModal(this.app, {
+            language: this.tempSettings.language,
+            wikiFolder: this.tempSettings.wikiFolder || 'wiki',
+          }).open();
+        }));
+
     // ==========================================
     // 5. Auto Maintenance
     // ==========================================
@@ -956,18 +971,5 @@ export class LLMWikiSettingTab extends PluginSettingTab {
       .addToggle(toggle => toggle
         .setValue(this.tempSettings.autoSmartFix)
         .onChange((value) => { this.tempSettings.autoSmartFix = value; }));
-
-    // Ingestion History Panel (#122)
-    new Setting(containerEl)
-      .setName(this.getText('historyButton'))
-      .addButton(button => button
-        .setButtonText(this.getText('historyButton'))
-        .setCta()
-        .onClick(() => {
-          new HistoryModal(this.app, {
-            language: this.tempSettings.language,
-            wikiFolder: this.tempSettings.wikiFolder || 'wiki',
-          }).open();
-        }));
   }
 }

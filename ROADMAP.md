@@ -108,6 +108,7 @@ Release focus: ship Schema Coherence Phase 1 (`SchemaContext` + `buildSchemaSect
 - **Settings UI default mode** previews user-defined custom tags with activation hint.
 - **v1.20.0 migration** resets `disableThinking` to `false` and `advancedSettingsMode` to `'default'` (already shipped).
 - 🔴 **#164 — Empty-content hallucinated entity guard** (in PR by @Indexed-Apogrypha). Add early-return in `WikiEngine.ingestSource` (line ~248, right after `vault.read`): if `fileContent.trim().length === 0` → emit `emptySourceNotice` + return. Plus 9-locale i18n + unit + integration tests. Closes a critical bug where local models (Ollama gemma4, qwen-coder) hallucinate entity names from empty input prompts.
+- ✅ **#122 — Ingestion History Panel** (implemented, committed locally on `feat/v1.21.0-ingest-history`). Pure-function `parseLogEntries` + `HistoryModal` with date grouping, search, filter, clickable page links. 21 new tests (842 total). Pending merge into main.
 
 ### Phase 2 (next, after Phase 1 lands)
 - Wire `generation.ts` to consume `buildSchemaSectionTemplate` (replace hardcoded `## {{section_xxx}}`).
