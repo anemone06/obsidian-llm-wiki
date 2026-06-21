@@ -6,6 +6,7 @@ import { LLMWikiSettings } from '../types';
 import { WikiEngine } from '../wiki/wiki-engine';
 import { TEXTS } from '../texts';
 import { fixPollutedSources, scanPollutedSources } from '../core/sources-normalizer';
+import { findIncompletePages, cleanIncompletePages } from '../core/incomplete-page-cleaner';
 
 export class AutoMaintainManager {
   private app: App;
@@ -383,7 +384,27 @@ export class AutoMaintainManager {
       console.warn('[QuickFixes] Phase 2 failed:', e);
     }
 
-    // ---- Phase 3: Health summary (existing) ----
+    // ---- Phase 3: Incomplete-page cleanup (Issue #170) ----
+    // Scan wiki/{entities,concepts,sources} for pages whose `generation_complete`
+    // flag is stuck at `false` (interrupted ingest, partial write). Archive them
+    // so the user can recover from .trash if needed. Pages WITHOUT the field
+    // are treated as legacy (preserved) — never wipe existing wikis on upgrade.
+    let incompleteFilesScanned = 0;
+    let incompleteFilesArchived = 0;
+    try {
+      const incomplete = await findIncompletePages(this.app, wikiFolder);
+      incompleteFilesScanned = incomplete.length;
+      if (incomplete.length > 0) {
+        incompleteFilesArchived = await cleanIncompletePages(this.app, incomplete);
+        console.debug(`[QuickFixes] Phase 3: ${incompleteFilesScanned} incomplete pages found, ${incompleteFilesArchived} archived`);
+      } else {
+        console.debug('[QuickFixes] Phase 3: no incomplete pages found');
+      }
+    } catch (e) {
+      console.warn('[QuickFixes] Phase 3 failed:', e);
+    }
+
+    // ---- Phase 4: Health summary (existing) ----
     const pages = await this.wikiEngine.getExistingWikiPages();
     const entities = pages.filter(p => p.path.includes('/entities/')).length;
     const concepts = pages.filter(p => p.path.includes('/concepts/')).length;
@@ -392,9 +413,9 @@ export class AutoMaintainManager {
     const indexPath = `${wikiFolder}/index.md`;
     const hasIndex = await this.wikiEngine.tryReadFile(indexPath);
     const indexStatus = hasIndex ? '' : ' — index.md missing';
-    console.debug(`[QuickFixes] Phase 3: Wiki health — ${pages.length} pages (entities=${entities}, concepts=${concepts}, sources=${sources})${indexStatus}`);
+    console.debug(`[QuickFixes] Phase 4: Wiki health — ${pages.length} pages (entities=${entities}, concepts=${concepts}, sources=${sources})${indexStatus}`);
 
-    // ---- Phase 4: Build notice ----
+    // ---- Phase 5: Build notice ----
     const structureLabel = structureOk
       ? texts.startupCheckStructureOk
       : texts.startupCheckStructureMissing;
@@ -403,10 +424,15 @@ export class AutoMaintainManager {
           .replace('{files}', String(sourcesFilesCleaned))
           .replace('{entries}', String(sourcesEntriesCleaned))
       : texts.startupCheckSourcesClean;
+    const incompleteLabel = incompleteFilesArchived > 0
+      ? texts.startupCheckIncompleteArchived
+          .replace('{count}', String(incompleteFilesArchived))
+      : texts.startupCheckIncompleteClean;
 
     const summary = `${texts.startupCheckTitle}\n` +
       `${texts.startupCheckStructureLabel}: ${structureLabel}\n` +
       `${texts.startupCheckSourcesLabel}: ${sourcesLabel}\n` +
+      `${incompleteLabel}\n` +
       `${texts.startupCheckSummary
         .replace('{pages}', String(pages.length))
         .replace('{entities}', String(entities))

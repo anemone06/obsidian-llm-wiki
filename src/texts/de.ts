@@ -348,6 +348,8 @@ export const DE_TEXTS = {
     startupCheckSourcesLabel: 'Sources normalisiert',
     startupCheckSourcesClean: 'bereits sauber',
     startupCheckSourcesCleaned: '{files} Datei(en), {entries} Eintrag/Einträge bereinigt',
+    startupCheckIncompleteClean: 'unvollständige Seiten: keine',
+    startupCheckIncompleteArchived: 'unvollständige Seiten: {count} archiviert (wiederherstellbar aus .trash)',
     startupCheckDisableHint: 'Zum Deaktivieren: Einstellungen → Auto-Wartung → Schnellkorrekturen beim Start ausführen',
     lintWikiStart: 'Wiki-Prüfung wird gestartet...',
     lintWikiComplete: 'Wiki-Prüfung abgeschlossen',

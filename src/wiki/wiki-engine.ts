@@ -17,6 +17,7 @@ import { getText } from '../core/i18n';
 import { slugify } from '../core/slug';
 import { resolveSourceSlug } from '../core/source-slug';
 import { parseFrontmatter } from '../core/frontmatter';
+import { setGenerationComplete } from '../core/incomplete-page-cleaner';
 import { detectRateLimitFailures, formatRateLimitNotice } from '../core/rate-limit';
 import { extractSourceTags } from '../core/arrays';
 import { cleanMarkdownResponse } from '../core/markdown';
@@ -142,6 +143,30 @@ export class WikiEngine {
   private notifyProgress(msg: string): void {
     this.onProgress?.(msg);
     this.updateStatusBar(msg);
+  }
+
+  /**
+   * Issue #170: stamp `generation_complete: true` on a wiki page after a
+   * successful write. The pre-ingest requirement that pages carry this flag
+   * is implicit — if it's missing, the page is treated as legacy (preserved).
+   * This is best-effort: if re-read fails we just leave the file as-is; the
+   * startup self-scan will catch any incomplete pages.
+   */
+  private markPageComplete(path: string): void {
+    void (async () => {
+      try {
+        const current = await this.tryReadFile(path);
+        if (!current) return;
+        const flipped = setGenerationComplete(current, true);
+        if (flipped === current) return;
+        const file = this.app.vault.getAbstractFileByPath(path);
+        if (file instanceof TFile) {
+          await this.app.vault.process(file, () => flipped);
+        }
+      } catch (e) {
+        console.warn(`[wiki-engine] markPageComplete failed for ${path}:`, e);
+      }
+    })();
   }
 
   setDoneCallback(cb: ((report: IngestReport) => void) | null): void {
@@ -788,6 +813,7 @@ export class WikiEngine {
           console.debug(`Attempt ${attempt + 1}: File exists, updating:`, path);
           await this.app.vault.process(file, () => content);
           console.debug('Update success:', path);
+          this.markPageComplete(path);
           this.onFileWrite?.(path);
           this.pagesCache = null;
           return;
@@ -795,6 +821,7 @@ export class WikiEngine {
           console.debug(`Attempt ${attempt + 1}: File not found, creating:`, path);
           await this.app.vault.create(path, content);
           console.debug('Create success:', path);
+          this.markPageComplete(path);
           this.onFileWrite?.(path);
           this.pagesCache = null;
           return;
