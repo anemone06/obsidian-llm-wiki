@@ -353,6 +353,8 @@ export const IT_TEXTS = {
     startupCheckSourcesLabel: 'Sorgenti normalizzate',
     startupCheckSourcesClean: 'già pulite',
     startupCheckSourcesCleaned: 'pulite {files} file, {entries} voce/i',
+    startupCheckIncompleteClean: 'pagine incomplete: nessuna',
+    startupCheckIncompleteArchived: 'pagine incomplete: {count} archiviate (recuperabili da .trash)',
     startupCheckDisableHint: 'Per disabilitare, vai su Impostazioni → Manutenzione automatica → Esegui correzioni rapide all\'avvio',
     autoIngestRunning: 'Acquisizione automatica di {count} file modificato/i...',
     autoIngestComplete: 'Acquisizione automatica completata: {success} riusciti, {fail} falliti',

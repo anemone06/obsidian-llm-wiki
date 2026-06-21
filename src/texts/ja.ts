@@ -349,6 +349,8 @@ export const JA_TEXTS = {
     startupCheckSourcesLabel: 'Sources 正規化',
     startupCheckSourcesClean: '既に正規化済み',
     startupCheckSourcesCleaned: '{files} ファイル、{entries} エントリを修正',
+    startupCheckIncompleteClean: '未完成ページ：なし',
+    startupCheckIncompleteArchived: '未完成ページ：{count} 件をアーカイブ（.trash から復元可能）',
     startupCheckDisableHint: '無効化するには 設定 → 自動メンテナンス → 起動時にクイック修正を実行',
     lintWikiStart: 'Wiki Lintを開始中...',
     lintWikiComplete: 'Wiki Lint完了',
