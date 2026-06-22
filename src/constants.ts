@@ -153,7 +153,7 @@ export const TOKENS_QUERY_SAVE_DEDUP = 300;
 /**
  * Token budget for schema suggestion generation.
  */
-export const TOKENS_SCHEMA_SUGGESTION = 1000;
+export const TOKENS_SCHEMA_SUGGESTION = 4096;
 
 /**
  * Character limit per wiki page loaded into the query engine context.

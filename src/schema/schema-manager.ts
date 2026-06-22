@@ -1,10 +1,11 @@
 // Schema Manager - Wiki Schema configuration layer (Karpathy's third layer)
 
 import { App, TFile } from 'obsidian';
-import { LLMWikiSettings, WikiSchema, SchemaSuggestion, VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG } from '../types';
+import { LLMWikiSettings, WikiSchema, SchemaSuggestion, VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG, LLMClient, WIKI_LANGUAGES } from '../types';
 import { PROMPTS } from '../prompts';
-import { parseJsonResponse } from '../core/json';
+import { parseSchemaSuggestion } from './parse-suggestion';
 import { getActiveEntityTags, getActiveConceptTags } from '../core/tag-vocab';
+import { capMaxTokens } from '../core/token-cap';
 import { TOKENS_SCHEMA_SUGGESTION } from '../constants';
 
 const SCHEMA_FILENAME = 'schema/config.md';
@@ -154,14 +155,14 @@ Rules:
 export class SchemaManager {
   private app: App;
   private settings: LLMWikiSettings;
-  private getLLMClient: () => { createMessage(params: { model: string; max_tokens: number; system?: string; messages: Array<{ role: 'user' | 'assistant'; content: string }>; response_format?: { type: 'json_object' } }): Promise<string> } | null;
+  private getLLMClient: () => LLMClient | null;
   private cachedBody: string | null = null;
   private cacheValid = false;
 
   constructor(
     app: App,
     settings: LLMWikiSettings,
-    getLLMClient: () => { createMessage(params: { model: string; max_tokens: number; system?: string; messages: Array<{ role: 'user' | 'assistant'; content: string }>; response_format?: { type: 'json_object' } }): Promise<string> } | null
+    getLLMClient: () => LLMClient | null
   ) {
     this.app = app;
     this.settings = settings;
@@ -338,25 +339,46 @@ ${body}`;
     const schema = await this.loadSchema();
     const schemaContent = schema?.body || '(No schema configured yet)';
 
+    // v1.22.0 #97: inject the user's UI language so the LLM writes the
+    // "suggestions" field in the user's preferred language. WIKI_LANGUAGES
+    // is the source of truth — it covers all 10 locales (en, zh, ja, ko,
+    // de, fr, es, pt, it, zh-Hant) and returns the language's native name
+    // (e.g. "中文" for zh, "繁體中文" for zh-Hant). Falling back to
+    // 'English' keeps v1.21.x behaviour for unrecognised language codes.
+    const userLanguage = WIKI_LANGUAGES[this.settings.language] ?? 'English';
+
     const prompt = PROMPTS.suggestSchemaUpdate
       .replace('{{schema_content}}', schemaContent)
-      .replace('{{analysis_context}}', context);
+      .replace('{{analysis_context}}', context)
+      .replace('{{user_language}}', userLanguage);
 
     try {
       const response = await this.client.createMessage({
         model: this.settings.model,
-        max_tokens: TOKENS_SCHEMA_SUGGESTION,
+        max_tokens: capMaxTokens(TOKENS_SCHEMA_SUGGESTION, this.settings),
         messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' }
+        response_format: { type: 'json_object' },
+        // v1.22.0 #97: pass the full LLMClient interface — enableThinking
+        // (user-controlled, NEVER hardcoded), maxTokensPerCall (truncation
+        // retry), and temperature (custom sampling, per user settings).
+        // These fields are ALL optional on LLMClient.createMessage; the
+        // client wrapper decides whether to send them to the provider.
+        ...(this.settings.disableThinking ? { enableThinking: false } : {}),
+        maxTokensPerCall: this.settings.maxTokensPerCall || undefined,
+        temperature: this.settings.extractionTemperature,
       });
 
-      const parsed = await parseJsonResponse(response) as { changes_needed?: boolean; suggestions?: string } | null;
+      // v1.22.0 #97: use the dedicated parser to extract new_schema_body
+      // (frontmatter-stripped, ready to splice). Legacy v1.21.x responses
+      // without new_schema_body still parse correctly.
+      const parsed = parseSchemaSuggestion(response);
 
       const suggestion: SchemaSuggestion = {
         timestamp: new Date().toISOString(),
         source: 'manual',
-        changes_needed: parsed?.changes_needed || false,
-        suggestions: parsed?.suggestions || '',
+        changes_needed: parsed.changes_needed,
+        suggestions: parsed.suggestions,
+        newSchemaBody: parsed.newSchemaBody,
       };
 
       // Append to suggestions.md
