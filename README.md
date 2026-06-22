@@ -223,6 +223,9 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 - **🏷️ Alias completion** — one-click parallel batch generation of missing aliases, improving future duplicate detection.
 - **🔄 Auto-maintenance** — multi-folder watching, scheduled Lint, startup health check (all optional).
 - **⚠️ Contradiction state machine** — `detected → review-passed → resolved` (AI-fix) or `detected → unresolved` (manual).
+- **🛡️ Pre-ingest requirements gate (v1.21.0)** — every source file is validated *before* any LLM call: empty/whitespace/frontmatter-only notes are rejected, and content-hash dedup catches identical files across paths. Prevents small/local models from hallucinating entity names on blank inputs.
+- **📊 Operation History Panel (v1.21.0)** — searchable, filterable UI for past ingestions, lint reports, and maintenance runs, with insight-driven KPI cards and clickable page links.
+- **🧹 Incomplete-page cleaner (v1.21.0)** — pages left in a partial state after interrupted ingests are automatically archived on startup. Recoverable from Obsidian's `.trash`.
 
 ### 💬 Query & Feedback
 
@@ -262,10 +265,13 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 |---------|-------------|
 | **📥 Ingest single source** | Select a note → generate Wiki pages with entities, concepts, and summary |
 | **📂 Ingest from folder** | Select a folder → batch generate Wiki from existing notes |
+| **🎯 Ingest current file** | Quickly ingest the file you're currently editing (one-click) |
 | **🔍 Query wiki** | Conversational Q&A over your Wiki, streaming responses with `[[wiki-links]]` |
 | **🛠️ Lint wiki** | Full health scan: duplicates, dead links, empty pages, orphans, missing aliases, contradictions |
 | **📋 Regenerate index** | Manually rebuild `wiki/index.md` |
 | **💡 Suggest schema updates** | LLM analyzes Wiki and proposes schema improvements |
+| **📊 View Ingestion History (v1.21.0)** | Browse past ingestions, lint reports, and maintenance runs in a searchable, filterable UI |
+| **⏹ Cancel current ingestion** | Stop an in-progress operation cleanly at the next batch boundary |
 
 ---
 
@@ -361,26 +367,33 @@ schema/      # 📋 Wiki structure configuration (naming, templates, categories)
 **Codebase** (`src/`):
 
 ```
-wiki/               # Wiki engine modules
-  wiki-engine.ts    # 🎯 Orchestrator
-  query-engine.ts   # 💬 Conversational query
-  source-analyzer.ts # 📊 Iterative batch extraction
-  page-factory.ts   # 🏗️ Entity/concept CRUD + merge
-  lint-controller.ts # 🔍 Lint orchestration
-  lint-fixes.ts     # 🛠️ Fix logic for dead links, empty pages, orphans
-  lint/             # Lint sub-modules
-    duplicate-detection.ts  # 🔄 Programmatic candidate generation
-    fix-runners.ts          # ⚡ Batch fix execution helpers
-    scanners.ts            # 🔍 Scanners (dead links, orphans, aliases)
-  contradictions.ts # ⚠️ Contradiction detection
-  system-prompts.ts # 🗣️ Language directive + section labels
-schema/             # Schema co-evolution
-  schema-manager.ts # 📋 Schema CRUD + suggestions
-  auto-maintain.ts  # 🔄 File watcher + periodic lint
-ui/                 # User interface
-  settings.ts       # ⚙️ Settings panel
-  modals.ts         # 📦 Lint/Ingest/Query modals
-+ shared modules: llm-client.ts, prompts.ts, texts.ts, utils.ts, types.ts
+main.ts                  # 🔌 Plugin entry point
+wiki/                    # Wiki engine modules
+  wiki-engine.ts         # 🎯 Orchestrator
+  query-engine.ts        # 💬 Conversational query
+  source-analyzer.ts     # 📊 Iterative batch extraction
+  page-factory.ts        # 🏗️ Entity/concept CRUD + merge
+  conversation-ingest.ts # 📥 Chat → wiki knowledge
+  contradictions.ts      # ⚠️ Contradiction detection
+  system-prompts.ts      # 🗣️ Language directive + section labels
+  lint/                  # Lint sub-modules
+    controller.ts        # 🔍 Lint orchestration
+    fix-runners.ts       # ⚡ Batch fix execution helpers
+    scanners.ts          # 🔍 Scanners (dead links, orphans, aliases, quote grounding)
+    duplicate-detection.ts # 🔄 Programmatic candidate generation
+    report-builder.ts    # 📋 Pure-function report markdown builder
+    phases/              # Phased lint execution
+  prompts/               # LLM prompt templates by domain
+schema/                  # Schema co-evolution
+  manager.ts             # 📋 Schema CRUD + suggestions
+  auto-maintain.ts       # 🔄 File watcher + periodic lint + startup quick fixes
+  analyze.ts             # 📊 Schema-analyze with cancel wiring
+ui/                      # User interface
+  settings.ts            # ⚙️ Settings panel
+  modals.ts              # 📦 Lint / Ingest / Query / History modals
+core/                    # 🧩 Pure function modules (zero IO, fully testable)
+  i18n, slug, json, frontmatter, tag-vocab, sources-normalizer, ...
++ shared: llm-client.ts, llm-client-wrapper.ts, texts.ts, prompts.ts, types.ts
 ```
 
 **Generated pages:**
@@ -475,6 +488,9 @@ Yes. Set `reviewed: true` in frontmatter to protect from overwrite. Manual alias
 
 **Safe upgrade?**
 The plugin never modifies your source files. Backup `wiki/` → update plugin → **Regenerate index** → **Lint Wiki** → fix selectively.
+
+**My local model (Ollama, LM Studio) is fabricating weird entity names from blank or frontmatter-only notes. (v1.21.0)**
+Fixed in v1.21.0 by the pre-ingest requirements gate: empty/whitespace/frontmatter-only notes are now rejected *before* any LLM call, and content-hash dedup catches identical files across paths. Upgrade to v1.21.0+ to stop the empty-file hallucination class of bugs (small models filling in made-up entity names when given a blank prompt).
 
 **My `sources/` files got renamed after upgrading to v1.20.3 — is something wrong? (v1.20.3+)**
 No — this is the new collision-safe source-slug fingerprint at work. Every `sources/<slug>.md` is now `sources/<basename>_<6hex>.md` (the hex is an FNV-1a hash of the file's full path). Files with the same basename across different folders (e.g. 11× `About this course.md` in Academy courses) no longer collide. Re-ingest renames existing `sources/` pages in place and all `[[sources/<slug>]]` backlinks update automatically. If you have external scripts or bookmarks pointing to `sources/<old-slug>.md`, update them to the new fingerprinted names.

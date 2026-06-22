@@ -1,6 +1,6 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-21
+**Last Updated:** 2026-06-22
 
 ---
 
@@ -17,48 +17,23 @@
 - ✅ **Tests: 939 passing.** +148 tests, 67 test files.
 
 ### Completed (v1.20.3) — Hotfix 2026-06-20
-- ✅ **Source-slug fingerprint (PR #156, Closes #155).** Every source slug now `<basename>_<6hex FNV-1a of full path>` — fixes silent overwrite when two source files share a basename across folders. Contributed by @Indexed-Apogrypha.
-- ✅ **mergeFrontmatter alias dedup (PR #154).** `mergeFrontmatter` now dedups `fm.aliases` parity with `enforceFrontmatterConstraints`. Closes latent alias-accumulation bug. Contributed by @DocTpoint.
-- ✅ **Stage-4 reviewed guard (PR #158).** `updateRelatedPage` now respects `reviewed: true` and routes to `appendToReviewedPage`. Contributed by @DocTpoint.
-- ✅ **Tests: 791 passing.** +12 tests (9 source-slug + 2 frontmatter + 1 page-factory).
+- ✅ **#155 — Source-slug fingerprint (PR #156, Closes #155).** Every source slug now `<basename>_<6hex FNV-1a of full path>`. Contributed by @Indexed-Apogrypha.
+- ✅ **mergeFrontmatter alias dedup (PR #154).** `mergeFrontmatter` dedups `fm.aliases` parity with `enforceFrontmatterConstraints`. Contributed by @DocTpoint.
+- ✅ **Stage-4 reviewed guard (PR #158).** `updateRelatedPage` routes `reviewed: true` pages to `appendToReviewedPage`. Contributed by @DocTpoint.
+- ✅ **Tests: 791 passing.** +12 tests.
 
-### Completed (v1.20.2) — Hotfix 2026-06-19
-- ✅ **Anthropic fallback system-role fix (#141, #147, PR #151).** All 4 Anthropic fallback retry paths now keep system as top-level field. Contributed by @Indexed-Apogrypha.
-- ✅ **Tests: 779 passing.** +4 tests from Anthropic API simulator suite.
+### Completed (v1.20.2 / v1.20.1 / v1.20.0) — Hotfix + Release 2026-06-18/19
+- ✅ **v1.20.2 — Anthropic fallback system-role fix (#141, #147, PR #151).** All 4 retry paths keep system as top-level field. 779 tests.
+- ✅ **v1.20.1 — AnthropicClient prefill rejection fix (#141, #147).** Newer Claude models reject assistant prefill. Auto-fallback + caching. 775 tests.
+- ✅ **v1.20.0 — Provider-first thinking control.** Default `disableThinking: false`, 3-tier dialect fallback. Collapsible thinking UI in Query Wiki. +10 code-review fixes. 771 tests.
 
-### Completed (v1.20.1) — Hotfix 2026-06-18
-- ✅ **AnthropicClient prefill rejection fix (#141, #147).** Newer Claude models (Opus 4.8+, Sonnet 4.6+, Fable 5, Mythos 5) reject assistant prefill messages. Auto-fallback to no-prefill retry with caching. 4 regression tests.
-- ✅ **Tests: 775 passing.** +4 tests from `llm-client-anthropic-prefill` suite.
-
-### Completed (v1.20.0) — Released 2026-06-18
-- ✅ **Provider-first thinking control.** Default `disableThinking: false` — no thinking-control field sent. 3-tier dialect fallback when user explicitly enables "Disable thinking". Collapsible thinking UI in Query Wiki.
-- ✅ **Anthropic baseUrl normalization (#141, #134).** Prevents `/v1/v1` double-path.
-- ✅ **gpt-5 max_completion_tokens (#143).** Correct token parameter + truncation retry fix.
-- ✅ **DeepSeek reasoning_content extraction.** SSE parser + non-stream + collapsible UI.
-- ✅ **Query Wiki UX.** wikiFolder respect, auto-scroll, user message right-align.
-- ✅ **10 code-review fixes.** Reasoning preservation, enableThinking consistency, activeDocument guard, PROTECTED_FIELDS, wrapReasoningContent escaping.
-- ✅ **v1.20.0 migration.** Old users auto-migrated to new defaults.
-- ✅ **Tests: 771 passing.** 51 test files, 0 regressions.
-
-### Completed (v1.19.1) — Hotfix 2026-06-17
-- ✅ **Issue #137: Gemini HTTP 400.** 3-tier thinking-control dialect fallback chain (anthropic → openai → none). Settings tab no longer wipes `thinkingControlCache` on close. Generic field-strip retry for temperature/repetition_penalty. Stream path field-strip fix (was dead code). Fallback notices now localized (was hard-coded EN). Console noise reduced.
-
-### Completed (v1.19.0) — Released 2026-06-16
-- ✅ **Issue #116: Compact slug list in analyzeSource prompt.** `buildCompactSlugList()` injects a sorted slug-only list of existing wiki pages so the LLM uses exact paths when creating `[[links]]`, reducing dead-link mismatches. Contributed by @DocTpoint.
-- ✅ **Issue #126: Quote-grounding lint scanner.** `scanQuoteGrounding()` pure function (zero token cost) verifies every quote under `## Mentions in Source` against the linked source file. Supports current `"— [[sources/slug]]"` format and historical bare quotes. Tier 1 = exact match; Tier 2 = normalized. Contributed by @DocTpoint.
-- ✅ **Issue #128: Advanced LLM parameter settings.** Default/Custom mode selector in LLM Configuration. Default hides all advanced params, keeps disable-thinking on. Custom reveals: thinking toggle, extraction temperature (0–2), query temperature (0–2), repetition penalty (0–2). `disableThinking` field preserved in `data.json` for backward compatibility.
-- ✅ **Issue #99: Reasoning-only response detection.** Empty content + finish_reason=length + reasoning_tokens >= 50% → actionable error. Automatic 400 fallback to `chat_template_kwargs: {enable_thinking: false}`.
-- ✅ **PR #131 Tier 1: Stage 4 no-op skip.** ~33% Stage 4 LLM call reduction. Contributed by @DocTpoint.
-- ✅ **PR #109: Auto Smart Fix setting.** Lint can auto-run Smart Fix All after analysis without showing modal. Default off.
-- ✅ **PR #110: Status bar mirrors popup during ingest and lint.** Contributed by @dmarchevsky.
-- ✅ **PR #127: Sources normalization in write path.** Contributed by @DocTpoint.
-- ✅ **Lint report enhanced:** summary includes ungroundedQuotes + tagViolations counts. `lintTagViolationSection` fully i18n'd.
-- ✅ **Internal refactoring:** lint-controller modularization (phases/report-builder), schema-analyze to schema/, LintContext to lint/types, lint-controller + lint-fixes into lint/ directory.
-- ✅ **Tests: 744 passing (was 728).** 36 test files, 0 regressions. +16 tests since v1.19.0 (new `llm-client-gemini-fallback` + `settings-thinkcache` suites).
+### Completed (v1.19.x) — Ingest Quality & Cost Hardening (2026-06-16/17)
+- ✅ **v1.19.1 — Gemini HTTP 400 (Issue #137).** 3-tier thinking-control dialect fallback. Generic 400 field-strip retry.
+- ✅ **v1.19.0 — Multiple enhancements.** #116 compact slug list, #126 quote-grounding scanner, #128 advanced LLM settings, #99 reasoning-only detection, PR #131 Stage 4 no-op skip, PR #109 auto Smart Fix, PR #110 status bar, PR #127 sources normalization. 744 tests.
 
 ### P0 — Bug fixes / quality regressions
-- 🔴 **#164 — Empty-content fabricated-entity (v1.21.0, in PR).** Critical bug. Reported by @Indexed-Apogrypha 2026-06-21. Fix path: guard at `WikiEngine.ingestSource` entry + unit + integration tests + 9-locale i18n.
-- All v1.20.x P0 items closed (Anthropic prefill v1.20.1, system-role v1.20.2, source-slug/alias-dedup/reviewed-guard v1.20.3).
+
+- All v1.21.0 P0 items closed (#164 in PR #174, #172/#173 in PR #176).
 
 ### P1 — Cleanup (v1.19.0 target, deferred items from v1.18.x)
 
@@ -167,7 +142,7 @@ src/
 │   ├── sse-parser.ts               # SSE event parser (anthropic + openai formats)
 │   ├── token-cap.ts                # max_tokens cap helper
 │   └── conflict-resolver.ts        # Conflict detection
-└── __tests__/                      # Unit tests (vitest, 813 tests)
+└── __tests__/                      # Unit tests (vitest, 939 tests)
 ```
 
 ---
@@ -366,54 +341,14 @@ main (protected) ─────────────────────
 
 - `pnpm build` — **production** build (console.debug disabled, no sourcemap). Use for release.
 - `pnpm build:dev` — **debug** build (inline sourcemap + console.debug preserved). Use when the user requests a local test build.
-- `pnpm dev` — **watch** mode (rebuilds on file change, same as build:dev but stays running).
+- `pnpm dev` — **watch** mode (rebuilds on file change).
 
-When the user says "build local debug file for testing" or asks for manual testing files:
-1. Run `pnpm build:dev` to generate `main.js` (2MB+ with inline sourcemap)
+When the user says "build local debug file for testing":
+1. Run `pnpm build:dev` → outputs `main.js`, `manifest.json`, `styles.css`
 2. Verify `main.js` ends with `//# sourceMappingURL=data:application/json;base64,...`
-3. Confirm `console.debug` is NOT replaced (header should not contain `console.debug = function(){};`)
-4. The 3 output files are: `main.js`, `manifest.json`, `styles.css`
-5. Offer to zip them or tell the user the paths
-2. Update relevant docs and memory
-3. Present change summary for user review
-4. Commit locally after user approval (do NOT push directly to main)
-5. When ready to push: create a feature branch, push the branch, create a PR, **merge via `gh pr merge`** (or GitHub UI)
-6. After PR merge: pull main, create tag (NO `v` prefix), push tag
-7. Wait for GitHub Actions to create Draft Release
-8. Generate release notes (via `/obsidian-plugin-release` skill)
-9. **Main branch is protected** — direct pushes are rejected with `GH013`
+3. Confirm `console.debug` is NOT replaced
 
-```bash
-# Push workflow (main is protected)
-git checkout -b chore/vX.Y.Z-release
-git push origin chore/vX.Y.Z-release
-gh pr create --title "chore: bump version to X.Y.Z" --body "## Summary\n...\n\n## Test plan\n- [x] ..." --base main
-gh pr merge <PR#> --merge --delete-branch
-git checkout main && git pull origin main
-
-# Tag (after PR merge, NO 'v' prefix)
-git tag -a X.Y.Z -m "X.Y.Z"
-git push origin X.Y.Z
-```
-
-## Tag & Release workflow
-
-**Use `/obsidian-plugin-release` skill for complete release preparation.**
-
-Tags are pushed AFTER the PR is merged to main:
-```bash
-# Ensure you're on the latest main with the merged commit
-git checkout main && git pull origin main
-git tag -a X.Y.Z -m "X.Y.Z"
-git push origin X.Y.Z
-# GitHub Actions creates the draft release automatically
-```
-
-**Before version bump commit**, verify ALL items in skill's Pre-Release Checklist:
-- All 8 READMEs' "What's New" section REPLACED (not appended)
-- TOC links match actual heading text exactly
-- CHANGELOG.md entry added
-- Lockfiles regenerated (pnpm + npm official registry)
+For full release workflow (commit + push + tag + release notes), use the `obsidian-plugin-release` skill. **Main branch is protected** — direct pushes rejected with `GH013`.
 
 ---
 
@@ -520,16 +455,7 @@ it('debug', () => {
 
 ## ✅ Pre-Release Checklist
 
-**六无门禁 Gate 1 验证：**
-
-```bash
-pnpm lint           # Gate 1: ESLint - 0 errors, 0 warnings
-npx tsc --noEmit    # Gate 1: TypeScript - 0 errors, 0 warnings
-pnpm test           # Gate 1: Tests - all pass, 0 failures
-pnpm build          # Gate 1: Build - clean exit
-```
-
-**重要**：四个命令必须**全部通过**才能提交。单一工具通过不足够。Gates 2-6 在发布流程中依次验证。
+Use the `obsidian-plugin-release` skill for the full workflow (Steps 1-8). Gate 1 (lint + tsc + test + build + css-lint) must all pass before any commit.
 
 ---
 

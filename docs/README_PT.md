@@ -181,6 +181,9 @@ Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 - **🏷️ Completude de Aliases** — Geração em lote paralela de aliases ausentes em um clique, melhorando a detecção futura de duplicados
 - **🔄 Auto-Manutenção** — Observador de arquivos multi-pasta, lint periódico, verificação de saúde na inicialização (Startup Quick Fixes ativado por padrão, File Watcher e Periodic Lint desativados por padrão)
 - **⚠️ Máquina de Estados de Contradição** — `detected → review_ok → resolved` (correção por IA) ou `detected → pending_fix` (manual)
+- **🛡️ Portal de pré-ingestão (v1.21.0)** — Cada arquivo de origem é validado *antes* de qualquer chamada LLM: notas vazias/em branco/somente frontmatter são rejeitadas; a deduplicação por hash de conteúdo detecta arquivos idênticos entre caminhos. Impede que modelos locais alucinem nomes de entidades em entradas vazias.
+- **📊 Painel de histórico de operações (v1.21.0)** — UI pesquisável e filtrável para ingestões passadas, relatórios de lint e execuções de manutenção, com cartões KPI orientados por insights e links clicáveis para páginas.
+- **🧹 Limpador de páginas incompletas (v1.21.0)** — Páginas deixadas em estado parcial após ingestões interrompidas são arquivadas automaticamente na inicialização (recuperáveis da `.trash` do Obsidian).
 
 ### 💬 Consulta e Feedback
 
@@ -228,6 +231,7 @@ Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 | **📋 Regenerar índice** | Reconstrua manualmente `wiki/index.md` |
 | **⏹️ Cancelar operação** | `Cmd+P` → "Cancel current ingestion" ou clique na barra de status — parada segura nos limites do lote |
 | **💡 Sugerir atualizações de Schema** | LLM analisa a Wiki e propõe melhorias no Schema |
+| **📊 Ver histórico de ingestão (v1.21.0)** | Navegue por ingestões passadas, relatórios de lint e execuções de manutenção em uma UI pesquisável e filtrável |
 
 ---
 
@@ -327,26 +331,33 @@ schema/      # 📋 Configuração da estrutura Wiki (nomenclatura, templates, c
 **Código** (`src/`):
 
 ```
-wiki/               # Módulos do motor Wiki
-  wiki-engine.ts    # 🎯 Orquestrador
-  query-engine.ts   # 💬 Query conversacional
+main.ts              # 🔌 Ponto de entrada do plugin
+wiki/                # Módulos do motor Wiki
+  wiki-engine.ts     # 🎯 Orquestrador
+  query-engine.ts    # 💬 Query conversacional
   source-analyzer.ts # 📊 Extração em lote iterativa
-  page-factory.ts   # 🏗️ CRUD de Entity/Concept + mesclagem
-  lint-controller.ts # 🔍 Orquestração de Lint
-  lint-fixes.ts     # 🛠️ Correção de dead links, páginas vazias e órfãos
-  lint/             # Submódulos de Lint
-    duplicate-detection.ts  # 🔄 Geração programática de candidatos
-    fix-runners.ts          # ⚡ Helpers de execução de correção em lote
-    scanners.ts            # 🔍 Scanners (dead links, orphans, aliases)
-  contradictions.ts # ⚠️ Detecção de contradições
-  system-prompts.ts # 🗣️ Diretiva de idioma + rótulos de seção
-schema/             # Co-evolução de Schema
-  schema-manager.ts # 📋 CRUD de Schema + sugestões
-  auto-maintain.ts  # 🔄 Observador de arquivos + lint periódico
-ui/                 # Interface do usuário
-  settings.ts       # ⚙️ Painel de configurações
-  modals.ts         # 📦 Modais de Lint/Ingest/Query
-+ módulos compartilhados: llm-client.ts, prompts.ts, texts.ts, utils.ts, types.ts
+  page-factory.ts    # 🏗️ CRUD de Entity/Concept + mesclagem
+  conversation-ingest.ts # 📥 Chat → conhecimento Wiki
+  contradictions.ts  # ⚠️ Detecção de contradições
+  system-prompts.ts  # 🗣️ Diretiva de idioma + rótulos de seção
+  lint/              # Submódulos de Lint
+    controller.ts        # 🔍 Orquestração de Lint
+    fix-runners.ts       # ⚡ Helpers de execução de correção em lote
+    scanners.ts          # 🔍 Scanners (dead links, orphans, aliases, ancoragem de citação)
+    duplicate-detection.ts # 🔄 Geração programática de candidatos
+    report-builder.ts    # 📋 Construtor de relatório de função pura
+    phases/              # Execução de Lint por fases
+  prompts/           # Modelos de prompts LLM por domínio
+schema/              # Co-evolução de Schema
+  manager.ts         # 📋 CRUD de Schema + sugestões
+  auto-maintain.ts   # 🔄 Observador de arquivos + lint periódico + correções na inicialização
+  analyze.ts         # 📊 Análise de Schema com fiação de cancelamento
+ui/                  # Interface do usuário
+  settings.ts        # ⚙️ Painel de configurações
+  modals.ts          # 📦 Modais de Lint / Ingest / Query / History
+core/                # 🧩 Módulos de função pura (zero IO, totalmente testáveis)
+  i18n, slug, json, frontmatter, tag-vocab, sources-normalizer, ...
++ compartilhados: llm-client.ts, llm-client-wrapper.ts, texts.ts, prompts.ts, types.ts
 ```
 
 **Páginas geradas:**
@@ -448,9 +459,21 @@ Não — é a nova impressão digital anti-colisão de slug de origem em ação.
 **Re-ingerir uma fonte não relacionada sobrescreverá uma página bloqueada com `reviewed: true`? (v1.20.3+)**
 Não — Stage 4 (`updateRelatedPage`) agora respeita `reviewed: true` e roteia para o caminho append-only, igual ao caminho de ingestão. Seu corpo curado sobrevive tal qual; apenas conteúdo genuinamente novo é anexado.
 
+**Meu modelo local (Ollama, LM Studio) está fabricando nomes estranhos de entidades a partir de notas em branco ou apenas com frontmatter. (v1.21.0)**
+Corrigido em v1.21.0 pelo portal de pré-ingestão: notas vazias/em branco/somente frontmatter agora são rejeitadas *antes* de qualquer chamada LLM, e a deduplicação por hash de conteúdo detecta arquivos idênticos entre caminhos. Atualize para v1.21.0+ para parar a classe de bugs "arquivo vazio → alucinação" (modelos pequenos inventando nomes de entidades em um prompt vazio).
+
 **Como obter ajuda?**
 - [GitHub Issues](https://github.com/green-dalii/obsidian-llm-wiki/issues) — relatar bugs
 - [GitHub Discussions](https://github.com/green-dalii/obsidian-llm-wiki/discussions) — perguntas e feedback
+
+**Como coletar logs de depuração para solução de problemas?**
+
+1. Abra as Ferramentas de Desenvolvedor (`Ctrl+Shift+I` / `Cmd+Option+I`)
+2. Vá para a aba **Console**
+3. Execute sua operação (ingestão, consulta ou lint)
+4. Procure mensagens com prefixos de nome de módulo como `[Step]`, `[LLM]`, nomes de módulos
+5. Para testes locais, use `pnpm build:dev` em vez de `pnpm build` para preservar a saída de depuração completa
+6. Copie as linhas de log relevantes e inclua-as no seu issue do GitHub — isso acelera muito o diagnóstico
 
 ---
 

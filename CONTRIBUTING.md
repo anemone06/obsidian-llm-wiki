@@ -24,13 +24,14 @@ pnpm build
 
 ## Quality Checks
 
-All four checks must pass before submitting any change:
+All five checks must pass before submitting any change:
 
 ```bash
 pnpm lint          # ESLint with Obsidian plugin rules (0 errors, 0 warnings)
 pnpm test          # Vitest unit tests (all pass)
 npx tsc --noEmit   # TypeScript type check (0 errors, 0 warnings) — Dual Gate
 pnpm build         # esbuild production build (must exit cleanly)
+pnpm css-lint      # styles.css contains no !important declarations
 ```
 
 ## Code Conventions
@@ -111,7 +112,7 @@ src/
 │   └── analyze.ts       # Schema-analyze with cancel wiring
 ├── ui/                  # Settings + Modals
 ├── texts/               # i18n (9 languages)
-└── __tests__/           # Unit tests (vitest, 813 tests across 54 files)
+└── __tests__/           # Unit tests (vitest, 939 tests across 67 files)
 ```
 
 ## Internationalization

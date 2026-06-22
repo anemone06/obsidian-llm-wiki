@@ -2,7 +2,7 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.21.0 | **Updated:** 2026-06-21
+**Version:** 1.22.0 (planned) | **Updated:** 2026-06-22
 
 ---
 
@@ -105,49 +105,11 @@ Major quality release addressing previously-unprocessable large sources and a cl
 
 ---
 
-## Next Milestone: v1.21.0 — Schema Coherence Phase 1
+## Next Milestone: v1.22.0 — Schema Coherence Phase 2
 
-Release focus: unify schema as the single source of truth for both system prompts and generation prompts, fixing three concrete inconsistencies confirmed via code review (see [Issue #124](https://github.com/green-dalii/obsidian-llm-wiki/issues/124), [Issue #97](https://github.com/green-dalii/obsidian-llm-wiki/issues/97)).
+Release focus: complete the schema unification started in v1.21.0 by adding custom section names, one-click apply, schema diff preview, and the graph-based / workflow improvements (P3 backlog).
 
-### Phase 1: Schema → Prompt Unification (v1.21.0)
-
-### Phase 1: Schema Coherence (in progress)
-- **`SchemaContext`** shared parsed representation of `schema/config.md`, used by both system prompts and generation prompts (eliminates the "schema template overridden by hardcoded sections" bug from #124).
-- **`buildSchemaSectionTemplate(ctx, pageType)`** extracts user-defined sections from `**Sections:**` lists; `hasUserSections` flag for backward compat.
-- **`buildActiveTagVocabularySection` injection into system prompt** with dedup guard. Custom tags now active in every LLM call that needs them.
-- **Settings UI default mode** previews user-defined custom tags with activation hint.
-- **v1.20.0 migration** resets `disableThinking` to `false` and `advancedSettingsMode` to `'default'` (already shipped).
-- 🔴 **#164 — Empty-content fabricated-entity guard** (in PR by @Indexed-Apogrypha). Add early-return in `WikiEngine.ingestSource` (line ~248, right after `vault.read`): if `fileContent.trim().length === 0` → emit `emptySourceNotice` + return. Plus 9-locale i18n + unit + integration tests. Closes a critical bug where local models (Ollama gemma4, qwen-coder) fabricate entity names to satisfy the JSON schema when given a blank prompt.
-- ✅ **#122 — Ingestion History Panel** (implemented, merged). Pure-function `parseLogEntries` + `HistoryModal` with date grouping, search, filter, clickable page links. 21 new tests (842 total). Pending merge into main.
-
-**Problem:** Three concrete inconsistencies between user-configured schema (`schema/config.md`) and runtime prompt construction:
-
-1. **Section structure hardcoded in user prompts.** `src/wiki/prompts/generation.ts` lines 57-70 hardcode `## {{section_basic_information}}`, `## {{section_description}}`, etc. in the user prompt, while `schema/config.md` templates go into the system prompt. Two conflicting definitions in one LLM call.
-2. **Tag vocabulary only injected into lint paths.** `buildActiveTagVocabularySection` in `system-prompts.ts:213` is called by lint-analyze and fix-runners, but NOT by `buildSystemPrompt` or `generation.ts`. Users on Custom tag vocabulary see their settings silently ignored for page generation.
-3. **Settings UI description drift.** `settings.ts:720` shows hardcoded `VALID_ENTITY_TAGS` in the default-mode description, but the actual runtime uses `getActiveEntityTags(settings)` which switches to user-defined CSV in Custom mode.
-
-**Plan (minimum-invasive, backward compatible):**
-
-- Extract `SchemaContext` type as shared input for `buildSystemPrompt` + `generation.ts`
-- `generation.ts` reads section structure from schema, not from `## {{section_xxx}}` placeholders
-- `buildSystemPrompt` injects the tag vocabulary section
-- Settings description uses `getActiveEntityTags/Concepts` for live alignment
-- Default fallback: when schema doesn't define custom sections, use the current hardcoded templates (no behavior change for users who haven't customized schema)
-
-**Acceptance criteria:**
-
-- Schema customization in `config.md` propagates to actual generated pages (not silently overridden)
-- Custom tag vocabulary in settings is respected by all ingestion paths
-- Existing wikis (with default schema) produce identical output before and after
-- Tests pass for both default-schema and custom-schema paths
-
-**🔴 #164 — Empty-content hallucinated entity guard** (in PR by @Indexed-Apogrypha). Add early-return in `WikiEngine.ingestSource` (line ~248, right after `vault.read`): if `fileContent.trim().length === 0` → emit `emptySourceNotice` + return. Plus 9-locale i18n + unit + integration tests. Closes a critical bug where local models (Ollama gemma4, qwen-coder) fabricate entity names to satisfy the JSON schema when given a blank prompt. Folded into v1.21.0 with Schema Phase 1 to avoid two consecutive hotfixes within a week.
-
-- 🔴 **#173 — Ingest: create-retry loop + duplicate Created entry** (reported by @Indexed-Apogrypha 2026-06-21). Symptom A: `createOrUpdateFile()` retries `vault.create()` 3 times when path already exists, instead of short-circuiting to `vault.process()`. Symptom B: `analysis.created_pages` lacks Set dedup, causing duplicate report rows. Both small fixes bundled with #164.
-- 🔴 **#172 — i18n: hardcoded Chinese error string** (reported by @Indexed-Apogrypha 2026-06-21). `wiki-engine.ts:850` throws `无法创建或更新文件: ${path}` unconditionally. Add `fileWriteFailed` i18n key × 9 locales + replace with `getText(...)`. Audit other source files for similar leaks.
-- 🟢 **#170 — Incomplete-page cleaner** (tracked for v1.21.0, design approved 2026-06-21). Simplification: instead of full-batch atomic write, use `generation_complete: false` frontmatter signal flipped to `true` only after full body write. Startup self-scan cleans any pages where signal is missing/false. Preserves write-through simplicity, works with existing AbortController.
-
-### Phase 2: Custom section names + #97 one-click apply (v1.21.0 or v1.22.0)
+### Phase 2: Custom section names + #97 one-click apply (v1.22.0)
 
 - Schema supports custom section names (not just multi-language translation)
 - One-click apply schema suggestions with auto-backup
@@ -157,8 +119,7 @@ Release focus: unify schema as the single source of truth for both system prompt
 ### Phase 3: Graph-based features & Workflow scale-up (v1.22.0+)
 
 - **#117 — Graph-based domain tag inference.** Hub detection + cheap LLM labeling + tag propagation with explainability.
-- **#122 — Ingestion history panel.** Start with log.md UI layer.
-- **#130 — In-place batch ingest queue.** Composes with #122 and `pageGenerationConcurrency`.
+- **#130 — In-place batch ingest queue.** Composes with #122 (history panel) and `pageGenerationConcurrency`.
 - **#168 — Single-file vs batch granularity split** (design approved 2026-06-21). Replace single `extractionGranularity` with two independent settings: `singleFileGranularity` + `batchGranularity`. Rationale: single-file ingest is pre-vetted (expects depth), folder ingest is bulk (expects noise reduction).
 - **#169 — Better status reporting** (deferred split scope). Phase 1 (v1.22.0): richer progress text (batch count, ETA, current model). Phase 2 (backlog): live file preview (needs new UI component).
 - **#157 — Embedding-distinctiveness hub-link policy** (DocTpoint proposal). Replace tag-based stripping with cosine-based distinctiveness. Opt-in via `hubLinkPolicy: 'embedding'` mode. 252-link empirical evidence on bge-m3.
@@ -187,12 +148,13 @@ Documented in `~/.claude/projects/.../memory/project_v1.19.0_query_evolution.md`
 
 | Version | Date | Headline |
 |---------|------|----------|
+| **1.21.0** | 2026-06-21 | Pre-ingest gate (Closes #164) + Schema Coherence Phase 1 (Closes #124) + History Panel (Closes #122) + Incomplete-page cleaner (Closes #170) + Italian locale (Closes #159) — 939 tests |
+| **1.20.3** | 2026-06-20 | Source-slug fingerprint (Closes #155) + alias dedup + Stage-4 reviewed guard — 791 tests |
 | **1.19.1** | 2026-06-17 | Gemini HTTP 400 hotfix (Closes #137) — 3-tier dialect fallback, settings tab cache persistence, stream field-strip fix |
-| **1.19.0** | 2026-06-16 | Ingest quality & cost hardening — advanced LLM params, quote grounding, compact slugs |
-| **1.18.2** | 2026-06-12 | Custom extraction limits hard-enforced (Closes #120) + #114 tags preservation + #111 slug casing |
-| **1.18.1** | 2026-06-11 | Obsidian review compliance (document ban + prefer-active-doc) |
-| **1.18.0** | 2026-06-10 | Tag controlled vocabulary (Closes #85) v6/v7/v8 — chip input UX, end-to-end customTags pipeline |
-| **1.18.0** | 2026-06-10 | Tag controlled vocabulary (Closes #85) |
+| 1.19.0 | 2026-06-16 | Ingest quality & cost hardening — advanced LLM params, quote grounding, compact slugs |
+| 1.18.2 | 2026-06-12 | Custom extraction limits hard-enforced (Closes #120) + #114 tags preservation + #111 slug casing |
+| 1.18.1 | 2026-06-11 | Obsidian review compliance (document ban + prefer-active-doc) |
+| 1.18.0 | 2026-06-10 | Tag controlled vocabulary (Closes #85) — chip input UX, end-to-end customTags pipeline |
 | 1.17.0 | 2026-06-08 | Long-document ingestion + source attribution (Closes #90) |
 | 1.16.3 | 2026-06-07 | v1.16.2 P0 hotfix completion |
 | 1.16.2 | 2026-06-07 | Lint cancel + thinking token bleeding + delete empty stubs |

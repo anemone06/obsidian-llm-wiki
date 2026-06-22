@@ -198,6 +198,9 @@ Details unter [CHANGELOG.md](../CHANGELOG.md).
 - **🏷️ Alias Completion** — One-Click parallele Batch-Generierung fehlender Aliases zur Verbesserung zukünftiger Duplikat-Detection
 - **🔄 Auto-Maintenance** — Multi-Folder File Watcher, periodischer Lint, Startup Health Check (Startup Quick Fixes standardmäßig AN, File Watcher und Periodic Lint standardmäßig AUS)
 - **⚠️ Contradiction State Machine** — `detected → review_ok → resolved` (AI Fix) oder `detected → pending_fix` (manuell)
+- **🛡️ Pre-Ingest Requirements Gate (v1.21.0)** — Jede Quelldatei wird *vor* jedem LLM-Aufruf validiert: leere/Whitelist-/nur-Frontmatter-Notizen werden abgelehnt; Content-Hash-Dedup erkennt identische Dateien über Pfade hinweg. Verhindert Halluzinationen lokaler Modelle bei leeren Eingaben.
+- **📊 Operation History Panel (v1.21.0)** — Durchsuchbare, filterbare UI für vergangene Ingests, Lint-Berichte und Wartungsläufe, mit Insight-getriebenen KPI-Karten und klickbaren Seitenlinks.
+- **🧹 Incomplete-Page Cleaner (v1.21.0)** — Durch unterbrochene Ingests unvollständig gebliebene Seiten werden beim Start automatisch archiviert (aus Obsidians `.trash` wiederherstellbar).
 
 ### 💬 Query & Feedback
 
@@ -244,6 +247,7 @@ Details unter [CHANGELOG.md](../CHANGELOG.md).
 | **🛠️ Wiki prüfen** | Vollständiger Health Scan: Duplikate, tote Links, leere Pages, Orphans, fehlende Aliases, Widersprüche |
 | **📋 Index neu generieren** | `wiki/index.md` manuell neu aufbauen |
 | **💡 Schema-Aktualisierungen vorschlagen** | LLM analysiert Wiki und schlägt Schema-Verbesserungen vor |
+| **📊 Aufnahmeverlauf anzeigen (v1.21.0)** | Vergangene Ingests, Lint-Berichte und Wartungsläufe in durchsuchbarer, filterbarer UI durchsuchen |
 
 ---
 
@@ -344,26 +348,33 @@ schema/      # 📋 Wiki Structure Config (Naming Conventions, Page Templates, C
 **Code-Struktur** (`src/`):
 
 ```
-wiki/               # Wiki-Engine-Module
-  wiki-engine.ts    # 🎯 Orchestrator
-  query-engine.ts   # 💬 Conversationelle Abfrage
+main.ts              # 🔌 Plugin-Einstiegspunkt
+wiki/                # Wiki-Engine-Module
+  wiki-engine.ts     # 🎯 Orchestrator
+  query-engine.ts    # 💬 Conversationelle Abfrage
   source-analyzer.ts # 📊 Iterative Batch-Extraktion
-  page-factory.ts   # 🏗️ Entity/Concept CRUD + Merge
-  lint-controller.ts # 🔍 Lint-Orchestrierung
-  lint-fixes.ts     # 🛠️ Fix-Logik für tote Links, leere Seiten, Orphans
-  lint/             # Lint-Submodule
-    duplicate-detection.ts  # 🔄 Programmatische Kandidatengenerierung
-    fix-runners.ts          # ⚡ Batch-Fix-Ausführungshilfen
-    scanners.ts            # 🔍 Scanners (dead links, orphans, aliases)
-  contradictions.ts # ⚠️ Widerspruchs-Erkennung
-  system-prompts.ts # 🗣️ Sprach-Direktive + Sektions-Labels
-schema/             # Schema Co-Evolution
-  schema-manager.ts # 📋 Schema CRUD + Suggestions
-  auto-maintain.ts  # 🔄 File Watcher + Periodischer Lint
-ui/                 # User Interface
-  settings.ts       # ⚙️ Settings Panel
-  modals.ts         # 📦 Lint/Ingest/Query Modals
-+ Shared Modules: llm-client.ts, prompts.ts, texts.ts, utils.ts, types.ts
+  page-factory.ts    # 🏗️ Entity/Concept CRUD + Merge
+  conversation-ingest.ts # 📥 Chat → Wiki-Wissen
+  contradictions.ts  # ⚠️ Widerspruchs-Erkennung
+  system-prompts.ts  # 🗣️ Sprach-Direktive + Sektions-Labels
+  lint/              # Lint-Submodule
+    controller.ts        # 🔍 Lint-Orchestrierung
+    fix-runners.ts       # ⚡ Batch-Fix-Ausführungshilfen
+    scanners.ts          # 🔍 Scanners (dead links, orphans, aliases, Belegprüfung)
+    duplicate-detection.ts # 🔄 Programmatische Kandidatengenerierung
+    report-builder.ts    # 📋 Pure-Function-Report-Builder
+    phases/              # Phasenweise Lint-Ausführung
+  prompts/           # LLM-Prompt-Templates nach Domäne
+schema/              # Schema Co-Evolution
+  manager.ts         # 📋 Schema CRUD + Suggestions
+  auto-maintain.ts   # 🔄 File Watcher + Periodischer Lint + Startup Quick Fixes
+  analyze.ts         # 📊 Schema-Analyse mit Abbruch-Verdrahtung
+ui/                  # User Interface
+  settings.ts        # ⚙️ Settings Panel
+  modals.ts          # 📦 Lint / Ingest / Query / History Modals
+core/                # 🧩 Pure Function Modules (Zero IO, voll testbar)
+  i18n, slug, json, frontmatter, tag-vocab, sources-normalizer, ...
++ Geteilt: llm-client.ts, llm-client-wrapper.ts, texts.ts, prompts.ts, types.ts
 ```
 
 **Generierte Seiten:**
@@ -387,100 +398,99 @@ ui/                 # User Interface
 Sie legen Notizen ab, es extrahiert Personen, Konzepte und Theorien und generiert ein verknüpftes Wiki mit `[[Wiki-Links]]`. Stellen Sie Fragen und erhalten Sie Antworten basierend auf *Ihren* Notizen — keine Internet-Halluzinationen.
 
 **Mindestanforderungen?**
-Obsidian v1.11.0+, Desktop (Windows/macOS/Linux), ein API-Key eines LLM-Providers. Ollama funktioniert lokal ohne API-Key.
-
-**Warum kann ich nach der Installation keine Funktionen nutzen?**
-Einstellungen → Karpathy LLM Wiki → Provider wählen → API-Key eingeben → Fetch Models → Modell wählen → Test Connection. Grüner "LLM Ready"-Indikator schaltet alle Funktionen frei.
-
-**Wie breche ich eine laufende Aufnahme/Lint ab?**
-Statusleisten-Text klicken oder Ctrl+P → "Cancel current ingestion". Stoppt sicher nach Abschluss des aktuellen Batch.
-
-**Doppelte Klammern [[[[...]]]] in log.md beheben?**
-Lint Wiki ausführen — der Scanner erkennt und behebt automatisch alle doppelt verschachtelten Wiki-Links im gesamten Wiki-Verzeichnis (einschließlich log.md) ohne LLM-Kosten. Kein manuelles Aufräumen erforderlich.
-
+Obsidian v1.11.0+, Desktop (Windows/macOS/Linux), ein API-Key eines LLM-Providers. Ollama funktioniert lokal ohne API-Key. Siehe [LLM-Provider konfigurieren](#-llm-provider-konfigurieren) oben.
 
 **Welches Modell sollte ich wählen?**
 Siehe [Modellempfehlungen](#-modellempfehlungen) oben. Modelle mit langem Kontext werden empfohlen — je größer Ihr Wiki, desto mehr Kontext benötigt der LLM.
 
-### 🏷️ Warum zeigt Lint bei fast all meinen Seiten "fehlende Aliases" an?
+### 🏷️ Aliase & Duplikate
 
+**Warum zeigt Lint bei fast all meinen Seiten "fehlende Aliases" an?**
 Seiten, die vor v1.7.11 generiert wurden, enthielten keine Aliases. Das ist normal und harmlos — Aliases sind eine Verbesserung, keine Voraussetzung. Klicken Sie im Lint-Report auf **"Complete Aliases"**, damit der LLM Übersetzungen, Akronyme und alternative Namen für alle fehlenden Seiten in einem Batch generiert. Sobald Aliases vorhanden sind, werden die Duplikaterkennung und die Alias-basierte Suche deutlich effektiver.
 
-### 🔄 Warum sehe ich doppelte Seiten mit ähnlichen Namen (z. B. "CoT" und "Chain-of-Thought")?
+**Warum sehe ich doppelte Seiten mit ähnlichen Namen (z. B. "CoT" und "Chain-of-Thought")?**
+Ältere Versionen (vor v1.7.10) hatten keine Alias-basierte Duplikaterkennung. Führen Sie **Lint Wiki** aus — wenn Duplikate gefunden werden, klicken Sie **"Merge Duplicates"**, um sie zu verschmelzen. Die zusammengeführte Seite behält Aliases von beiden und verhindert so zukünftige Duplikate.
 
-Ältere Versionen (vor v1.7.10) hatten keine Alias-basierte Duplikaterkennung. Wenn Sie Inhalte über dasselbe Konzept mit unterschiedlichen Namen verarbeitet haben, hat der LLM separate Seiten erstellt. Führen Sie **Lint Wiki** aus — wenn Duplikate gefunden werden, klicken Sie **"Merge Duplicates"**, um sie zu verschmelzen. Die zusammengeführte Seite behält Aliases von beiden und verhindert so zukünftige Duplikate.
+**Wie funktioniert die Duplikaterkennung? (v1.7.10+)**
+Zweistufige semantische Erkennung: Stufe 1 (immer LLM-verifiziert) erkennt sprachübergreifende Übereinstimmungen, Abkürzungen, Titel mit hoher Ähnlichkeit. Stufe 2 füllt das verbleibende Token-Budget mit Kandidaten mittlerer Ähnlichkeit.
 
-### ⚡ Wie kann ich die Ingestion für große Quelldateien beschleunigen?
+**Was sind "verschmutzte Seiten"? (v1.9.0)**
+Seiten mit versehentlich in den Dateinamen eingebauten Ordner-Präfixen — z. B. `concepts/conceptsLayoutOptimierung.md`. Führen Sie **Lint Wiki** → **🧹 Fix Polluted Pages** aus, um sie umzubenennen und alle eingehenden Links zu aktualisieren.
 
-Zwei Einstellungen in **Settings → LLM Configuration**:
-- **🚀 Page Generation Concurrency**: Erhöhen Sie den Wert von 1 auf 3 (oder 5 für Provider mit hohen Rate Limits). Dadurch werden mehrere Entity/Concept-Seiten parallel verarbeitet.
-- **⏱️ Batch Delay**: Niedrigere Werte sind schneller, bergen aber ein Risiko für Rate Limits. Beginnen Sie bei 300 ms; erhöhen Sie auf 500–800 ms, wenn Sie HTTP-429-Fehler sehen.
+### ⚡ Leistung & Kosten
 
-Prüfen Sie auch die **📊 Extraktionsgranularität**: "Minimal", "Groß" oder "Standard" erzeugen weniger Seiten und sparen API-Kosten.
+**Wie kann ich die Ingestion beschleunigen?**
+In **Einstellungen → LLM-Konfiguration**: **Page Generation Concurrency** auf 3–5 erhöhen (parallele Seitenerstellung), **Batch Delay** auf 100–300 ms senken (auf Rate-Limits achten). Wählen Sie **Extraktionsgranularität** "Minimal", "Grob" oder "Standard", um die Seitenanzahl zu reduzieren und API-Kosten zu sparen.
 
-### 🧊 Das Plugin friert ein, wenn ich Lint auf einem großen Wiki ausführe. Was ist los?
+**Warum erhalte ich HTTP 429-Fehler?**
+Das Plugin erkennt Rate-Limiting automatisch und schlägt vor: Concurrency auf 1–2 senken, Batch Delay auf 500–800 ms erhöhen, oder zu einem Provider mit höheren Limits wechseln.
 
-Dies war ein bekanntes Problem, das in v1.7.15 und v1.7.17 behoben wurde. Wenn Sie eine Version vor v1.7.15 verwenden, aktualisieren Sie auf die neueste Version — das Lint-System enthält jetzt asynchrone Yield Points, die die Kontrolle an den UI-Thread von Obsidian zurückgeben (alle 50 Seiten und alle 500 Vergleiche). Dies verhindert die 10–40 Sekunden langen Freezes, die bei Wikis mit 1200+ Seiten auftraten.
+**Wie kontrolliere ich die API-Kosten?**
+- Auto-Maintenance ist standardmäßig AUS — nur aktivieren, wenn Hintergrundverarbeitung benötigt wird
+- Smart Batch Skip überspringt automatisch bereits verarbeitete Dateien
+- Granularität "Standard" oder "Coarse" = weniger LLM-Aufrufe
+- Batch Delay > 500 ms verteilt Aufrufe, ohne den Token-Verbrauch zu erhöhen
+- Lint-Bericht zeigt Anzahlen vor der Ausführung von Fixes — entscheiden Sie, was es wert ist
 
-### ✏️ Kann ich Wiki-Seiten manuell bearbeiten?
+### 🧹 Wartung
 
-Ja. Das Plugin respektiert Ihre Bearbeitungen:
-- Setzen Sie `reviewed: true` im Frontmatter, um eine Seite vor Überschreibung bei erneuter Ingestion zu schützen. Überprüfte Seiten erhalten nur ergänzend wirklich neue Inhalte.
-- Das `created`-Datum bleibt bei Updates erhalten; nur `updated` wird aktualisiert.
-- Manuelle Aliases, Tags und Sources bleiben bei Zusammenführungen erhalten.
+**Was macht "Smart Fix All"?**
+Führt Fixes in kausaler Reihenfolge aus (v1.9.0+):
+1. 🧹 Verschmutzte Seiten reparieren → 2. 🏷️ Aliase vervollständigen → 3. 🔄 Duplikate zusammenführen → 4. 🔗 Tote Links reparieren → 5. 🔗 Verwaiste Seiten verlinken → 6. 📝 Leere Seiten erweitern
 
-### 🦙 Wie verwende ich lokale Modelle mit Ollama?
+**Das Plugin friert bei Lint auf einem großen Wiki ein. Was ist los?**
+Dies war ein bekanntes Problem, das in v1.7.15 und v1.7.17 behoben wurde. Aktualisieren Sie auf die neueste Version — das Lint-System enthält jetzt asynchrone Yield-Points, die die Kontrolle alle 50 Seiten und alle 500 Vergleiche an den UI-Thread zurückgeben. Dies verhindert die 10–40 Sekunden langen Freezes bei Wikis mit 1200+ Seiten.
 
-1. Installieren Sie [Ollama](https://ollama.com) und pullen Sie ein Modell: `ollama pull gemma4` oder `ollama pull qwen3.5:27b`
-2. Wählen Sie in den Plugin-Einstellungen **"Ollama (Local)"** als Provider
-3. Klicken Sie **Fetch Models**, um die Modellliste zu füllen, oder geben Sie den Modellnamen manuell ein
-4. Es ist kein API-Key erforderlich
+### 🔍 Fehlerbehebung
 
-> 💡 Lokale Modelle haben typischerweise kleinere Context Windows (8K–128K). Ziehen Sie in Betracht, einen Cloud-Provider für die Ingestion (die den größten Context benötigt) und Ihr lokales Modell für Query zu verwenden.
+**Warum kann ich nach der Installation keine Funktionen nutzen?**
+Das Plugin erfordert einen erfolgreichen Verbindungstest, bevor Kernfunktionen freigeschaltet werden. Gehen Sie zu **Einstellungen → Karpathy LLM Wiki** → Provider wählen → API-Key eingeben → **Fetch Models** → Modell wählen → **Test Connection**. Sobald die grüne "LLM Ready"-Anzeige erscheint, sind alle Funktionen verfügbar. Dies verhindert stille Fehler bei falsch konfigurierten Providern.
 
-### 🗣️ Was ist der Unterschied zwischen UI-Sprache und Wiki Output Language?
+**Wie breche ich eine laufende Aufnahme/Lint ab?**
+Klicken Sie auf den Statusleisten-Text während einer Operation (zeigt "Aufnahme läuft... klicken zum Abbrechen"), oder verwenden Sie `Ctrl+P` → "Cancel current ingestion". Die Operation stoppt sauber an der nächsten Batch-Grenze und bewahrt alle abgeschlossenen Arbeiten.
 
-- **🗣️ Interface Language** (oben in den Einstellungen): Steuert die Plugin-Oberfläche — Einstellungsbezeichnungen, Schaltflächentexte, Notices. Unterstützt derzeit Englisch und Chinesisch.
-- **🌐 Wiki Output Language** (hinzugefügt in v1.6.5): Steuert, in welcher Sprache der LLM Wiki-Seiten schreibt. Unterstützt 9 Sprachen (EN/ZH/JA/KO/DE/FR/ES/PT/IT) plus benutzerdefinierte Eingabe. Sie können eine englische Oberfläche haben, während Ihr Wiki auf Deutsch geschrieben wird.
+**Wie nehme ich die Datei, die ich gerade bearbeite, schnell auf?**
+Klicken Sie auf das `sticker`-Symbol in der linken Ribbon-Leiste, oder verwenden Sie `Ctrl+P` → "Ingest current file". Dies überspringt die Dateiauswahl und nimmt direkt den aktiven Editor-Tab auf.
 
-### 🔍 Warum findet Query keine Seiten, von denen ich weiß, dass sie existieren?
+**Doppelte Klammern [[[[...]]]] in log.md — wie beheben?**
+Führen Sie **Lint Wiki** aus — der Scanner erkennt und behebt automatisch alle doppelt verschachtelten Wiki-Links im gesamten Wiki-Verzeichnis (einschließlich log.md) ohne LLM-Kosten. Kein manuelles Aufräumen erforderlich.
 
-Drei häufige Ursachen:
-1. **📋 Index ist veraltet**: Führen Sie `Cmd+P` → **"Regenerate index"** aus, um den Index mit aktuellen Seiten und Aliases neu aufzubauen.
-2. **🏷️ Aliases fehlen**: Ohne Aliases (Seiten vor v1.7.11) kann der LLM nur nach exakten Seitentiteln suchen. Führen Sie Lint → Complete Aliases aus, um dies zu beheben.
-3. **🎯 Suchbegriffe stimmen nicht überein**: Versuchen Sie den Seitentitel, einen Alias oder einen verwandten Begriff. Der LLM führt semantisches Matching durch, keine Stichwortsuche — eine Umformulierung hilft.
+**Warum erhalte ich "Overloaded"-Fehler?**
+Das Plugin erkennt nun den 529-Overload-Fehler von Anthropic als wiederholbar. Overload-Fehler werden automatisch mit exponentiellem Backoff über alle Provider wiederholt.
 
-### 🛠️ Was macht "Smart Fix All" und in welcher Reihenfolge?
+**Warum wurde ein doppelter Stub erstellt, obwohl die Seite bereits in entities/ oder concepts/ existiert?**
+Das Plugin verwendet nun Slug-basiertes Matching — verschiedene Formatierungen desselben Namens werden auf die bestehende Seite aufgelöst, statt einen doppelten Stub zu erstellen.
 
-Smart Fix All führt Reparaturen in kausaler Reihenfolge durch, um die Entstehung neuer Probleme zu minimieren:
-1. **Phase 0 — 🏷️ Complete Aliases**: Fehlende Aliases ergänzen, damit die Duplikaterkennung korrekt funktioniert.
-2. **Phase 1 — 🔄 Merge Duplicates**: Doppelte Seiten zusammenführen (Hauptursache vieler toter Links und Orphans).
-3. **Phase 2 — 🔗 Fix Dead Links**: Defekte `[[wiki-links]]` reparieren (viele werden nach der Duplikat-Zusammenführung automatisch aufgelöst).
-4. **Phase 3 — 🔗 Link Orphans**: Eingehende Links zu Seiten hinzufügen, die keine haben.
-5. **Phase 4 — 📝 Expand Empty Pages**: Leere Seiten mit LLM-generierten Inhalten befüllen.
+**Query findet Seiten nicht, von denen ich weiß, dass sie existieren?**
+Drei häufige Ursachen: (1) Index veraltet → **Regenerate index**. (2) Fehlende Aliase → **Complete Aliases**. (3) Anders formulieren — LLM macht semantisches Matching, keine Stichwortsuche.
 
-### 💰 Wie vermeide ich unerwartete API-Kosten?
+**Kann ich Wiki-Seiten manuell bearbeiten?**
+Ja. Setzen Sie `reviewed: true` im Frontmatter, um vor Überschreibung zu schützen. Manuelle Aliase, Tags und Sources bleiben bei Zusammenführungen erhalten.
 
-- **🔄 Auto-Maintenance ist standardmäßig AUS** — aktivieren Sie es nicht, wenn Sie keine kontinuierliche Hintergrundverarbeitung wünschen.
-- **💡 Smart Batch Skip** (v1.7.7) überspringt automatisch bereits verarbeitete Dateien, sodass eine erneute Ordner-Ingestion nicht alles neu verarbeitet.
-- **📊 Extraction Granularity** auf "Standard" oder "Coarse" verwendet weniger API-Aufrufe als "Fine".
-- **⏱️ Batch Delay**-Werte über 500 ms geben mehr Spielraum, erhöhen aber nicht den Token-Verbrauch — sie verteilen die Aufrufe nur zeitlich.
-- **🔍 Lint-Report** zeigt Anzahlen an, bevor Sie Reparaturen ausführen, sodass Sie entscheiden können, was den API-Aufwand wert ist.
+**Sicheres Upgrade?**
+Das Plugin ändert niemals Ihre Quelldateien. Backup von `wiki/` → Plugin aktualisieren → **Regenerate index** → **Lint Wiki** → selektiv reparieren.
 
-### 📦 Wie führe ich ein Upgrade durch, ohne meine Wiki-Daten zu verlieren?
-
-Das Plugin ändert niemals Ihre Quelldateien in `sources/`. Wiki-Seiten in `wiki/` werden nur geändert, wenn Sie explizit Reparaturen ausführen oder erneut ingestieren. Um auf der sicheren Seite zu sein:
-1. 💾 Erstellen Sie ein Backup Ihres Vaults (oder zumindest des `wiki/`-Ordners)
-2. 🔄 Aktualisieren Sie das Plugin
+**Mein lokales Modell (Ollama, LM Studio) erfindet seltsame Entity-Namen aus leeren oder nur-Frontmatter-Notizen. (v1.21.0)**
+In v1.21.0 durch das Pre-Ingest Requirements Gate behoben: leere/Whitespace/nur-Frontmatter-Notizen werden *vor* jedem LLM-Aufruf abgelehnt, und Content-Hash-Dedup erkennt identische Dateien über Pfade hinweg. Upgrade auf v1.21.0+ stoppt die Empty-File-Halluzination-Klasse von Bugs (kleine Modelle, die bei leerem Prompt erfundene Entity-Namen ausfüllen).
 
 **Meine `sources/`-Dateien wurden nach dem Upgrade auf v1.20.3 umbenannt — ist das ein Fehler? (v1.20.3+)**
 Nein — das ist der neue kollisionssichere Quell-Slug-Fingerabdruck in Aktion. Jedes `sources/<slug>.md` ist jetzt `sources/<Basisname>_<6 hex>.md` (das Hex ist ein FNV-1a-Hash des vollständigen Dateipfads). Dateien mit gleichem Basisnamen in verschiedenen Ordnern (z. B. 11× `About this course.md` in Academy-Kursen) kollidieren nicht mehr. Ein erneuter Ingest benennt bestehende `sources/`-Seiten direkt um, und alle `[[sources/<slug>]]`-Backlinks werden automatisch aktualisiert. Wenn du externe Skripte oder Lesezeichen hast, die auf `sources/<alter-slug>.md` zeigen, aktualisiere diese auf die neuen Pfade mit Fingerabdruck.
 
 **Überschreibt ein Re-Ingest einer unrelated Notiz eine mit `reviewed: true` gesperrte Seite? (v1.20.3+)**
 Nein — Stage 4 (`updateRelatedPage`) respektiert jetzt `reviewed: true` und leitet auf den append-only-Pfad weiter, genau wie der Ingest-Pfad. Dein kuratierter Text bleibt wörtlich erhalten; nur wirklich neue Inhalte werden angehängt.
-3. 📋 Führen Sie zuerst **Regenerate index** aus
-4. 🔍 Führen Sie **Lint Wiki** aus, um zu sehen, was Aufmerksamkeit benötigt
-5. 🛠️ Wenden Sie Reparaturen gezielt an — Sie müssen nicht alles auf einmal beheben
+
+**Wo bekomme ich Hilfe?**
+- [GitHub Issues](https://github.com/green-dalii/obsidian-llm-wiki/issues) — Fehlerberichte
+- [GitHub Discussions](https://github.com/green-dalii/obsidian-llm-wiki/discussions) — Fragen & Feedback
+
+**Wie sammle ich Debug-Logs für die Fehlerbehebung?**
+
+1. Entwicklertools öffnen (`Ctrl+Shift+I` / `Cmd+Option+I`)
+2. Zum **Console**-Tab wechseln
+3. Operation ausführen (Ingest, Query oder Lint)
+4. Nachrichten mit Modulnamens-Präfixen wie `[Step]`, `[LLM]`, Modulnamen suchen
+5. Für lokale Tests `pnpm build:dev` statt `pnpm build` verwenden, um die volle Debug-Ausgabe zu erhalten
+6. Relevante Log-Zeilen kopieren und in den GitHub-Issue einfügen — das beschleunigt die Bug-Diagnose erheblich
 
 ---
 

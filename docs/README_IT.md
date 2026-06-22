@@ -223,6 +223,9 @@ Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 - **🏷️ Completamento alias** — generazione batch parallela con un clic degli alias mancanti, migliorando il rilevamento futuro dei duplicati.
 - **🔄 Auto-manutenzione** — monitoraggio multi-cartella, Lint programmato, controllo di integrità all'avvio (tutti opzionali).
 - **⚠️ Macchina a stati delle contraddizioni** — `rilevata → revisione-superata → risolta` (correzione AI) o `rilevata → non risolta` (manuale).
+- **🛡️ Portale di pre-ingestione (v1.21.0)** — Ogni file sorgente viene validato *prima* di qualsiasi chiamata LLM: le note vuote/blank/solo frontmatter vengono rifiutate; la deduplicazione per hash del contenuto rileva file identici attraverso i percorsi. Impedisce ai modelli locali di allucinare nomi di entità su input vuoti.
+- **📊 Pannello di cronologia operazioni (v1.21.0)** — UI ricercabile e filtrabile per ingestioni passate, report di lint ed esecuzioni di manutenzione, con card KPI guidate da insight e link cliccabili alle pagine.
+- **🧹 Pulitore di pagine incomplete (v1.21.0)** — Le pagine lasciate in stato parziale a causa di ingestioni interrotte vengono archiviate automaticamente all'avvio (recuperabili dal `.trash` di Obsidian).
 
 ### 💬 Query e feedback
 
@@ -266,6 +269,7 @@ Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 | **🛠️ Lint wiki** | Scansione completa dello stato di salute: duplicati, collegamenti interrotti, pagine vuote, pagine orfane, alias mancanti, contraddizioni |
 | **📋 Regenerate index** | Ricostruisci manualmente `wiki/index.md` |
 | **💡 Suggest schema updates** | L'LLM analizza il Wiki e propone miglioramenti dello schema |
+| **📊 Visualizza cronologia ingestioni (v1.21.0)** | Esplora ingestioni passate, report di lint ed esecuzioni di manutenzione in un'UI ricercabile e filtrabile |
 
 ---
 
@@ -361,26 +365,33 @@ schema/      # 📋 Configurazione della struttura del Wiki (denominazione, temp
 **Codebase** (`src/`):
 
 ```
-wiki/               # Moduli del motore Wiki
-  wiki-engine.ts    # 🎯 Orchestratore
-  query-engine.ts   # 💬 Query conversazionale
+main.ts              # 🔌 Punto di ingresso del plugin
+wiki/                # Moduli del motore Wiki
+  wiki-engine.ts     # 🎯 Orchestratore
+  query-engine.ts    # 💬 Query conversazionale
   source-analyzer.ts # 📊 Estrazione iterativa in batch
-  page-factory.ts   # 🏗️ CRUD entità/concetti + merge
-  lint-controller.ts # 🔍 Orchestrazione Lint
-  lint-fixes.ts     # 🛠️ Logica di correzione per collegamenti interrotti, pagine vuote, orfane
-  lint/             # Sotto-moduli Lint
-    duplicate-detection.ts  # 🔄 Generazione programmatica dei candidati
-    fix-runners.ts          # ⚡ Helper di esecuzione delle correzioni in batch
-    scanners.ts            # 🔍 Scanner (dead link, orphan, alias)
-  contradictions.ts # ⚠️ Rilevamento delle contraddizioni
-  system-prompts.ts # 🗣️ Direttiva di lingua + etichette di sezione
-schema/             # Co-evoluzione dello schema
-  schema-manager.ts # 📋 CRUD schema + suggerimenti
-  auto-maintain.ts  # 🔄 File watcher + Lint periodico
-ui/                 # Interfaccia utente
-  settings.ts       # ⚙️ Pannello delle impostazioni
-  modals.ts         # 📦 Modali Lint/Ingest/Query
-+ moduli condivisi: llm-client.ts, prompts.ts, texts.ts, utils.ts, types.ts
+  page-factory.ts    # 🏗️ CRUD entità/concetti + merge
+  conversation-ingest.ts # 📥 Chat → conoscenza Wiki
+  contradictions.ts  # ⚠️ Rilevamento delle contraddizioni
+  system-prompts.ts  # 🗣️ Direttiva di lingua + etichette di sezione
+  lint/              # Sotto-moduli Lint
+    controller.ts        # 🔍 Orchestrazione Lint
+    fix-runners.ts       # ⚡ Helper di esecuzione delle correzioni in batch
+    scanners.ts          # 🔍 Scanner (dead link, orphan, alias, ancoraggio citazioni)
+    duplicate-detection.ts # 🔄 Generazione programmatica dei candidati
+    report-builder.ts    # 📋 Generatore di report a funzione pura
+    phases/              # Esecuzione Lint a fasi
+  prompts/           # Template di prompt LLM per dominio
+schema/              # Co-evoluzione dello schema
+  manager.ts         # 📋 CRUD schema + suggerimenti
+  auto-maintain.ts   # 🔄 File watcher + Lint periodico + correzioni rapide all'avvio
+  analyze.ts         # 📊 Analisi dello schema con cablaggio annullamento
+ui/                  # Interfaccia utente
+  settings.ts        # ⚙️ Pannello delle impostazioni
+  modals.ts          # 📦 Modali Lint / Ingest / Query / History
+core/                # 🧩 Moduli a funzione pura (zero IO, completamente testabili)
+  i18n, slug, json, frontmatter, tag-vocab, sources-normalizer, ...
++ condivisi: llm-client.ts, llm-client-wrapper.ts, texts.ts, prompts.ts, types.ts
 ```
 
 **Pagine generate:**
@@ -481,6 +492,9 @@ No — è in azione la nuova impronta digitale anti-collisione degli slug delle 
 
 **La ri-acquisizione di una fonte non correlata sovrascriverà una pagina bloccata con `reviewed: true`? (v1.20.3+)**
 No — Stage 4 (`updateRelatedPage`) ora rispetta `reviewed: true` e instrada verso il percorso append-only, come il percorso di acquisizione. Il tuo corpo curato sopravvive identico; solo i contenuti genuinamente nuovi vengono aggiunti.
+
+**Il mio modello locale (Ollama, LM Studio) sta fabbricando nomi di entità strani a partire da note vuote o con solo frontmatter. (v1.21.0)**
+Corretto in v1.21.0 dal portale di pre-ingestione: le note vuote/blank/solo frontmatter ora vengono rifiutate *prima* di qualsiasi chiamata LLM, e la deduplicazione per hash del contenuto rileva file identici attraverso i percorsi. Aggiorna a v1.21.0+ per eliminare la classe di bug "file vuoto → allucinazione" (modelli piccoli che inventano nomi di entità su un prompt vuoto).
 
 **Come ottengo assistenza?**
 - [GitHub Issues](https://github.com/green-dalii/obsidian-llm-wiki/issues) — segnalazioni di bug
