@@ -16,11 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **#189 — Ingest status bar shows document name + batch progress (PR by @YounianC).** Single-file ingest displays `<doc> · Ingesting... click to cancel` instead of the bare label. Folder batch ingest shows `[current/total] <doc> · Ingesting... click to cancel`. New pure-function `core/status-bar.ts` (`buildIngestStatusBarText`) composes from the existing localized `ingestionStatusBar` label — no new i18n keys, all 10 locales covered automatically. `WikiEngine` ingestion-start callback now passes the source basename (optional param, backward-compatible). `batchProgress` field in `main.ts` tracks loop position.
 
 ### Fixed
+- **`merge.ts` hardcoded English section headers (#188).** Both `mergeEntityPage` and `mergeConceptPage` prompt templates used hardcoded `## Related Entities` / `## Related Concepts` / `## Basic Information` / `## Description` / `## Mentions in Source` headers, ignoring the configured `wikiLanguage`. Replaced with `{{section_*}}` placeholders so `applySectionLabels()` localizes them consistently across create and merge paths. Non-English vaults no longer get mixed-language section headers.
+- **`appendAliases` block-replace regex left stale items (#186).** `page-factory.ts:70` regex `/^aliases:[\s\S]*?(?=\n\S|\n*$)/m` — the `m` flag caused `$` to match end-of-line, so the lookahead succeeded immediately and the lazy quantifier matched zero characters. Only the bare `aliases:` line was replaced; existing list items survived, producing duplicate entries on every subsequent append. Fixed with `/^aliases:[^\n]*(?:\n[ \t]+[^\n]*)*/m` which consumes continuation lines by indentation.
 - **Lint: `apply-suggestion.ts` used `vault.delete()` fallback.** Simplified to direct `app.fileManager.trashFile` call — respects user's file deletion preference per Obsidian review rule `obsidianmd/prefer-file-manager-trash-file`. Test mock updated accordingly.
 - **Lint: `parse-suggestion.ts` unnecessary type assertion.** `as LLMSchemaResponse` cast removed (receiver already accepts the original type).
 
 ### Tests
-- **1003 tests passing** (was 948 in v1.21.1; +55: schema suite 48 tests + status-bar suite 7 tests).
+- **1006 tests passing** (was 948 in v1.21.1; +58: schema suite 48 tests + status-bar suite 7 tests + #186/#188 regression tests 3 tests).
 
 ## [1.21.1] - 2026-06-22
 

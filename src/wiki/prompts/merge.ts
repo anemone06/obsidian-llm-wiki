@@ -51,11 +51,11 @@ Rules:
   mergeEntityPage: `You are a Wiki editor performing intelligent content integration. Merge new source information into an existing page following the schema-defined structure.
 
 **Schema Rules (MUST follow this structure):**
-- ## Basic Information: Type, sources, key attributes
-- ## Description: Core definition and significance (3-6 sentences)
-- ## Related Entities: Links to related entities
-- ## Related Concepts: Links to related concepts
-- ## Mentions in Source: Chronological list of mentions with VERBATIM quotes in original language
+- ## {{section_basic_information}}: Type, sources, key attributes
+- ## {{section_description}}: Core definition and significance (3-6 sentences)
+- ## {{section_related_entities}}: Links to related entities
+- ## {{section_related_concepts}}: Links to related concepts
+- ## {{section_mentions_in_source}}: Chronological list of mentions with VERBATIM quotes in original language
 
 **Existing Page Content (the current version):**
 {{existing_body}}
@@ -73,9 +73,9 @@ Rules:
 **Integration Requirements:**
 1. STRUCTURE: Follow the schema sections exactly. If a section exists, update it; if missing, create it.
 2. DESCRIPTION: Integrate new facts naturally. Do NOT duplicate existing information.
-3. RELATED: Update "Related Entities" and "Related Concepts" sections with new relationships.
+3. RELATED: Update "{{section_related_entities}}" and "{{section_related_concepts}}" sections with new relationships.
 4. CONTRADICTIONS: If new info conflicts with existing, preserve BOTH with clear attribution.
-5. MENTIONS: Append new mentions to "Mentions in Source". Preserve VERBATIM quotes in original language. Translation optional in parentheses.
+5. MENTIONS: Append new mentions to "{{section_mentions_in_source}}". Preserve VERBATIM quotes in original language. Translation optional in parentheses.
 6. LINKS: Use [[path|display]] format. LEFT side = full path, RIGHT side = display name ONLY. NEVER duplicate folder prefixes (entities/, concepts/) in display name. Verify paths exist.
 7. STYLE: Match existing writing style.
 8. NO REDUNDANCY: Do NOT restate existing facts.
@@ -83,19 +83,19 @@ Rules:
 **Output Format:**
 Output ONLY the body content (no frontmatter):
 
-## Basic Information
+## {{section_basic_information}}
 [Type, sources, key attributes — updated]
 
-## Description
+## {{section_description}}
 [Integrated description — merge existing + new, no duplication]
 
-## Related Entities
+## {{section_related_entities}}
 [Updated entity links]
 
-## Related Concepts
+## {{section_related_concepts}}
 [Updated concept links]
 
-## Mentions in Source
+## {{section_mentions_in_source}}
 [ALL mentions — existing preserved with their source attribution blocks, new appended under a new source block:
 > **Source: [[source-name]]**
 > - "Verbatim quote in original language"]`,
@@ -103,11 +103,11 @@ Output ONLY the body content (no frontmatter):
   mergeConceptPage: `You are a Wiki editor performing intelligent content integration. Merge new source information into an existing concept page following the schema-defined structure.
 
 **Schema Rules (MUST follow this structure):**
-- ## Basic Information: Type, sources, definition
-- ## Description: Detailed explanation with examples (3-6 sentences)
-- ## Related Concepts: Connected concepts using [[concepts/...]]
-- ## Related Entities: Connected entities using [[entities/...]]
-- ## Mentions in Source: VERBATIM quotes in original language with source attribution
+- ## {{section_basic_information}}: Type, sources, definition
+- ## {{section_description}}: Detailed explanation with examples (3-6 sentences)
+- ## {{section_related_concepts}}: Connected concepts using [[concepts/...]]
+- ## {{section_related_entities}}: Connected entities using [[entities/...]]
+- ## {{section_mentions_in_source}}: VERBATIM quotes in original language with source attribution
 
 **Existing Page Content (the current version):**
 {{existing_body}}
@@ -128,7 +128,7 @@ Output ONLY the body content (no frontmatter):
 3. RELATED CONCEPTS: Update links — add new ones, preserve existing.
 4. RELATED ENTITIES: Update links — add new ones from this source.
 5. CONTRADICTIONS: If new info conflicts, preserve both with attribution.
-6. MENTIONS: Append to "Mentions in Source". Preserve VERBATIM quotes in original language.
+6. MENTIONS: Append to "{{section_mentions_in_source}}". Preserve VERBATIM quotes in original language.
 7. LINKS: Use [[path|display]] format. LEFT side = full path, RIGHT side = display name ONLY. NEVER duplicate folder prefixes (entities/, concepts/) in display name. Verify paths exist.
 8. STYLE: Match existing writing style.
 9. NO REDUNDANCY: Do NOT restate existing facts.
@@ -136,19 +136,19 @@ Output ONLY the body content (no frontmatter):
 **Output Format:**
 Output ONLY the body content (no frontmatter):
 
-## Basic Information
+## {{section_basic_information}}
 [Type, sources, definition — updated]
 
-## Description
+## {{section_description}}
 [Integrated description — merge existing + new]
 
-## Related Concepts
+## {{section_related_concepts}}
 [Updated concept links]
 
-## Related Entities
+## {{section_related_entities}}
 [Updated entity links]
 
-## Mentions in Source
+## {{section_mentions_in_source}}
 [ALL mentions — existing preserved with their source attribution blocks, new appended under a new source block:
 > **Source: [[source-name]]**
 > - "Verbatim quote in original language"]`,

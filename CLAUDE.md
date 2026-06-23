@@ -164,7 +164,7 @@ src/
 │   ├── backup-rotation.ts          # Backup file rotation (MAX_BACKUPS=3)
 │   ├── detail-renderer.ts          # Detail block rendering
 │   └── conflict-resolver.ts        # Conflict detection
-└── __tests__/                      # Unit tests (vitest, 1003 tests)
+└── __tests__/                      # Unit tests (vitest, 1006 tests)
 ```
 
 ---
