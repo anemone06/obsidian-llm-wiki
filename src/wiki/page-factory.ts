@@ -67,7 +67,7 @@ export class PageFactory {
     let newFm: string;
     if (fmText.includes('aliases:')) {
       // Replace existing aliases block
-      newFm = fmText.replace(/^aliases:[\s\S]*?(?=\n\S|\n*$)/m, aliasesLine);
+      newFm = fmText.replace(/^aliases:[^\n]*(?:\n[ \t]+[^\n]*)*/m, aliasesLine);
     } else {
       // Inject before closing ---
       newFm = fmText.trimEnd() + '\n' + aliasesLine;

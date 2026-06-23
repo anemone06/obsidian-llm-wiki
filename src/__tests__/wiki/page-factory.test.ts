@@ -87,6 +87,30 @@ describe('PageFactory — appendAliases', () => {
     const content = page(vault, 'wiki/entities/nonexistent.md');
     expect(content).toBeNull();
   });
+
+  // #186: block-format existing aliases must be fully replaced, not left as stale items
+  it('replaces existing block-format aliases without leaving stale items', async () => {
+    const { factory, vault } = makeFactory({
+      'wiki/entities/test.md': '---\ntype: entity\naliases:\n  - "Executive Function"\n  - "Exekutive Funktionen"\n---\n# Test\nBody',
+    });
+    await appendAliases(factory, 'wiki/entities/test.md', ['Working Memory']);
+
+    const content = page(vault, 'wiki/entities/test.md');
+    expect(content).not.toBeNull();
+    // New alias must be present
+    expect(content!).toContain('"Working Memory"');
+    // Old aliases must be preserved (append, not replace)
+    expect(content!).toContain('"Executive Function"');
+    expect(content!).toContain('"Exekutive Funktionen"');
+    // Each alias must appear exactly once — no stale duplicates from block-replace bug
+    const execMatches = content!.match(/"Executive Function"/g);
+    expect(execMatches).toHaveLength(1);
+    const exekMatches = content!.match(/"Exekutive Funktionen"/g);
+    expect(exekMatches).toHaveLength(1);
+    // Only one aliases: key
+    const aliasesKeyMatches = content!.match(/^aliases:/gm);
+    expect(aliasesKeyMatches).toHaveLength(1);
+  });
 });
 
 describe('PageFactory — buildPagesListForPrompt', () => {
