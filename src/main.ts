@@ -85,7 +85,7 @@ import { normalizeVocabularyCsv } from './core/tag-vocab';
 import { buildIngestStatusBarText, BatchProgress } from './core/status-bar';
 import { LLMWikiSettingTab } from './ui/settings';
 import { WikiEngine } from './wiki/wiki-engine';
-import { QueryModal } from './wiki/query-engine';
+import { QueryView, VIEW_TYPE_QUERY } from './wiki/query-engine';
 import { FileSuggestModal, FolderSuggestModal, IngestReportModal, ConfirmModal } from './ui/modals';
 import { HistoryModal } from './ui/history-modal';
 import { SchemaDiffModal } from './ui/schema-diff-modal';
@@ -159,6 +159,11 @@ export default class LLMWikiPlugin extends Plugin {
     if (this.settings.startupCheck) {
       void this.autoMaintainManager.runStartupCheck();
     }
+
+    this.registerView(
+      VIEW_TYPE_QUERY,
+      (leaf) => new QueryView(leaf, this)
+    );
 
     const t = TEXTS[this.settings.language];
     this.addCommand({
@@ -243,6 +248,10 @@ export default class LLMWikiPlugin extends Plugin {
 
     this.addRibbonIcon('sticker', t.cmdIngestActiveFile, () => {
       this.ingestActiveFile();
+    });
+
+    this.addRibbonIcon('message-circle', t.cmdQueryWiki, () => {
+      this.queryWiki();
     });
 
     this.ingestStatusBar = this.addStatusBarItem();
@@ -643,7 +652,22 @@ export default class LLMWikiPlugin extends Plugin {
       return;
     }
 
-    new QueryModal(this.app, this).open();
+    void this.activateQueryView();
+  }
+
+  private async activateQueryView(): Promise<void> {
+    const { workspace } = this.app;
+
+    const existing = workspace.getLeavesOfType(VIEW_TYPE_QUERY);
+    if (existing.length > 0) {
+      await workspace.revealLeaf(existing[0]);
+      return;
+    }
+
+    const leaf = workspace.getRightLeaf(false);
+    if (!leaf) return;
+    await leaf.setViewState({ type: VIEW_TYPE_QUERY, active: true });
+    await workspace.revealLeaf(leaf);
   }
 
   // ==================== Lint ====================
