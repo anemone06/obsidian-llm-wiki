@@ -307,14 +307,23 @@ Consider:
 Output JSON format:
 {
   "changes_needed": true,
-  "suggestions": "Markdown description of suggested schema changes with reasoning"
+  "new_schema_body": "The COMPLETE updated schema body in markdown, starting with the H1 title. Include all sections that should exist after the update (you may keep unchanged sections exactly as-is).",
+  "suggestions": "Markdown description of suggested schema changes with reasoning (1-3 sentences)"
 }
 
 If no changes are needed:
 {
   "changes_needed": false,
-  "suggestions": ""
+  "suggestions": "Short explanation of why no changes are needed"
 }
 
-Output ONLY the JSON, no other text.`,
+CRITICAL:
+- The "suggestions" field must be written in the user's UI language below (after this CRITICAL block). Do NOT default to English unless the user's UI language is English.
+- new_schema_body is the COMPLETE schema after your changes — not a diff, not a patch. The apply path replaces the current body with new_schema_body verbatim.
+- DO NOT include YAML frontmatter (--- ... ---) in new_schema_body. Start directly with the H1 title (e.g. "# Wiki Schema Configuration").
+- DO NOT wrap new_schema_body in markdown code fences (\`\`\`). The parser strips them, but cleaner output reduces parse risk on small models.
+- Preserve all existing sections that are still relevant. Only change what the analysis actually warrants.
+- Output ONLY the JSON, no other text.
+
+User UI language: {{user_language}}`,
 };

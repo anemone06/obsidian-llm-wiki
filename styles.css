@@ -563,3 +563,161 @@
   left: 8px;
   cursor: pointer;
 }
+
+/* v1.22.0 #97: Schema diff Modal — IDE-style dual-pane preview. */
+.llm-wiki-schema-diff-modal {
+  /* The Modal element itself is a child of the Obsidian modal container.
+   * We size the inner content here, but Obsidian constrains the
+   * .modal-container max-width. We override the container so the
+   * diff has enough horizontal space for two side-by-side panes. */
+  min-width: 720px;
+}
+
+/* Obsidian's default modal width is too narrow for a side-by-side
+ * diff. We target the modal-container that wraps our content via the
+ * .llm-wiki-schema-diff-modal class (added to contentEl in onOpen). */
+.modal:has(.llm-wiki-schema-diff-modal) {
+  width: min(90vw, 1100px);
+}
+
+.llm-wiki-schema-diff-panes {
+  display: flex;
+  gap: 8px;
+  max-height: 50vh;
+  overflow: auto;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  /* Outer container scrolls. The background lives here so the
+   * scrolled-into-view rows are filled all the way down (not just
+   * the first 50vh worth, leaving grey gaps when content is short).
+   * The pane-level background is set to "transparent" so it does
+   * not double-fill on top of the outer. */
+  background: var(--background-secondary);
+}
+
+.llm-wiki-schema-diff-pane {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px;
+  /* Transparent so the outer's background shows through. The
+   * .llm-wiki-schema-diff-row-highlight overlay paints red on
+   * individual rows. */
+  background: transparent;
+}
+
+.llm-wiki-schema-diff-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.llm-wiki-schema-diff-row-del {
+  /* Red-tinted background + red left border for the LEFT column
+   * (line removed from current schema). Text inherits pane color
+   * so contrast is preserved in both light and dark themes. */
+  background: rgba(var(--color-red-rgb, 255, 0, 0), 0.12);
+  border-left: 3px solid var(--text-error);
+}
+
+.llm-wiki-schema-diff-row-add {
+  /* Green-tinted background + green left border for the RIGHT column
+   * (line added by the LLM). Text inherits pane color. */
+  background: rgba(var(--color-green-rgb, 0, 255, 0), 0.12);
+  border-left: 3px solid var(--text-success);
+}
+
+.llm-wiki-schema-diff-gutter {
+  flex: 0 0 40px;
+  color: var(--text-faint);
+  text-align: right;
+  padding-right: 8px;
+  user-select: none;
+}
+
+.llm-wiki-schema-diff-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* Content highlight — left column (del) gets a red-toned background tint,
+ * right column (add) gets a green-toned background tint. Text color is
+ * inherited from the parent (no override — keeps contrast readable in
+ * both light and dark themes). */
+
+/* Left column: deletion (line removed from current schema) */
+.llm-wiki-schema-diff-pane-left .llm-wiki-schema-diff-content-highlight {
+  background: rgba(var(--color-red-rgb, 255, 0, 0), 0.08);
+}
+
+/* Right column: addition (line added by the LLM) */
+.llm-wiki-schema-diff-pane-right .llm-wiki-schema-diff-content-highlight {
+  background: rgba(var(--color-green-rgb, 0, 255, 0), 0.08);
+}
+
+.llm-wiki-schema-diff-summary {
+  color: var(--text-muted);
+  margin: 0 0 8px 0;
+}
+
+/* v1.22.0 #97: LLM's rationale — shown before the diff in BOTH empty
+ * and has-changes mode so the user can read the "why" before deciding. */
+.llm-wiki-schema-diff-rationale {
+  border-left: 3px solid var(--text-accent);
+  background: var(--background-secondary);
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin: 0 0 12px 0;
+}
+
+.llm-wiki-schema-diff-rationale-text {
+  margin: 0;
+  color: var(--text-normal);
+  white-space: pre-wrap;
+  font-size: 0.9em;
+}
+
+.llm-wiki-schema-diff-regen-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.llm-wiki-schema-diff-regen-label {
+  margin: 0 0 4px 0;
+  font-weight: bold;
+}
+
+.llm-wiki-schema-diff-regen-textarea {
+  width: 100%;
+  min-height: 50px;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.llm-wiki-schema-diff-btn-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.llm-wiki-schema-diff-empty-banner {
+  background: var(--background-modifier-border);
+  border-left: 3px solid var(--text-accent);
+  padding: 10px 12px;
+  border-radius: 4px;
+  margin: 0 0 12px 0;
+}
+
+.llm-wiki-schema-diff-empty-title {
+  font-weight: bold;
+  margin: 0 0 4px 0;
+}
+
+.llm-wiki-schema-diff-empty-rationale {
+  margin: 0;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+}

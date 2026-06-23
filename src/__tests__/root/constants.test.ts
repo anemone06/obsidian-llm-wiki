@@ -56,8 +56,8 @@ describe('Token budget constants (Issue #75)', () => {
     expect(TOKENS_QUERY_MODEL_DETECT).toBe(100);
   });
 
-  it('TOKENS_SCHEMA_SUGGESTION is 1000', () => {
-    expect(TOKENS_SCHEMA_SUGGESTION).toBe(1000);
+  it('TOKENS_SCHEMA_SUGGESTION is at least 1024 (v1.22.0 bumped to 4096 for full schema body + reasoning overhead)', () => {
+    expect(TOKENS_SCHEMA_SUGGESTION).toBeGreaterThanOrEqual(1024);
   });
 
   it('TOKENS_CONVERSATION_EXTRACTION is 5000', () => {

@@ -194,6 +194,10 @@ export interface SchemaSuggestion {
   source: string;
   changes_needed: boolean;
   suggestions: string;
+  /** v1.22.0 #97: full proposed new body (frontmatter-free, ready to
+   *  splice). Undefined when the LLM only provided markdown suggestions
+   *  (legacy v1.21.x format) or when changes_needed is false. */
+  newSchemaBody?: string;
 }
 
 // Ingestion report passed to onDone callback

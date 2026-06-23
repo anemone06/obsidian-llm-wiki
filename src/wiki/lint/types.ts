@@ -18,7 +18,7 @@ export interface LintContext {
   settings: LLMWikiSettings;
   llmClient: LLMClient | null;
   wikiEngine: WikiEngine;
-  onAnalyzeSchema: () => void;
+  onAnalyzeSchema: (context?: string) => void;
 }
 
 export interface LintPhaseContext {
