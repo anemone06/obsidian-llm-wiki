@@ -27,6 +27,7 @@ import { TOKENS_LINT_DEDUP_LLM, NOTICE_NORMAL, NOTICE_RATE_LIMIT } from '../../c
 import { isPageEmpty } from './utils';
 import { generateDuplicateCandidates, DuplicateCandidate } from './duplicate-detection';
 import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges, runRetagViolations, makeMirroredNotice } from './fix-runners';
+import { buildLintAnalysisContext } from './lint-analysis-context';
 import { runPreparationPhase } from './phases/preparation';
 import { runProgrammaticPhase } from './phases/programmatic';
 import { buildLintReport } from './report-builder';
@@ -525,7 +526,26 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
     };
 
     const fixCallbacks: LintFixCallbacks = {};
-    fixCallbacks.onAnalyzeSchema = () => { void ctx.onAnalyzeSchema(); };
+    // v1.22.0 #97: build a compact lint analysis summary from the
+    // findings so the LLM schema suggestion prompt receives real data
+    // (orphan counts, dead links, etc.) instead of the hardcoded
+    // string 'Wiki lint analysis'. The summary is ~100 tokens and
+    // fits comfortably in the LLM's context window.
+    const lintSummary = buildLintAnalysisContext({
+      orphanCount: orphans.length,
+      deadLinkCount: deadLinks.length,
+      pollutedPageCount: pollutedPages.length,
+      tagViolationCount: tagViolations.length,
+      duplicateCount: duplicates.length,
+      ungroundedQuoteCount: ungroundedQuotes.length,
+      emptyPageCount: emptyPages.length,
+      contradictionReport: contradictionsReport,
+      sampleOrphans: orphans.slice(0, 5),
+      sampleDeadLinks: deadLinks.slice(0, 5).map(dl => dl.target),
+      sampleTagViolations: tagViolations.slice(0, 5).map(tv => tv.path),
+      totalWikiPages: wikiFiles.length,
+    });
+    fixCallbacks.onAnalyzeSchema = () => { void ctx.onAnalyzeSchema(lintSummary); };
 
     // Polluted page repair (structural root cause — similar to aliases)
     if (pollutedPages.length > 0) {

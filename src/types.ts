@@ -79,7 +79,7 @@ export interface LLMWikiSettings {
   baseUrl: string;
   model: string;
   wikiFolder: string;
-  language: 'en' | 'zh' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt' | 'it';
+  language: 'en' | 'zh' | 'zh-Hant' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt' | 'it';
   wikiLanguage: string;
   useCustomWikiLanguage?: boolean;
   availableModels?: string[];
@@ -194,6 +194,10 @@ export interface SchemaSuggestion {
   source: string;
   changes_needed: boolean;
   suggestions: string;
+  /** v1.22.0 #97: full proposed new body (frontmatter-free, ready to
+   *  splice). Undefined when the LLM only provided markdown suggestions
+   *  (legacy v1.21.x format) or when changes_needed is false. */
+  newSchemaBody?: string;
 }
 
 // Ingestion report passed to onDone callback
@@ -284,6 +288,7 @@ export interface LLMClient {
 export const WIKI_LANGUAGES: Record<string, string> = {
   'en': 'English',
   'zh': '中文',
+  'zh-Hant': '繁體中文',  // v1.22.0: Traditional Chinese
   'ja': '日本語',
   'ko': '한국어',
   'de': 'Deutsch',

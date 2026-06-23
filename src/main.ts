@@ -88,6 +88,8 @@ import { WikiEngine } from './wiki/wiki-engine';
 import { QueryModal } from './wiki/query-engine';
 import { FileSuggestModal, FolderSuggestModal, IngestReportModal, ConfirmModal } from './ui/modals';
 import { HistoryModal } from './ui/history-modal';
+import { SchemaDiffModal } from './ui/schema-diff-modal';
+import { applySchemaSuggestion } from './schema/apply-suggestion';
 import { SchemaManager } from './schema/schema-manager';
 import { AutoMaintainManager } from './schema/auto-maintain';
 import { runLintWiki } from './wiki/lint/controller';
@@ -200,11 +202,12 @@ export default class LLMWikiPlugin extends Plugin {
       }
     });
 
-    this.addCommand({
-      id: 'suggest-schema-update',
-      name: t.cmdSuggestSchema,
-      callback: () => this.suggestSchemaUpdate()
-    });
+    // v1.22.0 #97: command entry removed — Schema suggestion MUST
+    // follow a Lint analysis so the LLM has real data to work with.
+    // Direct invocation from the command palette always produces
+    // changes_needed=false (no context), which is a confusing no-op.
+    // The only valid entry point is the Lint Report Modal's "Suggest
+    // Schema Updates" button, which supplies lint findings as context.
 
     this.addCommand({
       id: 'cancel-ingestion',
@@ -654,7 +657,7 @@ export default class LLMWikiPlugin extends Plugin {
         settings: this.settings,
         llmClient: this.llmClient,
         wikiEngine: this.wikiEngine,
-        onAnalyzeSchema: () => { void this.suggestSchemaUpdate(); },
+        onAnalyzeSchema: (context?: string) => { void this.suggestSchemaUpdate(context); },
       }, signal);
     } finally {
       this.wikiEngine.endLintOperation();
@@ -663,17 +666,103 @@ export default class LLMWikiPlugin extends Plugin {
 
   // ==================== Schema ====================
 
-  async suggestSchemaUpdate() {
+  async suggestSchemaUpdate(context?: string) {
     // ROADMAP v1.17.0 P1 #1: delegate to runSchemaAnalyze so the status bar's
     // "click to cancel" works for both this call site and the Lint Report
     // Modal's "Suggest Schema Updates" button (both ultimately reach here).
+    //
+    // v1.22.0 #97: when the LLM returns new_schema_body, the orchestrator
+    // opens the SchemaDiffModal (IDE-style diff + Apply / Regenerate / Cancel).
     await runSchemaAnalyze({
       settings: this.settings,
       llmClient: this.llmClient,
       wikiEngine: this.wikiEngine,
       schemaManager: this.schemaManager,
       requireLLMReady: () => this.requireLLMReady(),
+      openSchemaDiffModal: (suggestion) => this.openSchemaDiffModal(suggestion),
+      lintAnalysisContext: context,
     });
+  }
+
+  /** v1.22.0 #97: open the SchemaDiffModal with the LLM's proposed new body. */
+  private openSchemaDiffModal(suggestion: import('./types').SchemaSuggestion): Promise<void> | void {
+    const t = (TEXTS as unknown as Record<string, Record<string, string>>)[this.settings.language]
+      ?? TEXTS.en as unknown as Record<string, string>;
+    // TEMP DEBUG
+    console.debug('[SchemaDiffModal] suggestion.suggestions =', JSON.stringify(suggestion.suggestions), 'changes_needed =', suggestion.changes_needed, 'newSchemaBody length =', suggestion.newSchemaBody?.length);
+    // v1.22.0 #97: when the LLM reports changes_needed=false, we still
+    // open the Modal (so the user can read the LLM's rationale) but
+    // disable the Apply button (nothing to apply). The Modal hands
+    // back Regenerate (re-prompt) and Cancel as alternatives.
+    const isEmpty = !suggestion.changes_needed;
+    const modal = new SchemaDiffModal(this.app, {
+      currentBody: '',
+      newBody: suggestion.newSchemaBody ?? '',
+      language: this.settings.language,
+      isEmpty,
+      rationale: suggestion.suggestions,
+      onOpenFile: () => {
+        // v1.22.0 #97: hand-edit path. Opens wiki/schema/config.md in
+        // the active Obsidian leaf and closes the Modal. The user
+        // can tweak the file and then either re-run Suggest Schema
+        // Updates or just save — either way the change sticks
+        // because the file IS the schema.
+        const path = `${this.settings.wikiFolder}/schema/config.md`;
+        void this.app.workspace.openLinkText(path, '', false);
+      },
+      onApply: async () => {
+        const result = await applySchemaSuggestion({
+          app: this.app,
+          currentPath: `${this.settings.wikiFolder}/schema/config.md`,
+          newBody: suggestion.newSchemaBody ?? '',
+          onCacheInvalidate: () => this.schemaManager.invalidateCache(),
+        });
+        if (result.success) {
+          // v1.22.0 #97: persistent Notice with the backup path so the
+          // user has a clear way to recover. The path is what
+          // applySchemaSuggestion returned (it contains the ISO timestamp),
+          // and a short hint tells them how to restore.
+          const restore = t.schemaDiffRestoreHint
+            ? t.schemaDiffRestoreHint.replace('{path}', result.backupPath)
+            : `Backup saved to ${result.backupPath}. To restore, rename that file back to wiki/schema/config.md in your file explorer.`;
+          new Notice(restore, 0);
+        } else {
+          new Notice(t.schemaDiffFailed ?? 'Schema apply failed: ' + result.reason, NOTICE_ERROR);
+        }
+      },
+      onRegenerate: async (userHint: string) => {
+        const newSuggestion = await this.regenerateSchemaWithHint(suggestion, userHint);
+        if (newSuggestion?.newSchemaBody) {
+          // v1.22.0 #97: also sync the rationale + isEmpty flag so the
+          // modal re-renders both the "why" section and the dual-pane
+          // diff. The LLM may have changed its reasoning or decided
+          // (this round) that no changes are needed at all.
+          modal.setNewBody(newSuggestion.newSchemaBody, {
+            rationale: newSuggestion.suggestions,
+            isEmpty: !newSuggestion.changes_needed,
+          });
+        } else {
+          new Notice(t.schemaRegenerateNoBody ?? 'Regeneration succeeded but the LLM did not return a new body.', NOTICE_ERROR);
+        }
+      },
+    });
+    // Load the current body asynchronously, then push it into the modal.
+    // The modal opens immediately with currentBody='' so the user can
+    // see the LLM's proposal right away; when loadSchema() resolves the
+    // diff is recomputed against the real current body.
+    modal.open();
+    void this.schemaManager.loadSchema().then((loaded) => {
+      modal.setCurrentBody(loaded?.body ?? '');
+    });
+  }
+
+  /** v1.22.0 #97: re-call the LLM with the user's refinement hint. */
+  private async regenerateSchemaWithHint(
+    baseSuggestion: import('./types').SchemaSuggestion,
+    userHint: string
+  ): Promise<import('./types').SchemaSuggestion | null> {
+    const ctx = `${baseSuggestion.suggestions || ''}\n\nUser refinement: ${userHint || '(none)'}`;
+    return await this.schemaManager.suggestSchemaUpdate(ctx);
   }
 
   // ==================== Connection Test ====================
