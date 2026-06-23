@@ -4,7 +4,11 @@
 
 ---
 
-## Current Phase: v1.22.0 Released
+## Current Phase: v1.22.0 Released → v1.22.1 (local dev) → v1.23.0 (Graph Engine direction)
+
+### Completed (v1.22.1 — local, not yet pushed) — CSS review warning + 4-Gate
+- ✅ **CSS `:has()` warning fix** (Obsidian review bot: broad selector invalidation). `styles.css:579` `:has()` replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` add/remove class on `modalEl` via new helpers in `src/ui/schema-diff-modal-classes.ts` (separate file to keep tests obsidian-free). 1007 tests passing (+1).
+- ✅ **`scripts/css-lint.mjs`** — multi-rule CSS lint catching `!important` + `:has()` to prevent regression. Wired into `pnpm css-lint` (Gate 1).
 
 ### Completed (v1.22.0) — Schema One-Click Apply + Dynamic Tag Sync + zh-Hant + Status Bar (2026-06-23)
 - ✅ **#97 — Schema one-click apply with IDE-style diff Modal + auto-backup.** `SchemaDiffModal` class (dual-pane IDE-style diff, Apply/Cancel/Open file buttons, Regenerate hidden for v1.22). `applySchemaSuggestion()` with auto-backup to `.llm-wiki-backups/schema/` (rotation MAX_BACKUPS=3 via `core/backup-rotation.ts`). `lineDiff()` LCS algorithm in `core/diff.ts`. Lint "Update Schema" button removed from command palette — schema updates flow through Lint Modal only.
@@ -12,7 +16,7 @@
 - ✅ **Traditional Chinese (zh-TW) locale.** 10th language (zh-Hant). Parity guard extended to all 10 locales (bidirectional).
 - ✅ **Ingest status bar UX (#189).** Document name + batch progress in status bar. Pure-function `core/status-bar.ts` (`buildIngestStatusBarText`). Contributed by @YounianC.
 - ✅ **Lint fixes.** `apply-suggestion.ts` simplified to direct `app.fileManager.trashFile` (removed unnecessary fallback). `parse-suggestion.ts` removed unnecessary type assertion.
-- ✅ **Tests: 1003 passing.** +55 tests since v1.21.1 (schema suite + status-bar suite).
+- ✅ **Tests: 1007 passing.** +59 tests since v1.21.1 (schema suite 48 tests + status-bar suite 7 tests + #186/#188 regression tests 3 tests + CSS :has regression test 1 test).
 
 ### Completed (v1.21.1) — Hotfix 2026-06-22
 - ✅ **#173 Symptom A — createOrUpdateFile create-retry loop.** NFC/NFD path resolution before `vault.create`.
@@ -46,7 +50,9 @@
 
 ### P0 — Bug fixes / quality regressions
 
-- All v1.21.0 P0 items closed (#164 in PR #174, #172/#173 in PR #176).
+- All v1.22.0 P0 items closed (see Completed section).
+- **v1.22.1 (local, not yet pushed):** #197 fixDeadLink 制造 stub bug + #187 related-link `sources/` prefix; staying local to coalesce additional user-reported P0 issues.
+- **v1.23.0 direction (MINOR feature):** Graph Engine — see ROADMAP.md §Next Milestone v1.23.0. Core: Personalized PageRank (Haveliwala 2002) over `[[wiki-link]]` graph. Closes #117, #157, #175 simultaneously with one primitive. Tier B redesigned: zero-LLM section-extractor (parse `## Description`/`## Definition` at query time, ~30 LOC).
 
 ### P1 — Cleanup (v1.19.0 target, deferred items from v1.18.x)
 
