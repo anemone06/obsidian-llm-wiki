@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **CSS `:has()` Obsidian review warning.** `styles.css:579` used `:has(.llm-wiki-schema-diff-modal)` to size the outer modal container. Obsidian review bot flags `:has()` for broad selector invalidation → perf cost. Replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` now add/remove class on `modalEl` via new pure-function helpers in `schema-diff-modal-classes.ts`.
+
+### Added
+- **`scripts/css-lint.mjs`** — multi-rule CSS lint catching `!important` + `:has()` to prevent regression. Wired into `pnpm css-lint` (Gate 1).
+
+### Tests
+- **1007 tests passing** (+1 regression test for modal class lifecycle).
+
 ## [1.22.0] - 2026-06-23
 
 ### Added
