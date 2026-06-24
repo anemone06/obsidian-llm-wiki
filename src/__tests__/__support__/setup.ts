@@ -62,6 +62,38 @@ vi.mock('obsidian', () => ({
     onOpen() {}
     onClose() {}
   },
+  // ItemView base class (simplified for testing) — used by QueryView.
+  // Without this, importing query-engine.ts (`class QueryView extends
+  // ItemView`) throws "extends undefined" at module load.
+  ItemView: class {
+    app: unknown;
+    leaf: unknown;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    contentEl: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    containerEl: any;
+    constructor(leaf: unknown) {
+      this.leaf = leaf;
+      this.contentEl = {};
+      this.containerEl = {};
+    }
+    onOpen(): Promise<void> {
+      return Promise.resolve();
+    }
+    onClose(): Promise<void> {
+      return Promise.resolve();
+    }
+    getViewType(): string {
+      return '';
+    }
+    getDisplayText(): string {
+      return '';
+    }
+    getIcon(): string {
+      return '';
+    }
+  },
+  WorkspaceLeaf: class {},
   // Platform detection
   Platform: {
     isMacOS: false,

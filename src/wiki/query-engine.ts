@@ -1,6 +1,6 @@
 // Query Engine - Conversational Wiki Query Modal
 
-import { App, Modal, Notice, MarkdownRenderer, Component, Platform } from 'obsidian';
+import { App, Modal, ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component, Platform } from 'obsidian';
 import LLMWikiPlugin from '../main';
 import { TEXTS } from '../texts';
 import { WIKI_LANGUAGES } from '../types';
@@ -147,9 +147,11 @@ class SuggestSaveModal extends Modal {
   }
 }
 
-// ---- Query Modal ----
+// ---- Query View (right-docked side panel) ----
 
-export class QueryModal extends Modal {
+export const VIEW_TYPE_QUERY = 'llm-wiki-query-view';
+
+export class QueryView extends ItemView {
   plugin: LLMWikiPlugin;
   history: {
     messages: Array<{
@@ -169,8 +171,8 @@ export class QueryModal extends Modal {
   private pendingInput: string;
   private activeRenderComponent: Component | null;
 
-  constructor(app: App, plugin: LLMWikiPlugin) {
-    super(app);
+  constructor(leaf: WorkspaceLeaf, plugin: LLMWikiPlugin) {
+    super(leaf);
     this.plugin = plugin;
     this.history = {
       messages: plugin.settings.queryHistory || []
@@ -187,12 +189,24 @@ export class QueryModal extends Modal {
     this.pendingInput = '';
   }
 
-  onOpen() {
+  getViewType(): string {
+    return VIEW_TYPE_QUERY;
+  }
+
+  getDisplayText(): string {
+    return TEXTS[this.plugin.settings.language].queryModalTitle;
+  }
+
+  getIcon(): string {
+    return 'message-circle';
+  }
+
+  async onOpen() {
     const { contentEl } = this;
     contentEl.empty();
     const texts = TEXTS[this.plugin.settings.language];
 
-    this.modalEl.addClass('llm-wiki-query-modal');
+    contentEl.addClass('llm-wiki-query-view');
     contentEl.addClass('llm-wiki-query-content');
 
     const container = contentEl.createDiv({
@@ -289,7 +303,7 @@ export class QueryModal extends Modal {
     );
   }
 
-  onClose() {
+  async onClose() {
     const { contentEl } = this;
 
     if (this.activeRenderComponent) {

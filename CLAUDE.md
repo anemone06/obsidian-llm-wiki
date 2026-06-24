@@ -10,6 +10,9 @@
 - ✅ **CSS `:has()` warning fix** (Obsidian review bot: broad selector invalidation). `styles.css:579` `:has()` replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` add/remove class on `modalEl` via new helpers in `src/ui/schema-diff-modal-classes.ts` (separate file to keep tests obsidian-free). 1007 tests passing (+1).
 - ✅ **`scripts/css-lint.mjs`** — multi-rule CSS lint catching `!important` + `:has()` to prevent regression. Wired into `pnpm css-lint` (Gate 1).
 
+### In Progress (Unreleased) — Query Wiki Right-Docked Side Panel
+- 🔄 **Query Wiki: Modal → Copilot-style right side panel.** `QueryModal extends Modal` → `QueryView extends ItemView` (`VIEW_TYPE_QUERY`, registered via `registerView`). `query-wiki` command + new `message-circle` ribbon icon now activate/reveal a right sidebar leaf (reusing an existing leaf) instead of a popup. All existing behavior preserved (three-tier retrieval, streaming + fallback, thinking panel, save loop, LLM save suggestion, history cap, clear, copy, stop). `renderThinkingBlocksUI` pure fn + `SuggestSaveModal` untouched. Styles migrated to native `var(--…)` theme variables (0 hardcoded colors). Test mock extended with `ItemView`/`WorkspaceLeaf`. **1003 tests still passing.**
+
 ### Completed (v1.22.0) — Schema One-Click Apply + Dynamic Tag Sync + zh-Hant + Status Bar (2026-06-23)
 - ✅ **#97 — Schema one-click apply with IDE-style diff Modal + auto-backup.** `SchemaDiffModal` class (dual-pane IDE-style diff, Apply/Cancel/Open file buttons, Regenerate hidden for v1.22). `applySchemaSuggestion()` with auto-backup to `.llm-wiki-backups/schema/` (rotation MAX_BACKUPS=3 via `core/backup-rotation.ts`). `lineDiff()` LCS algorithm in `core/diff.ts`. Lint "Update Schema" button removed from command palette — schema updates flow through Lint Modal only.
 - ✅ **Schema dynamic tag sync.** Schema vocabulary is now the single source of truth; tag vocab injected into generation prompts. `SchemaContext` + `buildSchemaSectionTemplate` + tag vocabulary injection.
@@ -107,7 +110,7 @@ src/
 ├── llm-client-wrapper.ts           # Advanced settings injection wrapper
 ├── wiki/                           # Wiki engine
 │   ├── wiki-engine.ts              # Orchestrator
-│   ├── query-engine.ts             # Conversational query (streaming + thinking UI)
+│   ├── query-engine.ts             # Conversational query — QueryView (right-docked ItemView side panel), streaming + thinking UI
 │   ├── source-analyzer.ts          # Iterative batch extraction
 │   ├── page-factory.ts             # Entity/concept CRUD + merge
 │   ├── conversation-ingest.ts      # Chat → wiki knowledge
