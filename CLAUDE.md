@@ -1,17 +1,19 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-23
+**Last Updated:** 2026-06-24
 
 ---
 
-## Current Phase: v1.22.0 Released → v1.22.1 (local dev) → v1.23.0 (Graph Engine direction)
+## Current Phase: v1.22.1 PATCH (in release prep) → v1.23.0 (Graph Engine direction)
 
-### Completed (v1.22.1 — local, not yet pushed) — CSS review warning + 4-Gate
-- ✅ **CSS `:has()` warning fix** (Obsidian review bot: broad selector invalidation). `styles.css:579` `:has()` replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` add/remove class on `modalEl` via new helpers in `src/ui/schema-diff-modal-classes.ts` (separate file to keep tests obsidian-free). 1007 tests passing (+1).
+### Completed (v1.22.1 — in release prep) — P0 bug batch + UX improvement
+- ✅ **#197 — `fixDeadLink` fabrication root-cause fix.** Stop calling `fillEmptyPage()` in both stub-creating branches (LLM `create_stub` + deterministic fallback). Pure-function `buildStubContent()` produces honest placeholders with `generation_complete: false` marker so #170 incomplete-cleaner recognises them. Explicit policy gate `shouldFabricateStubForUnresolvableLink()` returns false for both branches — any future PR that wants to re-introduce fabrication must edit this single greppable switch. 6 regression tests.
+- ✅ **#199 — `startupCheck` silently reset to true on every restart.** v1.18.3 migration removed. Remaining migrations extracted to pure-function `applySettingsMigrations()` in `core/settings-migrations.ts` for unit testability. 5 regression tests (multi-load idempotency, new-user default, v1.20.0 migration unaffected).
+- ✅ **CSS `:has()` warning fix.** `styles.css:579` `:has()` replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` add/remove class on `modalEl` via pure helpers in `src/ui/schema-diff-modal-classes.ts` (separate file to keep tests obsidian-free).
 - ✅ **`scripts/css-lint.mjs`** — multi-rule CSS lint catching `!important` + `:has()` to prevent regression. Wired into `pnpm css-lint` (Gate 1).
-
-### In Progress (Unreleased) — Query Wiki Right-Docked Side Panel
-- 🔄 **Query Wiki: Modal → Copilot-style right side panel.** `QueryModal extends Modal` → `QueryView extends ItemView` (`VIEW_TYPE_QUERY`, registered via `registerView`). `query-wiki` command + new `message-circle` ribbon icon now activate/reveal a right sidebar leaf (reusing an existing leaf) instead of a popup. All existing behavior preserved (three-tier retrieval, streaming + fallback, thinking panel, save loop, LLM save suggestion, history cap, clear, copy, stop). `renderThinkingBlocksUI` pure fn + `SuggestSaveModal` untouched. Styles migrated to native `var(--…)` theme variables (0 hardcoded colors). Test mock extended with `ItemView`/`WorkspaceLeaf`. **1003 tests still passing.**
+- ✅ **#196 — Query Wiki Modal → Copilot-style right side panel (PR #196 by @YounianC).** `QueryModal extends Modal` → `QueryView extends ItemView` (`VIEW_TYPE_QUERY`, registered via `registerView`). `query-wiki` command + new `message-circle` ribbon icon activate/reveal a right sidebar leaf (reusing an existing leaf) instead of a popup. All existing behavior preserved. Styles migrated to native `var(--…)` theme variables — fixes hardcoded colors breaking light mode.
+- ✅ **#187 — Related-link `sources/` prefix re-asserted deterministically (PR #200 by @DocTpoint).** Pure-function `correctRelatedLinkPrefixes()` re-asserts the known type of each related name after generation; section-scoped so legitimate source citations in *Mentions in Source* are never rewritten. 9 regression tests including named `[truncated-existing-pages]` and `[co-created-siblings]` cases.
+- ✅ **Tests: 1029 passing.** +22 since v1.22.0 (#197 ×6, #199 ×5, CSS :has ×1, #200 ×9, query-engine mock ×1).
 
 ### Completed (v1.22.0) — Schema One-Click Apply + Dynamic Tag Sync + zh-Hant + Status Bar (2026-06-23)
 - ✅ **#97 — Schema one-click apply with IDE-style diff Modal + auto-backup.** `SchemaDiffModal` class (dual-pane IDE-style diff, Apply/Cancel/Open file buttons, Regenerate hidden for v1.22). `applySchemaSuggestion()` with auto-backup to `.llm-wiki-backups/schema/` (rotation MAX_BACKUPS=3 via `core/backup-rotation.ts`). `lineDiff()` LCS algorithm in `core/diff.ts`. Lint "Update Schema" button removed from command palette — schema updates flow through Lint Modal only.

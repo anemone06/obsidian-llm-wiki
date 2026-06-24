@@ -1,4 +1,4 @@
-![llm_wiki_banner](/docs/assets/llm_wiki_banner.webp)
+![llm_wiki_banner](assets/llm_wiki_banner.webp)
 
 # 🧠 Karpathy LLM Wiki Plugin für Obsidian
 
@@ -139,8 +139,9 @@ Dieses Projekt entwickelt sich rasch — neue Funktionen, Fehlerbehebungen und V
 | **🔍 Wiki anfragen** | `Cmd+P` → "Query wiki" — stelle Fragen und erhalte Streaming-Antworten |
 | **🛠️ Wiki prüfen** | `Cmd+P` → "Lint wiki" — Health Scan: Duplikate, tote Links, leere Seiten, Orphans |
 | **📋 Index neu generieren** | `Cmd+P` → "Regenerate index" — erstelle `wiki/index.md` neu |
-| **💡 Schema-Aktualisierungen vorschlagen** | `Cmd+P` → "Suggest schema updates" — LLM schlägt Schema-Verbesserungen vor |
 | **🎯 Ein-Klick-Aufnahme** | Klicke auf das Seitenleisten-Symbol oder `Cmd+P` → "Ingest current file" |
+
+![Befehlspalette — "karpa" suchen, um alle Karpathy LLM Wiki Befehle zu sehen](assets/command-panel.png)
 
 ### ⚠️ Upgrade von einer älteren Version?
 
@@ -177,6 +178,18 @@ Wir empfehlen dringend ein Upgrade — das Schema-One-Click-Apply-Feature macht 
 
 Details unter [CHANGELOG.md](../CHANGELOG.md).
 
+### v1.22.1 — 2026-06-24 (PATCH)
+
+Ein fokussierter PATCH, der drei P0-Bugs schließt und eine UX-Verbesserung bringt.
+
+- **🛡️ Fix Dead Links erzeugt keine fabrizierten AI-Stub-Seiten mehr (#197).** Wenn `fixDeadLink` einen Dead Link nicht auflösen konnte, wurde ein Stub angelegt und `fillEmptyPage()` aufgerufen — das LLM erfand Alias-Behauptungen und Related-Link-Ziele ohne Quellinhalt. Stubs sind jetzt ehrliche Platzhalter mit `generation_complete: false`-Markierung, sodass #170 incomplete-cleaner sie erkennt. Ein echter zukünftiger Ingest füllt sie über den regulären gated Pfad.
+- **✅ „Schnellkorrekturen beim Start"-Schalter bleibt gesetzt (#199).** Eine v1.18.3-Migration hat `startupCheck: false → true` bei jedem Plugin-Load erzwungen und die explizite Wahl des Nutzers stillschweigend zurückgesetzt. Migration entfernt; verbleibende Migrationen in die Pure-Function `applySettingsMigrations()` in `core/settings-migrations.ts` extrahiert.
+- **🎨 CSS-`:has()`-Review-Warnung behoben.** `.modal:has(.llm-wiki-schema-diff-modal)` durch direkten Klassen-Selektor ersetzt. Neues `scripts/css-lint.mjs` Multi-Rule-Lint fängt `!important` + `:has()` zur Regressions-Prävention.
+- **🪟 Query Wiki ist jetzt ein Copilot-artiges rechts angedocktes Seitenpanel (#196, @YounianC).** `QueryModal extends Modal` wurde zu `QueryView extends ItemView` — die Konversation kann neben deinen Notizen geöffnet bleiben statt als Popup zu unterbrechen. Alle Funktionalität bleibt unverändert.
+- **🧹 Related-Link-Präfix deterministisch neu gesetzt (#200, @DocTpoint, #187).** Neue Pure-Function `correctRelatedLinkPrefixes()` korrigiert das LLM-`sources/`-Default nach der Generierung. Section-scoped, sodass legitime `[[sources/<slug>]]`-Zitate in *Mentions in Source* nie umgeschrieben werden.
+
+Upgrade empfohlen — die Stub-Fabrikations-Klasse ist geschlossen und das Query-Wiki-Seitenpanel hält deine Notizen sichtbar.
+
 ## ✨ Funktionen
 
 ### 📊 Knowledge Quality
@@ -187,6 +200,8 @@ Details unter [CHANGELOG.md](../CHANGELOG.md).
 - **🧩 Smart Knowledge Fusion** — Multi-Source Updates mergen neue Info ohne Redundanz, Widersprüche werden mit Attribution bewahrt, `reviewed: true` Pages sind vor Überschreibung geschützt
 - **📏 Content Truncation Protection** — 8000 max_tokens mit automatischer stop_reason-Detection und Retry bei 2× tokens über alle Providers
 - **📝 Verbatim Source Mentions** — Original-Language-Quotes mit optionaler Übersetzung für Nachvollziehbarkeit bewahren
+
+- **🎨 Anpassbares Tag-Vokabular (v1.18.0).** Einstellungen → Wiki → Tag-Vokabular-Modus → *Custom* erlaubt es, eigene Entity- und Concept-Tag-Listen zu definieren (z. B. `Medical_Arzneimittel`, `法规`). Das Plugin respektiert dein Vokabular in Extraction-Prompts und Frontmatter-Validierung; die bestehende Lint-Audit (Issue #85 v7) meldet jede Seite, deren Tags außerhalb des aktiven Vokabulars liegen.
 
 ### 🛠️ Maintenance
 
@@ -203,6 +218,7 @@ Details unter [CHANGELOG.md](../CHANGELOG.md).
 ### 💬 Query & Feedback
 
 - **🤖 Conversational Query** — ChatGPT-Style-Dialog, Streaming Markdown Output, `[[wiki-links]]`, Multi-Turn History
+- **🪟 Rechts angedocktes Seitenpanel (v1.22.1, PR #196).** Query Wiki öffnet sich in einem Copilot-artigen rechten Sidebar-Leaf (existierendes Leaf wird wiederverwendet) statt eines zentrierten Popups. Das `message-circle` Ribbon-Icon und der `Query Wiki`-Befehl aktivieren/zeigen das Panel; deine Notizen bleiben neben der Konversation sichtbar. Alle Funktionen bleiben unverändert.
 - **📤 Query-to-Wiki Feedback** — Wertvolle Conversations ins Wiki speichern, Entity/Concept Extraction, Semantic Dedup vor dem Speichern
 - **🔒 Duplicate Save Prevention** — Hash Tracking verhindert Re-Evaluation unveränderter Conversations
 
@@ -244,7 +260,6 @@ Details unter [CHANGELOG.md](../CHANGELOG.md).
 | **🔍 Wiki anfragen** | Konversationelles Q&A mit Streaming Output und `[[wiki-links]]` |
 | **🛠️ Wiki prüfen** | Vollständiger Health Scan: Duplikate, tote Links, leere Pages, Orphans, fehlende Aliases, Widersprüche |
 | **📋 Index neu generieren** | `wiki/index.md` manuell neu aufbauen |
-| **💡 Schema-Aktualisierungen vorschlagen** | LLM analysiert Wiki und schlägt Schema-Verbesserungen vor |
 | **📊 Aufnahmeverlauf anzeigen (v1.21.0)** | Vergangene Ingests, Lint-Berichte und Wartungsläufe in durchsuchbarer, filterbarer UI durchsuchen |
 
 ---

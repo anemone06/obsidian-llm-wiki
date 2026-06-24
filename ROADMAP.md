@@ -2,26 +2,27 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.0 → 1.22.1 (dev) → 1.23.0 | **Updated:** 2026-06-23
+**Version:** 1.22.1 (dev) → 1.23.0 | **Updated:** 2026-06-24
 
 ---
 
 ## Current Status
 
-### In Progress — v1.22.0 P1 (i18n + regex bug batch)
+### In Progress — v1.22.1 (PATCH — collecting in-the-wild P0 fixes)
 
-Three new bug reports triaged on 2026-06-23 from @DocTpoint, all in the same code path (i18n + regex + related-link correctness), to be shipped as one hotfix after P0:
+Three P0 bugs reported after v1.22.0 ship, plus one UX improvement merged at maintainer discretion:
 
-- 🔧 **#188 — merge.ts emits hardcoded English section headers.** `src/wiki/prompts/merge.ts` hardcodes `## Related Entities` / `## Related Concepts` at lines 56, 57, 92, 95, 108, 109, 145, 148; only `generation.ts` uses `{{section_*}}` placeholders via `applySectionLabels()`. Result: non-English vaults get mixed-language section headers between create and merge paths. **Fix:** replace 9 literals with placeholders; ~9 lines + 1 regression test. Effort: 0.5 day.
-- 🔧 **#187 — Related-link sections default to `sources/` prefix.** `page-factory.ts:206` `MAX_PAGES = 50` + `:215` truncates concept-page prompts to concepts only when vault > 50 pages. Related entities never visible → LLM guesses prefix → defaults to `sources/` (most prominent in prompt). User reports 225 pages / ~450 mis-prefixed related-links, 76 dead. **Fix:** split visible list by type (concepts + entities) instead of filtering; ~1 day with regression test.
-- 🔧 **#186 — appendAliases block-replace regex leaves stale items.** `page-factory.ts:70` regex `^aliases:[\s\S]*?(?=\n\S|\n*$)/m` — `m` flag + `$` lookahead succeeds at end of bare `aliases:` line, lazy quantifier matches zero chars, only the bare line gets replaced and old list items survive. **Fix:** drop `m`, use non-line-anchored lookahead; ~5 lines + regression test.
+- 🔧 **#197 — `fixDeadLink` fabricates AI-expanded stub pages.** Stub-creating branches (LLM `create_stub` + deterministic fallback) called `fillEmptyPage()` against an empty page with no real source → fabricated alias claims and related links. Reintroduces the empty-source hallucination class that #164/#174 gates in ingest. **Fix (TDD):** pure-function `buildStubContent()` produces honest placeholders with `generation_complete: false` marker; explicit policy gate `shouldFabricateStubForUnresolvableLink()` returns false for both branches. Stubs are filled by the next real ingest through the normal gated path. Effort: 0.5 day (delivered).
+- 🔧 **#199 — `startupCheck` silently reset to true on every restart.** A v1.18.3 migration forced `savedData.startupCheck === false` back to `true` on every load, undoing the user's explicit toggle. **Fix:** migration removed; remaining migrations extracted to `core/settings-migrations.ts` (pure function) for unit testability. Effort: 0.25 day (delivered).
+- 🔧 **CSS `:has()` Obsidian review warning.** `:has()` flagged for broad selector invalidation. **Fix:** direct class selector + `scripts/css-lint.mjs` multi-rule lint wired into Gate 1. Effort: 0.25 day (delivered).
+- ⭐ **#196 — Query Wiki Modal → Copilot-style right-docked side panel (PR #196 by @YounianC).** `QueryView extends ItemView` with `message-circle` ribbon icon. Native `var(--…)` theme tokens fix hardcoded colors breaking light mode. All functionality preserved. **Fix:** rebase onto main, maintainer `.gitignore` cleanup. Effort: 0.5 day (delivered).
+- 🔧 **#187 — Related-link `sources/` prefix (PR #200 by @DocTpoint).** Pure-function `correctRelatedLinkPrefixes()` re-asserts the known type of each related name after generation; section-scoped so legitimate source citations are never rewritten. Effort: 0.5 day (delivered).
 
-### In Progress — v1.22.0 P0 (Released 2026-06-23)
+### Next Milestone: v1.23.0 (MINOR — Graph Engine direction)
 
-- ✅ **#97 — One-click schema apply with IDE-style diff Modal + auto-backup** (PR by @Linate, implemented by maintainer). `SchemaDiffModal` class (dual-pane IDE-style diff, Apply / Cancel / Open file buttons, Regenerate hidden for v1.22). `applySchemaSuggestion()` with auto-backup to `.llm-wiki-backups/schema/` (rotation MAX_BACKUPS=3 via `core/backup-rotation.ts`). `lineDiff()` LCS algorithm in `core/diff.ts`. Lint "Update Schema" button removed from command palette — schema updates flow through Lint Modal only (single entry point).
-- ✅ **Schema dynamic tag sync + Traditional Chinese (zh-Hant) locale.** Schema vocabulary is now the single source of truth; tag vocab injected into generation prompts. 10th locale (zh-TW). Parity guard extended to all 10 locales (bidirectional). 948 → 1003 tests.
+- ⭐ **#198 — Personalized PageRank (PPR) over the `[[wiki-link]]` graph.** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR (Fogaras 2005) — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel, Web Worker compatible. Hybrid guard: lex-match fallback when graph too small (min_pages / min_edges threshold). Tier B redesigned: zero-LLM section-extractor (parse `## Description` / `## Definition` at query time, ~30 LOC). Clustering retirement deferred to v1.24.0.
 
-### Next Milestone: v1.22.0 P2 (Feature batch — after P1 lands)
+### In Progress — v1.22.0 P2 (Feature batch — after P1 lands)
 
 - ⭐ **#185 — Propagate source-note frontmatter `aliases:` to generated wiki pages** (@DocTpoint). Source-note curated aliases are the highest-value signal for inflected languages (de/fr/es/pt/it) where one concept has many grammatical forms. Plan: extend `source-analyzer.ts` to extract source `aliases:`; `appendAliases` (post-#186 fix) appends them; opt-in via settings flag. Effort: 1 day.
 - ⭐ **#184 — Obsidian Bases for wiki index management** (@alfred1137). Replace LLM-rewritten `wiki/index.md` with a `.base` file querying frontmatter (`wiki-content`, `generation_complete`, `type`). Eliminates token waste + LLM drift on the index. `BasesView` API integration for re-feeding context to LLM. Opt-in / backward-compat. Effort: 2-3 days.

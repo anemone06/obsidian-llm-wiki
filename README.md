@@ -136,12 +136,13 @@ This project evolves rapidly — new features, bug fixes, and improvements are s
 | **🔍 Query wiki** | `Cmd+P` → "Query wiki" — ask questions, get streaming answers with `[[wiki-links]]` |
 | **🛠️ Lint wiki** | `Cmd+P` → "Lint wiki" — health scan: duplicates, dead links, empty pages, orphans, missing aliases |
 | **📋 Regenerate index** | `Cmd+P` → "Regenerate index" — rebuild `wiki/index.md` with current pages and aliases |
-| **💡 Suggest schema updates** | `Cmd+P` → "Suggest schema updates" — LLM analyzes Wiki and proposes schema improvements |
 | **🎯 One-click ingest** | Click the `sticker` icon in the left sidebar or `Cmd+P` → "Ingest current file" — directly ingest the file you're editing |
 
 Re-ingesting the same source does incremental updates on entity/concept pages (new info merged in). Summary pages are regenerated.
 
 **💡 Smart Batch Skip:** When ingesting a folder, the plugin automatically detects already-processed files and skips them to save time and API costs. The batch report shows skipped count.
+
+![Command palette — search "karpa" to see all Karpathy LLM Wiki commands](docs/assets/command-panel.png)
 
 ### ⚠️ Upgrading from an Older Version?
 
@@ -198,7 +199,17 @@ v1.22.0 is a **MINOR feature release** that delivers a long-requested one-click 
 - **🇹🇼 Traditional Chinese (zh-TW) locale.** Plugin UI and wiki output now support Traditional Chinese as the 10th language. Bidirectional parity guard extended to all 10 locales.
 - **📊 Ingest status bar with document name (PR #189).** The status bar now shows the current document name (`My Note · Ingesting...`) and batch progress during folder ingest (`[4/10] My Note · Ingesting...`). Contributed by @YounianC.
 
-We strongly recommend upgrading — the schema one-click apply feature makes schema refinement a one-step operation, and Traditional Chinese locale significantly improves the experience for zh-TW users.
+### v1.22.1 — 2026-06-24 (PATCH)
+
+A focused PATCH that closes three P0 bugs reported by users and ships one UX improvement.
+
+- **🛡️ Fix Dead Links no longer fabricates AI-expanded stub pages (Issue #197).** Previously, when `fixDeadLink` couldn't resolve a dead link to an existing page, it created a stub and called `fillEmptyPage()` — letting the LLM invent alias claims and related links against zero source content. This re-introduced the empty-source hallucination class that #164/#174 was designed to prevent in the ingest path. Stubs are now honest placeholders with a `generation_complete: false` marker so #170's incomplete-cleaner recognizes them, and a future real ingest fills them through the normal gated path.
+- **✅ "Run quick fixes on startup" toggle now sticks (Issue #199).** A v1.18.3 migration silently forced `startupCheck: false → true` on every plugin load, undoing the user's explicit toggle. Migration removed; remaining migrations extracted to a pure function `applySettingsMigrations()` in `core/settings-migrations.ts`. New installs default ON; explicit choices are respected.
+- **🎨 CSS `:has()` review warning cleared.** `.modal:has(.llm-wiki-schema-diff-modal)` replaced with direct class selector. New `scripts/css-lint.mjs` multi-rule lint catches `!important` + `:has()` to prevent regression (wired into Gate 1).
+- **🪟 Query Wiki is now a Copilot-style right-docked side panel (PR #196 by @YounianC).** `QueryModal extends Modal` became `QueryView extends ItemView` — the conversation can stay open alongside your notes instead of interrupting with a popup. The `message-circle` ribbon icon and `Query Wiki` command now activate/reveal a right sidebar leaf (reusing the existing leaf if already open). All functionality is preserved unchanged: three-tier retrieval, streaming + non-streaming fallback, collapsible thinking panel, save-to-wiki feedback loop, and history. Styling moved to native `var(--…)` theme tokens for automatic light/dark adaptation.
+- **🧹 Related-link prefix re-asserted deterministically (PR #200 by @DocTpoint, Issue #187).** LLM-generated `Related Concepts` / `Related Entities` entries occasionally default to `[[sources/<slug>]]` when the target falls outside the truncated existing-pages window — or hasn't been created yet in the same ingest run. New pure-function `correctRelatedLinkPrefixes()` re-asserts each related name's known type after generation. Section-scoped by header label so legitimate `[[sources/<slug>]]` citations in *Mentions in Source* are never rewritten; also self-heals stale links carried through a `mergePage`.
+
+We recommend upgrading — the fix-dead-link stub fabrication class of bugs is now closed, and the Query Wiki side panel keeps your notes visible while chatting.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
 
@@ -212,6 +223,9 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 - **🧩 Intelligent knowledge fusion** — multi-source updates merge new information without duplication; contradictions are preserved with source attribution; `reviewed: true` pages are protected from overwrite.
 - **📏 Content truncation guard** — 8000 max_tokens with automatic stop_reason detection and 2× token retry, covering all providers.
 - **📝 Original quote preservation** — Mentions-in-Source sections preserve quotes in their original language (optional translation) for full traceability.
+- **🎨 Customizable tag vocabulary (v1.18.0).** Settings → Wiki → Tag Vocabulary Mode → *Custom* lets you define your own entity-type and concept-type tag lists (e.g. `Medical_Arzneimittel`, `法规`). The plugin respects your vocabulary in extraction prompts and frontmatter validation; the existing Lint audit (Issue #85 v7) reports any page whose tags fall outside the active vocabulary.
+
+![Custom tag vocabulary chip inputs](docs/assets/custom-tags.png)
 
 ### 🛠️ Maintenance
 
@@ -223,11 +237,17 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 - **⚠️ Contradiction state machine** — `detected → review-passed → resolved` (AI-fix) or `detected → unresolved` (manual).
 - **🛡️ Pre-ingest requirements gate (v1.21.0)** — every source file is validated *before* any LLM call: empty/whitespace/frontmatter-only notes are rejected, and content-hash dedup catches identical files across paths. Prevents small/local models from hallucinating entity names on blank inputs.
 - **📊 Operation History Panel (v1.21.0)** — searchable, filterable UI for past ingestions, lint reports, and maintenance runs, with insight-driven KPI cards and clickable page links.
+
+![History Panel](docs/assets/history-panel.png)
+
 - **🧹 Incomplete-page cleaner (v1.21.0)** — pages left in a partial state after interrupted ingests are automatically archived on startup. Recoverable from Obsidian's `.trash`.
 
 ### 💬 Query & Feedback
 
 - **🤖 Conversational query** — ChatGPT-style dialog with streaming Markdown output, automatic `[[wiki-links]]`, and multi-turn history.
+- **🪟 Right-docked side panel (v1.22.1, PR #196).** Query Wiki opens in a Copilot-style right sidebar leaf (reusing an existing leaf if already open) instead of a centered popup. The `message-circle` ribbon icon and `Query Wiki` command activate/reveal the panel; your notes stay visible alongside the conversation. All functionality is preserved unchanged.
+
+![Query Wiki side panel](docs/assets/query-side-panel.png)
 - **📤 Query → Wiki feedback** — save valuable conversations back into the Wiki, with entity/concept extraction and pre-save semantic dedup.
 - **🔒 Duplicate-save guard** — hash tracking prevents unchanged conversations from re-evaluating.
 
@@ -267,9 +287,10 @@ See [CHANGELOG.md](CHANGELOG.md) for full details.
 | **🔍 Query wiki** | Conversational Q&A over your Wiki, streaming responses with `[[wiki-links]]` |
 | **🛠️ Lint wiki** | Full health scan: duplicates, dead links, empty pages, orphans, missing aliases, contradictions |
 | **📋 Regenerate index** | Manually rebuild `wiki/index.md` |
-| **💡 Suggest schema updates** | LLM analyzes Wiki and proposes schema improvements |
 | **📊 View Ingestion History (v1.21.0)** | Browse past ingestions, lint reports, and maintenance runs in a searchable, filterable UI |
 | **⏹ Cancel current ingestion** | Stop an in-progress operation cleanly at the next batch boundary |
+
+> **Note:** Schema update is no longer a top-level command. Schema suggestions are surfaced from inside the **🛠️ Lint wiki** Modal — a single entry point so the user always sees the current schema context before applying changes. The Lint Modal's "Update Schema" button opens the IDE-style diff view (Issue #97).
 
 ---
 

@@ -20,6 +20,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Tests
 - **1007 tests passing** (+1 regression test for modal class lifecycle).
 
+## [1.22.1] - 2026-06-24
+
+### Fixed
+- **#199 — `startupCheck` silently reset to true on every restart.** A v1.18.3 migration forced `savedData.startupCheck === false` back to `true` on every load, silently undoing the user's explicit toggle. Migration removed; remaining migrations extracted to `core/settings-migrations.ts` (pure function) for unit testability.
+- **#197 — `fixDeadLink` fabricated AI-expanded stub pages for unresolvable dead links.** The stub-creating branches (LLM `create_stub` + deterministic fallback) used to call `fillEmptyPage()`, which ran the LLM against an empty stub with no real source and produced fabricated alias claims and related links — reintroducing the empty-source hallucination class that #164/#174 was designed to prevent in the ingest path. Stubs are now honest placeholders with `generation_complete: false` marker so #170 incomplete-cleaner recognises them. New pure function `buildStubContent()` + explicit policy gate `shouldFabricateStubForUnresolvableLink()` prevents accidental re-introduction.
+- **CSS `:has()` Obsidian review warning.** `styles.css:579` used `:has(.llm-wiki-schema-diff-modal)` to size the outer modal container. Obsidian review bot flags `:has()` for broad selector invalidation → perf cost. Replaced with direct class selector `.modal.llm-wiki-schema-diff-modal`. JS side: `schema-diff-modal.ts` `onOpen`/`onClose` now add/remove class on `modalEl` via new pure-function helpers in `schema-diff-modal-classes.ts`.
+- **#187 — `sources/`-prefixed related links (PR #200 by @DocTpoint).** LLM-generated `Related Concepts` / `Related Entities` entries occasionally default to `[[sources/<slug>]]` when the target falls outside the truncated existing-pages window — or hasn't been created yet in the same ingest run. New pure-function `correctRelatedLinkPrefixes()` re-asserts each related name's known type after generation. Section-scoped by header label so legitimate `[[sources/<slug>]]` citations in *Mentions in Source* are never rewritten; also self-heals stale links carried through a `mergePage`.
+
+### Added
+- **`scripts/css-lint.mjs`** — multi-rule CSS lint catching `!important` + `:has()` to prevent regression. Wired into `pnpm css-lint` (Gate 1).
+
+### Changed
+- **Query Wiki moved from a centered Modal to a Copilot-style right-docked side panel (PR #196 by @YounianC).** `QueryModal extends Modal` became `QueryView extends ItemView` (registered via `registerView(VIEW_TYPE_QUERY, …)`). The command `query-wiki` and a new `message-circle` ribbon icon now activate/reveal a right sidebar leaf (reusing the existing leaf if already open) instead of opening a popup. All existing behavior is preserved unchanged: three-tier retrieval, streaming + non-streaming fallback, collapsible thinking panel, save-to-wiki feedback loop, LLM save suggestion, history cap, clear, copy, and stop. The `renderThinkingBlocksUI` pure function and the post-query `SuggestSaveModal` are untouched.
+- **Query panel styling now uses native theme variables.** All hardcoded colors (`#4caf50`, `#fff3e0`, `#2196f3`, `#f44336`, `#999`, `white`) were replaced with `var(--…)` tokens so the panel adapts to light/dark themes automatically. The fixed-size `.llm-wiki-query-modal` (800×780) rule was removed in favor of a flex `.llm-wiki-query-view` root.
+- **`.gitignore` no longer ignores `data.json` by default.** Removed blanket rule; the file only appears in the repo working dir when a contributor symlinks their vault plugin dir into the repo (local-dev convenience). Added a comment explaining when to re-enable the rule.
+
+### Tests
+- **1029 tests passing** (+22 since v1.22.0: +6 for #197, +5 for #199, +1 for CSS :has regression, +9 for #200 / `related-link-corrector`, +1 from existing `query-engine` test mock extension).
+
 ## [1.22.0] - 2026-06-23
 
 ### Added

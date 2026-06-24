@@ -1,4 +1,4 @@
-![llm_wiki_banner](/docs/assets/llm_wiki_banner.webp)
+![llm_wiki_banner](assets/llm_wiki_banner.webp)
 
 # 🧠 Karpathy LLM Wiki Plugin para Obsidian
 
@@ -129,8 +129,9 @@ Este proyecto evoluciona rápidamente. Recomendamos mantenerse actualizado:
 | **🔍 Consultar wiki** | `Cmd+P` → "Consultar wiki" |
 | **🛠️ Verificar wiki** | `Cmd+P` → "Verificar wiki" |
 | **📋 Regenerar índice** | `Cmd+P` → "Regenerar índice" |
-| **💡 Sugerir actualizaciones del esquema** | `Cmd+P` → "Sugerir actualizaciones del esquema" |
 | **🎯 Ingestión con un clic** | Icono de la barra lateral o `Cmd+P` → "Ingestar archivo actual" |
+
+![Paleta de comandos — busca "karpa" para ver todos los comandos de Karpathy LLM Wiki](assets/command-panel.png)
 
 ### ⚠️ ¿Actualizar desde una versión anterior?
 
@@ -160,6 +161,18 @@ Recomendamos encarecidamente actualizar — la función de aplicación de esquem
 
 Detalles en [CHANGELOG.md](../CHANGELOG.md).
 
+### v1.22.1 — 2026-06-24 (PATCH)
+
+Un PATCH enfocado que cierra tres errores P0 reportados por usuarios y aporta una mejora de UX.
+
+- **🛡️ Fix Dead Links ya no fabrica páginas stub expandidas por IA (#197).** Cuando `fixDeadLink` no podía resolver un dead link a una página existente, creaba un stub y llamaba a `fillEmptyPage()` — dejando que la IA inventara alias y enlaces relacionados sin contenido fuente. Los stubs ahora son marcadores honestos con la marca `generation_complete: false`.
+- **✅ El toggle "Ejecutar correcciones rápidas al inicio" ahora persiste (#199).** Una migración de v1.18.3 forzaba `startupCheck: false → true` en cada carga. Eliminada; migraciones restantes extraídas a `applySettingsMigrations()`.
+- **🎨 Advertencia de revisión CSS `:has()` corregida.** Reemplazado por selector de clase directo. Nuevo `scripts/css-lint.mjs` para prevenir regresiones.
+- **🪟 Query Wiki ahora es un panel lateral acoplado a la derecha estilo Copilot (#196, @YounianC).** `QueryModal extends Modal` se convirtió en `QueryView extends ItemView`. Todas las funcionalidades se conservan sin cambios.
+- **🧹 Prefijo de related link re-afirmado determinísticamente (#200, @DocTpoint, #187).** Nueva función pura `correctRelatedLinkPrefixes()`.
+
+Recomendamos actualizar.
+
 ## ✨ Características
 
 ### 📊 Calidad del Conocimiento
@@ -170,6 +183,8 @@ Detalles en [CHANGELOG.md](../CHANGELOG.md).
 - **🧩 Smart Knowledge Fusion** — Las actualizaciones multi-source fusionan información nueva sin redundancia; las contradicciones se preservan con atribución; las páginas `reviewed: true` se protegen de sobrescritura
 - **📏 Content Truncation Protection** — 8000 max_tokens con detección automática de stop_reason y reintento a 2× tokens en todos los providers
 - **📝 Verbatim Source Mentions** — Las citas en idioma original se preservan con traducción opcional para trazabilidad
+
+- **🎨 Vocabulario de etiquetas personalizable (v1.18.0).** Ajustes → Wiki → Modo de vocabulario de etiquetas → *Personalizado* te permite definir tus propias listas de etiquetas de tipo de entidad y concepto (por ejemplo, `Medical_Arzneimittel`, `法规`). El plugin respeta tu vocabulario en los prompts de extracción y en la validación de frontmatter; la auditoría de Lint (Issue #85 v7) reporta cualquier página cuyas etiquetas estén fuera del vocabulario activo.
 
 ### 🛠️ Mantenimiento
 
@@ -186,6 +201,7 @@ Detalles en [CHANGELOG.md](../CHANGELOG.md).
 ### 💬 Query & Feedback
 
 - **🤖 Conversational Query** — Diálogo estilo ChatGPT con Markdown en streaming e `[[wiki-links]]`, historial multi-turn
+- **🪟 Panel lateral acoplado a la derecha (v1.22.1, PR #196).** Query Wiki se abre en un leaf del sidebar derecho estilo Copilot (reutilizando un leaf existente) en lugar de un popup centrado. El icono ribbon `message-circle` y el comando `Query Wiki` activan/muestran el panel; tus notas quedan visibles junto a la conversación. Toda la funcionalidad se conserva sin cambios.
 - **📤 Query-to-Wiki Feedback** — Guarda conversaciones valiosas al Wiki con entity/concept extraction, semantic dedup antes de guardar
 - **🔒 Duplicate Save Prevention** — El hash tracking previene re-evaluación de conversaciones sin cambios
 
@@ -228,7 +244,6 @@ Detalles en [CHANGELOG.md](../CHANGELOG.md).
 | **🛠️ Verificar wiki** | Escaneo completo de salud: duplicados, dead links, empty pages, orphans, aliases faltantes, contradicciones |
 | **📋 Regenerar índice** | Reconstruye manualmente `wiki/index.md` |
 | **⏹️ Cancelar operación** | `Cmd+P` → "Cancel current ingestion" o clic en barra de estado — parada segura en límites de lote |
-| **💡 Sugerir actualizaciones del esquema** | El LLM analiza el Wiki y propone mejoras al schema |
 | **📊 Ver historial de ingestión (v1.21.0)** | Explora ingestiones pasadas, informes de lint y ejecuciones de mantenimiento en una UI buscable y filtrable |
 
 ---

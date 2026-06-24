@@ -1,4 +1,4 @@
-![llm_wiki_banner](/docs/assets/llm_wiki_banner.webp)
+![llm_wiki_banner](assets/llm_wiki_banner.webp)
 
 # 🧠 Karpathy LLM Wiki Plugin para Obsidian
 
@@ -129,8 +129,9 @@ Este projeto evolui rapidamente. Recomendamos manter-se atualizado:
 | **🔍 Consultar Wiki** | `Cmd+P` → "Consultar Wiki" |
 | **🛠️ Verificar Wiki** | `Cmd+P` → "Verificar Wiki" |
 | **📋 Regenerar índice** | `Cmd+P` → "Regenerar índice" |
-| **💡 Sugerir atualizações de Schema** | `Cmd+P` → "Sugerir atualizações de Schema" |
 | **🎯 Ingestão com um clique** | Ícone da barra lateral ou `Cmd+P` → "Ingerir arquivo atual" |
+
+![Paleta de comandos — pesquise "karpa" para ver todos os comandos do Karpathy LLM Wiki](assets/command-panel.png)
 
 ### ⚠️ Atualizando de uma versão anterior?
 
@@ -160,6 +161,18 @@ Recomendamos fortemente atualizar — a função de aplicação de esquema com u
 
 Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 
+### v1.22.1 — 2026-06-24 (PATCH)
+
+Um PATCH focado que fecha três bugs P0 reportados por usuários e traz uma melhoria de UX.
+
+- **🛡️ Fix Dead Links não fabrica mais páginas stub expandidas por IA (#197).** Stubs agora são marcadores honestos com `generation_complete: false`.
+- **✅ O toggle "Executar correções rápidas na inicialização" agora persiste (#199).** Migração v1.18.3 removida.
+- **🎨 Aviso de revisão CSS `:has()` corrigido.** Novo `scripts/css-lint.mjs`.
+- **🪟 Query Wiki agora é um painel lateral acoplado à direita estilo Copilot (#196, @YounianC).** `QueryModal extends Modal` virou `QueryView extends ItemView`.
+- **🧹 Prefixo de related link reafirmado deterministicamente (#200, @DocTpoint, #187).** Nova função pura `correctRelatedLinkPrefixes()`.
+
+Atualização recomendada.
+
 ## ✨ Funcionalidades
 
 ### 📊 Qualidade do Conhecimento
@@ -170,6 +183,8 @@ Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 - **🧩 Fusão Inteligente de Conhecimento** — Atualizações multi-source mesclam nova informação sem redundância, contradições preservadas com atribuição, páginas `reviewed: true` protegidas de sobrescrita
 - **📏 Proteção contra Truncamento de Conteúdo** — 8000 max_tokens com detecção automática de stop_reason e tentativa em 2× tokens em todos os providers
 - **📝 Menções Verbatim de Source** — Citações em idioma original preservadas com tradução opcional para rastreabilidade
+
+- **🎨 Vocabulário de tags personalizável (v1.18.0).** Configurações → Wiki → Modo de vocabulário de tags → *Personalizado* permite definir suas próprias listas de tags de tipo de entidade e conceito (por exemplo, `Medical_Arzneimittel`, `法规`). O plugin respeita seu vocabulário nos prompts de extração e na validação de frontmatter; a auditoria Lint (Issue #85 v7) reporta qualquer página cujas tags estejam fora do vocabulário ativo.
 
 ### 🛠️ Manutenção
 
@@ -186,6 +201,7 @@ Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 ### 💬 Consulta e Feedback
 
 - **🤖 Consulta Conversacional** — Diálogo estilo ChatGPT com Markdown em streaming e `[[wiki-links]]`, histórico multi-turn
+- **🪟 Painel lateral acoplado à direita (v1.22.1, PR #196).** Query Wiki abre em um leaf do sidebar direito estilo Copilot (reutilizando um leaf existente) em vez de um popup centralizado. O ícone ribbon `message-circle` e o comando `Query Wiki` ativam/exibem o painel; suas notas ficam visíveis ao lado da conversa. Toda a funcionalidade é preservada sem alterações.
 - **📤 Query-to-Wiki Feedback** — Salve conversas valiosas para a Wiki com extração de Entity/Concept, deduplicação semântica antes de salvar
 - **🔒 Prevenção de Salvamento Duplicado** — Rastreamento por hash evita reavaliação de conversas inalteradas
 
@@ -228,7 +244,6 @@ Detalhes em [CHANGELOG.md](../CHANGELOG.md).
 | **🛠️ Verificar Wiki** | Verificação completa de saúde: duplicados, dead links, páginas vazias, órfãos, aliases ausentes, contradições |
 | **📋 Regenerar índice** | Reconstrua manualmente `wiki/index.md` |
 | **⏹️ Cancelar operação** | `Cmd+P` → "Cancel current ingestion" ou clique na barra de status — parada segura nos limites do lote |
-| **💡 Sugerir atualizações de Schema** | LLM analisa a Wiki e propõe melhorias no Schema |
 | **📊 Ver histórico de ingestão (v1.21.0)** | Navegue por ingestões passadas, relatórios de lint e execuções de manutenção em uma UI pesquisável e filtrável |
 
 ---

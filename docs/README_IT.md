@@ -136,10 +136,13 @@ Questo progetto evolve rapidamente — nuove funzionalità, correzioni di bug e 
 | **🔍 Interroga il wiki** | `Cmd+P` → "Query wiki" — poni domande, ottieni risposte in streaming con `[[wiki-link]]` |
 | **🛠️ Lint del wiki** | `Cmd+P` → "Lint wiki" — scansione dello stato di salute: duplicati, collegamenti interrotti, pagine vuote, pagine orfane, alias mancanti |
 | **📋 Rigenera l'indice** | `Cmd+P` → "Regenerate index" — ricostruisci `wiki/index.md` con pagine e alias aggiornati |
-| **💡 Suggerisci aggiornamenti dello schema** | `Cmd+P` → "Suggest schema updates" — l'LLM analizza il Wiki e propone miglioramenti dello schema |
 | **🎯 Acquisizione con un clic** | Clicca sull'icona `sticker` nella barra laterale sinistra o `Cmd+P` → "Ingest current file" — acquisisci direttamente il file che stai modificando |
 
 Riacquisire la stessa sorgente esegue aggiornamenti incrementali sulle pagine di entità/concetti (le nuove informazioni vengono unite). Le pagine di riepilogo vengono rigenerate.
+
+**💡 Salto intelligente dei batch:** durante l'acquisizione di una cartella, il plugin rileva automaticamente i file già elaborati e li salta per risparmiare tempo e costi API. Il report del batch mostra il numero di file saltati.
+
+![Command palette — cerca "karpa" per visualizzare tutti i comandi di Karpathy LLM Wiki](assets/command-panel.png)
 
 **💡 Salto intelligente dei batch:** durante l'acquisizione di una cartella, il plugin rileva automaticamente i file già elaborati e li salta per risparmiare tempo e costi API. Il report del batch mostra il numero di file saltati.
 
@@ -202,6 +205,18 @@ Consigliamo vivamente l'aggiornamento — la funzione di applicazione schema con
 
 Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 
+### v1.22.1 — 2026-06-24 (PATCH)
+
+Una PATCH mirata che chiude tre bug P0 segnalati dagli utenti e introduce un miglioramento UX.
+
+- **🛡️ Fix Dead Links non fabbrica più pagine stub espanse dall'IA (#197).** Gli stub ora sono segnaposto onesti con il marker `generation_complete: false`.
+- **✅ Il toggle "Esegui correzioni rapide all'avvio" ora persiste (#199).** La migrazione v1.18.3 è stata rimossa.
+- **🎨 Avviso di revisione CSS `:has()` risolto.** Nuovo `scripts/css-lint.mjs`.
+- **🪟 Query Wiki ora è un pannello laterale destro stile Copilot (#196, @YounianC).** `QueryModal extends Modal` è diventato `QueryView extends ItemView`.
+- **🧹 Prefisso del related link riaffermato deterministicamente (#200, @DocTpoint, #187).** Nuova funzione pura `correctRelatedLinkPrefixes()`.
+
+Aggiornamento consigliato.
+
 ## ✨ Funzionalità
 
 ### 📊 Qualità della conoscenza
@@ -212,6 +227,8 @@ Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 - **🧩 Fusione intelligente della conoscenza** — gli aggiornamenti multi-fonte fondono le nuove informazioni senza duplicati; le contraddizioni vengono preservate con attribuzione della fonte; le pagine `reviewed: true` sono protette dalla sovrascrittura.
 - **📏 Guardia di troncamento del contenuto** — 8000 max_tokens con rilevamento automatico di stop_reason e retry con 2× token, su tutti i provider.
 - **📝 Conservazione delle citazioni originali** — le sezioni Menzioni nella sorgente conservano le citazioni nella lingua originale (traduzione opzionale) per la tracciabilità completa.
+
+- **🎨 Vocabolario tag personalizzabile (v1.18.0).** Impostazioni → Wiki → Modalità vocabolario tag → *Personalizzato* ti permette di definire le tue liste di tag per tipo di entità e concetto (es. `Medical_Arzneimittel`, `法规`). Il plugin rispetta il tuo vocabolario nei prompt di estrazione e nella validazione del frontmatter; l'audit Lint (Issue #85 v7) segnala qualsiasi pagina i cui tag cadano fuori dal vocabolario attivo.
 
 ### 🛠️ Manutenzione
 
@@ -228,6 +245,7 @@ Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 ### 💬 Query e feedback
 
 - **🤖 Query conversazionale** — dialogo in stile ChatGPT con output Markdown in streaming, `[[wiki-links]]` automatici e cronologia multi-turno.
+- **🪟 Pannello laterale ancorato a destra (v1.22.1, PR #196).** Query Wiki si apre in un leaf del sidebar destro in stile Copilot (riutilizzando un leaf esistente) invece di un popup centrato. L'icona ribbon `message-circle` e il comando `Query Wiki` attivano/mostrano il pannello; le tue note restano visibili accanto alla conversazione. Tutte le funzionalità sono preservate senza modifiche.
 - **📤 Feedback Query → Wiki** — salva le conversazioni preziose nel Wiki, con estrazione di entità/concetti e deduplicazione semantica pre-salvataggio.
 - **🔒 Guardia salvataggio duplicati** — tracciamento hash che impedisce la ri-valutazione di conversazioni invariate.
 
@@ -266,7 +284,6 @@ Vedi [CHANGELOG.md](../CHANGELOG.md) per i dettagli completi.
 | **🔍 Query wiki** | Domande e risposte conversazionali sul tuo Wiki, risposte in streaming con `[[wiki-link]]` |
 | **🛠️ Lint wiki** | Scansione completa dello stato di salute: duplicati, collegamenti interrotti, pagine vuote, pagine orfane, alias mancanti, contraddizioni |
 | **📋 Regenerate index** | Ricostruisci manualmente `wiki/index.md` |
-| **💡 Suggest schema updates** | L'LLM analizza il Wiki e propone miglioramenti dello schema |
 | **📊 Visualizza cronologia ingestioni (v1.21.0)** | Esplora ingestioni passate, report di lint ed esecuzioni di manutenzione in un'UI ricercabile e filtrabile |
 
 ---

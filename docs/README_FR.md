@@ -1,4 +1,4 @@
-![llm_wiki_banner](/docs/assets/llm_wiki_banner.webp)
+![llm_wiki_banner](assets/llm_wiki_banner.webp)
 
 # 🧠 Karpathy LLM Wiki — Plugin Obsidian
 
@@ -129,8 +129,9 @@ Ce projet évolue rapidement. Nous vous recommandons de rester à jour :
 | **🔍 Interroger le wiki** | `Cmd+P` → « Interroger le wiki » |
 | **🛠️ Vérifier le wiki** | `Cmd+P` → « Vérifier le wiki » |
 | **📋 Régénérer l'index** | `Cmd+P` → « Régénérer l'index » |
-| **💡 Suggérer des mises à jour du schéma** | `Cmd+P` → « Suggérer des mises à jour du schéma » |
 | **🎯 Ingestion en un clic** | Icône de la barre latérale ou `Cmd+P` → « Ingérer le fichier actuel » |
+
+![Palette de commandes — recherchez "karpa" pour voir toutes les commandes Karpathy LLM Wiki](assets/command-panel.png)
 
 ### ⚠️ Mise à niveau depuis une ancienne version ?
 
@@ -160,6 +161,18 @@ Nous recommandons vivement la mise à niveau — la fonction d'application du sc
 
 Détails dans [CHANGELOG.md](../CHANGELOG.md).
 
+### v1.22.1 — 2026-06-24 (PATCH)
+
+Un PATCH ciblé qui ferme trois bugs P0 signalés par les utilisateurs et apporte une amélioration UX.
+
+- **🛡️ Fix Dead Links ne fabrique plus de pages stub expansées par l'IA (#197).** Les stubs sont désormais des espaces réservés honnêtes avec le marqueur `generation_complete: false`.
+- **✅ Le commutateur « Exécuter les corrections rapides au démarrage » persiste désormais (#199).** La migration v1.18.3 supprimée.
+- **🎨 Avertissement de revue CSS `:has()` corrigé.** Nouveau `scripts/css-lint.mjs` pour empêcher la régression.
+- **🪟 Query Wiki est désormais un panneau latéral droit de style Copilot (#196, @YounianC).** `QueryModal extends Modal` est devenu `QueryView extends ItemView`.
+- **🧹 Préfixe de related link ré-affirmé déterministe (#200, @DocTpoint, #187).** Nouvelle fonction pure `correctRelatedLinkPrefixes()`.
+
+Mise à jour recommandée.
+
 ## ✨ Fonctionnalités
 
 ### 📊 Qualité des connaissances
@@ -170,6 +183,8 @@ Détails dans [CHANGELOG.md](../CHANGELOG.md).
 - **🧩 Smart Knowledge Fusion** — Les mises à jour multi-sources fusionnent les nouvelles informations sans redondance, préservent les contradictions avec attribution, et protègent les pages `reviewed: true` de l'écrasement
 - **📏 Content Truncation Protection** — 8000 max_tokens avec détection automatique de stop_reason et retry à 2× tokens pour tous les providers
 - **📝 Verbatim Source Mentions** — Préservation des citations en langue originale avec traduction optionnelle pour traçabilité
+
+- **🎨 Vocabulaire de tags personnalisable (v1.18.0).** Paramètres → Wiki → Mode de vocabulaire de tags → *Personnalisé* vous permet de définir vos propres listes de tags de type entité et concept (par ex. `Medical_Arzneimittel`, `法规`). Le plugin respecte votre vocabulaire dans les prompts d'extraction et la validation du frontmatter ; l'audit Lint (Issue #85 v7) signale toute page dont les tags sortent du vocabulaire actif.
 
 ### 🛠️ Maintenance
 
@@ -186,6 +201,7 @@ Détails dans [CHANGELOG.md](../CHANGELOG.md).
 ### 💬 Query et feedback
 
 - **🤖 Conversational Query** — Dialogue style ChatGPT avec Markdown streaming et `[[Wiki-links]]`, historique multi-tours
+- **🪟 Panneau latéral ancré à droite (v1.22.1, PR #196).** Query Wiki s'ouvre dans un panneau latéral droit de style Copilot (en réutilisant un panneau existant) au lieu d'une popup centrée. L'icône ribbon `message-circle` et la commande `Query Wiki` activent/affichent le panneau ; vos notes restent visibles à côté de la conversation. Toutes les fonctionnalités sont conservées sans changement.
 - **📤 Query-to-Wiki Feedback** — Sauvegarde des conversations pertinentes dans le Wiki avec extraction Entity/Concept et déduplication sémantique préalable
 - **🔒 Duplicate Save Prevention** — Le suivi par hash empêche la ré-évaluation des conversations inchangées
 
@@ -228,7 +244,6 @@ Détails dans [CHANGELOG.md](../CHANGELOG.md).
 | **🛠️ Vérifier le wiki** | Analyse complète de santé : doublons, liens morts, pages vides, orphelines, alias manquants, contradictions |
 | **📋 Régénérer l'index** | Reconstruire manuellement `wiki/index.md` |
 | **⏹️ Annuler opération** | `Cmd+P` → "Cancel current ingestion" ou clic barre de statut — arrêt propre aux limites de lot |
-| **💡 Suggérer des mises à jour du schéma** | Le LLM analyse le Wiki et propose des améliorations de Schema |
 | **📊 Voir l'historique d'ingestion (v1.21.0)** | Parcourir les ingestions passées, rapports de lint et exécutions de maintenance dans une UI consultable et filtrable |
 
 ---
