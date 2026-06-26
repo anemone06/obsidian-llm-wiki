@@ -530,6 +530,11 @@ export const EN_TEXTS = {
     ingestReportClose: 'Close',
     ingestReportCreatedPages: 'Created pages: {count}',
     ingestReportUpdatedPages: 'Updated pages: {count}',
+    // v1.22.2: log.md header content (Operation History Panel hint)
+    logHeaderTitle: 'Wiki Operation Log',
+    logHeaderSubtitle: 'Every ingest, lint run, and maintenance operation is recorded here automatically. For a better experience, use the **Operation History** panel:',
+    logHeaderShortcut: 'Cmd+P → "View operation history"',
+    logHeaderSettingsShortcut: 'Or open from Settings → Auto Maintenance → Operation History',
     // v1.22.2: concise per-file ingest summary labels for Notice (no modal)
     ingestionCreatedPages: '{count} page(s) created',
     ingestionUpdatedPages: '{count} page(s) updated',

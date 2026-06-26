@@ -179,6 +179,18 @@ export class WikiEngine {
   }
 
   /**
+   * True iff the path falls inside the wiki's content folders (entities/concepts/sources).
+   * Other files inside `wiki/` (log.md, schema/, index.md) are NOT content pages
+   * and must not be stamped with `generation_complete` — that frontmatter marker
+   * only applies to actual wiki entity/concept/source pages (Issue #170).
+   */
+  private isInWikiContentFolder(path: string, wikiFolder: string): boolean {
+    return path.startsWith(`${wikiFolder}/entities/`) ||
+           path.startsWith(`${wikiFolder}/concepts/`) ||
+           path.startsWith(`${wikiFolder}/sources/`);
+  }
+
+  /**
    * Issue #170: stamp `generation_complete: true` on a wiki page after a
    * successful write. The pre-ingest requirement that pages carry this flag
    * is implicit — if it's missing, the page is treated as legacy (preserved).
@@ -964,7 +976,9 @@ export class WikiEngine {
           console.debug(`Attempt ${attempt + 1}: File exists, updating:`, path);
           await this.app.vault.process(file, () => content);
           console.debug('Update success:', path);
-          this.markPageComplete(path);
+          if (this.isInWikiContentFolder(path, this.settings.wikiFolder)) {
+            this.markPageComplete(path);
+          }
           this.onFileWrite?.(path);
           this.invalidatePageCaches();
           return;
@@ -980,7 +994,9 @@ export class WikiEngine {
             console.debug('createOrUpdateFile: resolved via directory scan:', path);
             await this.app.vault.process(resolved, () => content);
             console.debug('Update success (resolved path):', path);
-            this.markPageComplete(path);
+            if (this.isInWikiContentFolder(path, this.settings.wikiFolder)) {
+              this.markPageComplete(path);
+            }
             this.onFileWrite?.(path);
             this.invalidatePageCaches();
             return;
@@ -991,7 +1007,9 @@ export class WikiEngine {
         console.debug(`Attempt ${attempt + 1}: File not found, creating:`, path);
         await this.app.vault.create(path, content);
         console.debug('Create success:', path);
-        this.markPageComplete(path);
+        if (this.isInWikiContentFolder(path, this.settings.wikiFolder)) {
+          this.markPageComplete(path);
+        }
         this.onFileWrite?.(path);
         this.invalidatePageCaches();
         return;

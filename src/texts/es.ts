@@ -528,6 +528,11 @@ export const ES_TEXTS = {
     ingestReportClose: 'Cerrar',
     ingestReportCreatedPages: 'Páginas creadas: {count}',
     ingestReportUpdatedPages: 'Páginas actualizadas: {count}',
+    // v1.22.2: log.md header content (Operation History Panel hint)
+    logHeaderTitle: 'Wiki Registro de operaciones',
+    logHeaderSubtitle: 'Cada ingesta, ejecución de lint y operación de mantenimiento se registra aquí automáticamente. Para una mejor visualización, usa el panel **Historial de operaciones**:',
+    logHeaderShortcut: 'Cmd+P → "Ver historial de operaciones"',
+    logHeaderSettingsShortcut: 'O desde Ajustes → Mantenimiento automático → Historial de operaciones',
     ingestionCreatedPages: '{count} página(s) creada(s)',
     ingestionUpdatedPages: '{count} página(s) actualizada(s)',
     ingestionNoticeHistoryHint: 'Ver historial de operaciones para más detalles',

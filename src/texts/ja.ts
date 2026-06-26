@@ -520,6 +520,11 @@ export const JA_TEXTS = {
     ingestReportClose: '閉じる',
     ingestReportCreatedPages: '作成ページ：{count}',
     ingestReportUpdatedPages: '更新ページ：{count}',
+    // v1.22.2: log.md header content (Operation History Panel hint)
+    logHeaderTitle: 'Wiki 操作ログ',
+    logHeaderSubtitle: '取り込み、Lint実行、メンテナンス操作はすべてここに自動記録されます。より良い表示には**操作履歴**パネルをご利用ください：',
+    logHeaderShortcut: 'Cmd+P → "操作履歴を表示"',
+    logHeaderSettingsShortcut: 'または 設定 → 自動メンテナンス → 操作履歴 から',
     ingestionCreatedPages: '{count} ページ作成',
     ingestionUpdatedPages: '{count} ページ更新',
     ingestionNoticeHistoryHint: '詳細は操作履歴を表示',
