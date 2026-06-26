@@ -199,6 +199,16 @@ Dieses PATCH verbessert die Auto-Ingest-UX, lokalisiert das Betriebsprotokoll un
 - **🧹 Toter Code entfernt.**
 - **♻️ Automatische Migration des Log-Headers.**
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+Ein gezielter Hotfix, der den v1.22.2-Log-Header-Mechanismus absichert und Frontmatter-Verschmutzung auf Nicht-Content-Dateien verhindert.
+
+- **🔧 Log-Header-Erkennung jetzt sprachunabhängig und robust.** Umgestellt von textbasierter Erkennung (die für DE/JA/KO/etc. nicht funktionierte und durch natürliche Log-Eintrag-Inhalte in die Irre geführt werden konnte) auf einen strukturellen `<!-- llm-wiki-log-header-start -->` HTML-Kommentar-Marker im Header. Bestehende v1.22.2-Log-Dateien werden beim nächsten Start automatisch aktualisiert.
+- **🧹 Log-Header-Strings in `src/texts/<lang>.ts` konsolidiert.** Die vier lokalisierten Header-Strings, die zuvor in `core/log-header.ts` dupliziert waren, leben jetzt zusammen mit allen anderen UI-Strings — Übersetzer und Paritätstests erfassen sie automatisch.
+- **🚫 `generation_complete` wird nicht mehr in `log.md` / `index.md` / `schema/` geschrieben.** `createOrUpdateFile` rief zuvor `markPageComplete` für **jede** Schreiboperation auf, was bei Dateien ohne Frontmatter einen neuen Frontmatter-Block mit `generation_complete: true` voranstellte — sichtbare Verschmutzung des log.md-Body. Neue `isInWikiContentFolder()`-Wache beschränkt den Stempel auf `wiki/{entities,concepts,sources}/...`.
+
+Upgrade empfohlen — log.md sammelt bei Quick-Fix-Läufen keine Streu-Frontmatter mehr, und die Erkennung funktioniert in jeder Sprache ohne sprachspezifische Sonderfälle.
+
 Upgrade empfohlenUpgrade empfohlen — die Stub-Fabrikations-Klasse ist geschlossen und das Query-Wiki-Seitenpanel hält deine Notizen sichtbar.
 
 ## ✨ Funktionen

@@ -174,6 +174,16 @@ Ce PATCH améliore l'UX d'ingestion automatique, localise le journal des opérat
 - **🧹 Code mort supprimé.** `console.debug` redondant dans `slug.ts` et réinitialisations `setDoneCallback` inutiles retirées.
 - **♻️ Migration automatique de l'en-tête du journal.**
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+Un Hotfix ciblé qui renforce le mécanisme d'en-tête de log de la v1.22.2 et empêche la pollution de frontmatter sur les fichiers non-contenu.
+
+- **🔧 Détection d'en-tête de log désormais agnostique et robuste.** Passage d'une détection textuelle (qui ne fonctionnait pas pour DE/JA/KO/etc. et pouvait être trompée par le contenu naturel d'une entrée de log) à un marqueur de commentaire HTML structurel `<!-- llm-wiki-log-header-start -->` intégré à l'en-tête. Les fichiers log v1.22.2 existants sont mis à niveau automatiquement au prochain démarrage.
+- **🧹 Chaînes d'en-tête de log consolidées dans `src/texts/<lang>.ts`.** Les quatre chaînes localisées précédemment dupliquées dans `core/log-header.ts` vivent désormais avec toutes les autres chaînes UI — traducteurs et tests de parité les couvrent automatiquement.
+- **🚫 `generation_complete` n'est plus estampillé sur `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` appelait auparavant `markPageComplete` pour **chaque** écriture, ce qui préfixait un tout nouveau bloc frontmatter avec `generation_complete: true` aux fichiers sans frontmatter — pollution visible du corps de log.md. Le nouveau garde `isInWikiContentFolder()` limite l'estampillage à `wiki/{entities,concepts,sources}/...` uniquement.
+
+Nous vous recommandons cette amélioration — log.md n'accumule plus de frontmatter parasite à chaque exécution de correction rapide, et la détection fonctionne dans toutes les langues sans cas particulier par langue.
+
 Nous vous recommandons cette améliorationUn PATCH ciblé qui ferme trois bugs P0 signalés par les utilisateurs et apporte une amélioration UX.
 
 - **🛡️ Fix Dead Links ne fabrique plus de pages stub expansées par l'IA (#197).** Les stubs sont désormais des espaces réservés honnêtes avec le marqueur `generation_complete: false`.

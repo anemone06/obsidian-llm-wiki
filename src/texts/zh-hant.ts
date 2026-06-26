@@ -521,6 +521,11 @@ export const ZH_HANT_TEXTS = {
     ingestReportClose: '關閉',
     ingestReportCreatedPages: '建立頁面：{count}',
     ingestReportUpdatedPages: '更新頁面：{count}',
+    // v1.22.2: log.md header content (Operation History Panel hint)
+    logHeaderTitle: 'Wiki 操作日誌',
+    logHeaderSubtitle: '每次攝入、Lint 運行和維護操作都會自動記錄在這裡。推薦使用**操作歷史**面板獲得更好的可視化呈現：',
+    logHeaderShortcut: 'Cmd+P → "檢視操作歷史"',
+    logHeaderSettingsShortcut: '或從 設定 → 自動維護 → 操作歷史 進入',
     ingestionCreatedPages: '{count} 個頁面已建立',
     ingestionUpdatedPages: '{count} 個頁面已更新',
     ingestionNoticeHistoryHint: '檢視操作歷史以了解詳情',

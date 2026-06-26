@@ -36,4 +36,14 @@ describe('buildLogHeader (v1.22.2 — log header i18n)', () => {
       expect(h).not.toMatch(/\[missing/);
     }
   });
+
+  it('every header embeds the detection marker for language-agnostic identification', () => {
+    // The <!-- llm-wiki-log-header-start --> marker is the structural
+    // fingerprint isOldFormatLogHeader() uses to recognise a new-format
+    // header. It must be present in every locale's output.
+    for (const lang of ['en', 'zh', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'it', 'zh-Hant']) {
+      const h = buildLogHeader(lang);
+      expect(h).toMatch(/<!-- llm-wiki-log-header-start -->/);
+    }
+  });
 });

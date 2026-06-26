@@ -193,6 +193,16 @@ v1.22.0은 오래 기다려온 스키마 원클릭 업데이트 워크플로우,
 - **⚙️ 자동 수집 알림 설정 (조건부 표시).** 감시 모드가 "자동 수집"일 때 새 드롭다운(알림/모달)이 표시되며, "알림만"일 때는 숨겨집니다.
 - **♻️ 로그 헤더 자동 마이그레이션.** 이전 1줄 헤더의 `log.md`를 다음 플러그인 로딩 시 자동 감지·비파괴 마이그레이션합니다. 기존 `## [date time]` 항목은 모두 보존됩니다.
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+v1.22.2의 log header 메커니즘을 강화하고 콘텐츠가 아닌 파일에 frontmatter가 오염되는 것을 방지하는 Hotfix.
+
+- **🔧 log header 감지가 이제 언어 비종속이고 견고함.** 텍스트 기반 감지(독일어/일본어/한국어 등을 인식하지 못하며 log entry 본문의 일반적인 문구로 오판할 수 있음)에서 헤더에 내장된 구조적 `<!-- llm-wiki-log-header-start -->` HTML 주석 마커로 전환. 기존 v1.22.2 log 파일은 다음 시작 시 자동으로 업그레이드됩니다.
+- **🧹 log header 문자열을 `src/texts/<lang>.ts`로 통합.** `core/log-header.ts`에 중복 유지되던 4개의 현지화된 header 문자열을 이제 다른 모든 UI 문자열과 함께 배치하여 번역 작업과 일관성 테스트가 자동으로 이를 커버합니다.
+- **🚫 `log.md` / `index.md` / `schema/`에 더 이상 `generation_complete`를 기록하지 않음.** `createOrUpdateFile`은 이전에 **모든** 쓰기 파일에 대해 `markPageComplete`를 호출하여 frontmatter가 없는 파일 맨 앞에 `generation_complete: true`를 포함한 새 frontmatter 블록을 추가하여 log.md 본문을 가시적으로 오염시켰습니다. 새로운 `isInWikiContentFolder()` guard가 stamp를 `wiki/{entities,concepts,sources}/...` 디렉터리로만 제한합니다.
+
+업그레이드 권장 —— log.md가 빠른 수정 실행마다 잉여 frontmatter를 누적하지 않으며 감지가 모든 언어에서 통일된 규칙으로 작동합니다.
+
 업그레이드 권장업그레이드 권장.
 
 ## ✨ 주요 기능

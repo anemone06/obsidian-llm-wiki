@@ -529,6 +529,11 @@ export const KO_TEXTS = {
     ingestReportClose: '닫기',
     ingestReportCreatedPages: '생성된 페이지: {count}',
     ingestReportUpdatedPages: '업데이트된 페이지: {count}',
+    // v1.22.2: log.md header content (Operation History Panel hint)
+    logHeaderTitle: 'Wiki 작업 기록',
+    logHeaderSubtitle: '모든 수집, Lint 실행 및 유지보수 작업이 여기에 자동 기록됩니다. 더 나은 보기를 위해 **작업 기록** 패널을 사용하세요:',
+    logHeaderShortcut: 'Cmd+P → "작업 기록 보기"',
+    logHeaderSettingsShortcut: '또는 설정 → 자동 유지보수 → 작업 기록에서',
     ingestionCreatedPages: '{count} 페이지 생성됨',
     ingestionUpdatedPages: '{count} 페이지 업데이트됨',
     ingestionNoticeHistoryHint: '자세한 내용은 작업 기록 보기',

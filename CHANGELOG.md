@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.3] - 2026-06-26
+
+### Fixed
+- **`generation_complete` no longer stamped onto `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` previously called `markPageComplete` for **every** write, which would prepend a brand-new frontmatter block with `generation_complete: true` to files that didn't have one — visibly polluting `log.md` body on every QuickFix run. New `isInWikiContentFolder()` guard restricts the stamp to `wiki/{entities,concepts,sources}/...` only. 5 regression tests covering the path rule and custom wikiFolder.
+- **Log header detection is now language-agnostic and robust.** v1.22.2 detection relied on text matches like `view operation history` and `操作历史`, which broke for German / Japanese / Korean (false-negative → re-stamped every locale with the English header) and was vulnerable to false-positives when log entry bodies naturally contained the matched phrase. Switched to a structural `<!-- llm-wiki-log-header-start -->` HTML-comment marker embedded in the header — invisible in Obsidian, never appearing in user content, works for any language.
+- **Log header strings consolidated into `src/texts/<lang>.ts`.** Four localised header strings previously duplicated in `core/log-header.ts` now live alongside every other UI string, so translators and the i18n-parity test cover them automatically.
+
+### Tests
+- **1064 tests passing** (+5 since v1.22.2: 5 path-rule guard tests).
+
 ## [1.22.2] - 2026-06-26
 
 ### Fixed

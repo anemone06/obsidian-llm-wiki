@@ -226,6 +226,16 @@ Questo PATCH migliora l'UX di acquisizione automatica, localizza il registro ope
 - **🧹 Codice morto rimosso.** `console.debug` ridondante in `slug.ts` e reset `setDoneCallback` inutili rimossi.
 - **♻️ Migrazione automatica dell'intestazione del registro.**
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+Un Hotfix mirato che irrobustisce il meccanismo dell'intestazione del log della v1.22.2 e impedisce l'inquinamento del frontmatter sui file non di contenuto.
+
+- **🔧 Rilevamento dell'intestazione del log ora agnostico rispetto alla lingua e robusto.** Passaggio dal rilevamento basato sul testo (che non funzionava per DE/JA/KO/ecc. e poteva essere ingannato dal contenuto naturale di una voce di log) a un marcatore strutturale di commento HTML `<!-- llm-wiki-log-header-start -->` incorporato nell'intestazione. I file di log v1.22.2 esistenti vengono aggiornati automaticamente al prossimo avvio.
+- **🧹 Stringhe dell'intestazione del log consolidate in `src/texts/<lang>.ts`.** Le quattro stringhe localizzate precedentemente duplicate in `core/log-header.ts` ora vivono insieme a tutte le altre stringhe UI — traduttori e test di parità le coprono automaticamente.
+- **🚫 `generation_complete` non viene più stampato su `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` chiamava prima `markPageComplete` per **ogni** scrittura, che anteponeva un blocco frontmatter completamente nuovo con `generation_complete: true` ai file senza frontmatter — inquinamento visibile del corpo di log.md. La nuova guardia `isInWikiContentFolder()` limita la stampa solo a `wiki/{entities,concepts,sources}/...`.
+
+Aggiornamento consigliato — log.md non accumula più frontmatter vagante ad ogni esecuzione di correzione rapida, e il rilevamento funziona in tutte le lingue senza casi speciali per lingua.
+
 Aggiornamento consigliatoAggiornamento consigliato.
 
 ## ✨ Funzionalità

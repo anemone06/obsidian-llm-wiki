@@ -213,6 +213,16 @@ v1.22.0 是一個**次要功能版本**，帶來長期期待的 Schema 一鍵更
 - **⚙️ 自動攝入通知設定（條件顯示）。**
 - **♻️ 日誌頭部自動遷移。**
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+聚焦的 Hotfix，加固 v1.22.2 log header 機制，並防止非內容檔案被污染 frontmatter。
+
+- **🔧 log header 偵測現在語言無關且穩健。** 從基於文字的偵測（德/日/韓語無法辨識，且 log entry 正文裡的常見片語會誤判）改為嵌入 header 的結構性 `<!-- llm-wiki-log-header-start -->` HTML 註解標記。已存在的 v1.22.2 log 檔案將在下次啟動時自動升級。
+- **🧹 log header 字串合併到 `src/texts/<lang>.ts`。** 原本在 `core/log-header.ts` 重複維護的 4 個本地化 header 字串現在與其他所有 UI 文字放在一起，翻譯工作和一致性測試自動覆蓋。
+- **🚫 不再向 `log.md` / `index.md` / `schema/` 寫入 `generation_complete`。** `createOrUpdateFile` 之前對**所有**寫入的檔案呼叫 `markPageComplete`，會對沒有 frontmatter 的檔案 prepend 一個全新的 frontmatter 區塊（含 `generation_complete: true`），明顯污染 log.md 正文。新的 `isInWikiContentFolder()` guard 將 stamp 限制在 `wiki/{entities,concepts,sources}/...` 三個目錄下。
+
+建議升級 —— log.md 不再每次快速修復時累積雜散 frontmatter，偵測在所有語言下都按統一規則工作。
+
 建議升級
 
 我們強烈建議升級——Schema 一鍵應用功能使 Schema 優化成爲一步操作，繁體中文語言顯著改善 zh-TW 用戶的體驗。

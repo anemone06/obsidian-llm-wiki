@@ -222,6 +222,16 @@ This PATCH improves the auto-ingest UX, localizes the operation log, and removes
 - **⚙️ Auto Ingest Notification setting (conditional).** A new dropdown (Notice / Modal) appears under Watch Mode when set to "Auto Ingest", hidden when Watch Mode is "Notify Only".
 - **♻️ Log header auto-migration (startup Phase 4.5).** Existing `log.md` files with the old single-line header are detected and non-destructively migrated on next plugin load — all existing `## [date time]` entries are preserved.
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+A focused Hotfix that hardens the v1.22.2 log header mechanism and prevents frontmatter pollution on non-content files.
+
+- **🔧 log header detection now language-agnostic and robust.** Switched from text-based detection (which broke for German/Japanese/Korean/etc. and could be confused by natural log entry content) to a structural `<!-- llm-wiki-log-header-start -->` HTML-comment marker embedded in the header. Existing v1.22.2 log files are auto-upgraded on next startup.
+- **🧹 log header strings consolidated into `src/texts/<lang>.ts`.** The four localised header strings previously duplicated in `core/log-header.ts` now live alongside every other UI string, so translators and parity tests cover them automatically.
+- **🚫 `generation_complete` no longer stamped onto `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` previously called `markPageComplete` for **every** write, which would prepend a brand-new frontmatter block with `generation_complete: true` to files that didn't have frontmatter — visibly polluting log.md body. New `isInWikiContentFolder()` guard restricts the stamp to `wiki/{entities,concepts,sources}/...` only.
+
+We recommend upgrading — log.md no longer accumulates stray frontmatter on every quick-fix run, and the detection works in every language without per-locale special cases.
+
 We recommend upgradingWe recommend upgrading — the fix-dead-link stub fabrication class of bugs is now closed, and the Query Wiki side panel keeps your notes visible while chatting.
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
