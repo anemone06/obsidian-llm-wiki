@@ -47,4 +47,20 @@ describe('applySettingsMigrations (#199 root-cause regression)', () => {
     expect(settings.advancedSettingsMode).toBe('default');
     expect(applied).toContain('v1.20.0-thinking');
   });
+
+  it('v1.22.2: migrates retired periodicLint "hourly" to "daily"', () => {
+    const oldSaved = { periodicLint: 'hourly' as unknown } as Partial<import('../../types').LLMWikiSettings>;
+    const { settings, applied } = applySettingsMigrations(oldSaved);
+
+    expect(settings.periodicLint).toBe('daily');
+    expect(applied).toContain('v1.22.2-periodicLint-hourly');
+  });
+
+  it('v1.22.2: leaves valid periodicLint values untouched', () => {
+    for (const value of ['off', 'daily', 'weekly', 'monthly'] as const) {
+      const { settings, applied } = applySettingsMigrations({ periodicLint: value });
+      expect(settings.periodicLint).toBe(value);
+      expect(applied).not.toContain('v1.22.2-periodicLint-hourly');
+    }
+  });
 });

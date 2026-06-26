@@ -499,6 +499,7 @@ describe('enforceFrontmatterConstraints (Issue #85 v6 — preserve LLM intent)',
     customEntityTags: '',
     customConceptTags: '',
     autoSmartFix: false,
+    autoIngestNotificationLevel: 'notice',
     slugCase: 'lower' as const,
   };
 

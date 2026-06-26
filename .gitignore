@@ -23,3 +23,8 @@ docs/superpowers/
 
 .mimocode/
 data.json
+
+# Claude Code project-level: ignored entirely
+# (settings.json has plugin config, settings.local.json has user credentials —
+# neither belongs in the plugin repo)
+.claude/

@@ -56,5 +56,12 @@ export function applySettingsMigrations(
   // If we ever need a re-nudge in the future, use a version-key gate
   // (see the v1.20.0 pattern above) so the migration is truly one-time.
 
+  // v1.22.2 migration: the 'hourly' periodicLint option is retired.
+  // Fall back to 'daily' so old saved data stays valid without a breaking change.
+  if (savedData && (savedData as { periodicLint?: string }).periodicLint === 'hourly') {
+    settings.periodicLint = 'daily';
+    applied.push('v1.22.2-periodicLint-hourly');
+  }
+
   return { settings, applied };
 }

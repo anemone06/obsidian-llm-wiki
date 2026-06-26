@@ -194,6 +194,7 @@ describe('scanTagViolations', () => {
     customEntityTags: '',
     customConceptTags: '',
     autoSmartFix: false,
+    autoIngestNotificationLevel: 'notice',
     slugCase: 'lower' as const,
   };
 

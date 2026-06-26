@@ -120,6 +120,7 @@ describe('getActiveSourceTags (Issue #85 v7)', () => {
     customEntityTags: '',
     customConceptTags: '',
     autoSmartFix: false,
+    autoIngestNotificationLevel: 'notice',
     slugCase: 'lower' as const,
   };
 
