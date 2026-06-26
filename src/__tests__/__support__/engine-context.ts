@@ -95,6 +95,7 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   periodicLint: 'off',
   startupCheck: false,
   autoSmartFix: false,
+    autoIngestNotificationLevel: 'notice',
   pageGenerationConcurrency: 1,
   batchDelayMs: 0,
   llmReady: true,

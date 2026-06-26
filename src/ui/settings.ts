@@ -943,8 +943,20 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           dropdown.addOption('notify', this.getText('watchModeNotify'));
           dropdown.addOption('auto', this.getText('watchModeAuto'));
           dropdown.setValue(this.tempSettings.autoWatchMode);
-          dropdown.onChange((value: 'notify' | 'auto') => { this.tempSettings.autoWatchMode = value; });
+          dropdown.onChange((value: 'notify' | 'auto') => { this.tempSettings.autoWatchMode = value; this.display(); });
         });
+
+      if (this.tempSettings.autoWatchMode === 'auto') {
+        new Setting(containerEl)
+          .setName(this.getText('autoIngestLevelName'))
+          .setDesc(this.getText('autoIngestLevelDesc'))
+          .addDropdown(dropdown => {
+            dropdown.addOption('notice', this.getText('autoIngestLevelNotice'));
+            dropdown.addOption('modal', this.getText('autoIngestLevelModal'));
+            dropdown.setValue(this.tempSettings.autoIngestNotificationLevel);
+            dropdown.onChange((value: 'notice' | 'modal') => { this.tempSettings.autoIngestNotificationLevel = value; });
+          });
+      }
 
       new Setting(containerEl)
         .setName(this.getText('autoWatchDebounceName'))
@@ -978,11 +990,11 @@ export class LLMWikiSettingTab extends PluginSettingTab {
       .setDesc(this.getText('periodicLintDesc'))
       .addDropdown(dropdown => {
         dropdown.addOption('off', this.getText('periodicLintOff'));
-        dropdown.addOption('hourly', this.getText('periodicLintHourly'));
         dropdown.addOption('daily', this.getText('periodicLintDaily'));
         dropdown.addOption('weekly', this.getText('periodicLintWeekly'));
+        dropdown.addOption('monthly', this.getText('periodicLintMonthly'));
         dropdown.setValue(this.tempSettings.periodicLint);
-        dropdown.onChange((value: 'off' | 'hourly' | 'daily' | 'weekly') => { this.tempSettings.periodicLint = value; });
+        dropdown.onChange((value: 'off' | 'daily' | 'weekly' | 'monthly') => { this.tempSettings.periodicLint = value; });
       });
 
     new Setting(containerEl)
@@ -991,5 +1003,6 @@ export class LLMWikiSettingTab extends PluginSettingTab {
       .addToggle(toggle => toggle
         .setValue(this.tempSettings.autoSmartFix)
         .onChange((value) => { this.tempSettings.autoSmartFix = value; }));
+
   }
 }

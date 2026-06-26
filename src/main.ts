@@ -6,7 +6,7 @@ import {
   LLMClient,
   IngestReport
 } from './types';
-import { TOKENS_QUERY_MODEL_DETECT, NOTICE_NORMAL, NOTICE_ERROR, COMPATIBLE_SOURCE_EXTENSIONS } from './constants';
+import { TOKENS_QUERY_MODEL_DETECT, NOTICE_NORMAL, NOTICE_ERROR, NOTICE_ABORT, COMPATIBLE_SOURCE_EXTENSIONS } from './constants';
 import { AnthropicClient, AnthropicCompatibleClient, OpenAICompatibleClient } from './llm-client';
 import { wrapWithAdvancedSettings } from './llm-client-wrapper';
 import { runSchemaAnalyze } from './schema/analyze';
@@ -425,6 +425,26 @@ export default class LLMWikiPlugin extends Plugin {
     new IngestReportModal(this.app, report, this.settings.language).open();
   }
 
+  // v1.22.2 #204: notification-level done callback for watch-mode auto-ingest.
+  // When autoIngestNotificationLevel === 'notice' (default), summary is a
+  // transient Notice with History Panel hint rather than a blocking modal.
+  // When 'modal', opens the full IngestReportModal (unchanged legacy behaviour).
+  private onAutoIngestDone(report: IngestReport): void {
+    this.dismissProgress();
+    const level = this.settings.autoIngestNotificationLevel;
+    if (level === 'modal') {
+      new IngestReportModal(this.app, report, this.settings.language).open();
+      return;
+    }
+    // 'notice' (default): transient notification + pointer to history panel
+    const texts = TEXTS[this.settings.language];
+    const summary = report.createdPages?.length > 0
+      ? texts.ingestionCreatedPages.replace('{count}', String(report.createdPages.length))
+      : texts.ingestionUpdatedPages.replace('{count}', String(report.updatedPages.length));
+    const hint = getText(this.settings.language, 'ingestionNoticeHistoryHint');
+    new Notice(`✅ ${report.sourceFile}: ${summary}. ${hint}`, NOTICE_ABORT);
+  }
+
   // ==================== Ingestion ====================
 
   private async isAlreadyIngested(sourceFile: TFile): Promise<boolean> {
@@ -548,7 +568,6 @@ export default class LLMWikiPlugin extends Plugin {
       }
 
       if (ingestCount === 0) {
-        this.wikiEngine.setDoneCallback((report: IngestReport) => this.onIngestDone(report));
         const texts = TEXTS[this.settings.language];
         new Notice(texts.batchIngestAllIngested.replace('{total}', String(totalFiles)), NOTICE_NORMAL);
         return;
@@ -590,7 +609,6 @@ export default class LLMWikiPlugin extends Plugin {
       }
 
       this.batchProgress = null;
-      this.wikiEngine.setDoneCallback((report: IngestReport) => this.onIngestDone(report));
 
       this.dismissProgress();
 

@@ -102,12 +102,13 @@ export interface LLMWikiSettings {
 
   // Auto-maintenance
   autoWatchSources: boolean;
-  autoWatchMode: 'notify' | 'auto';
-  autoWatchDebounceMs: number;
-  watchedFolders: string[];
-  periodicLint: 'off' | 'hourly' | 'daily' | 'weekly';
-  startupCheck: boolean;
-  autoSmartFix: boolean;
+autoWatchMode: 'notify' | 'auto';
+autoWatchDebounceMs: number;
+watchedFolders: string[];
+periodicLint: 'off' | 'daily' | 'weekly' | 'monthly';
+startupCheck: boolean;
+autoSmartFix: boolean;
+autoIngestNotificationLevel: 'modal' | 'notice';
 
   // Ingestion acceleration
   pageGenerationConcurrency: number;
@@ -525,6 +526,7 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   periodicLint: 'off',
   startupCheck: true,  // Issue #81: default ON for low-level format fixes
   autoSmartFix: false,
+  autoIngestNotificationLevel: 'notice',  // v1.22.2: default to Notice (no blocking Modal) for auto-ingest
 
   // Ingestion acceleration (default: 3 parallel for most providers)
   pageGenerationConcurrency: 3,

@@ -1,6 +1,6 @@
 export function slugify(text: string, preserveCase = false): string {
-  console.debug('slugify input:', text, 'length:', text?.length);
-
+  // v1.22.2 D2: console.debug removed from slugify hot-path (called thousands
+  // of times per batch — every debug log is I/O that slows ingest).
   if (!text || text.trim().length === 0) {
     console.warn('slugify: input text is empty');
     return 'untitled';

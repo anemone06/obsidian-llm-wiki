@@ -13,7 +13,7 @@
 // require rich ctx wiring that does not pay off in module isolation.
 
 import { Notice } from 'obsidian';
-import { LintFixCallbacks, LintCounts, LintReportModal, FixReportModal, FixReportPhase } from '../../ui/modals';
+import { LintFixCallbacks, LintCounts, LintReportModal, FixReportPhase } from '../../ui/modals';
 import { TEXTS } from '../../texts';
 import { PROMPTS } from '../../prompts';
 import { getText } from '../../core/i18n';
@@ -23,7 +23,7 @@ import { nestReportUnderParent } from '../../core/report';
 import { cleanMarkdownResponse } from '../../core/markdown';
 import { normalizeLLMPath } from '../../core/prompt-builders';
 import { appendGranularityToPrompt, appendTagVocabularyToPrompt } from '../system-prompts';
-import { TOKENS_LINT_DEDUP_LLM, NOTICE_NORMAL, NOTICE_RATE_LIMIT } from '../../constants';
+import { TOKENS_LINT_DEDUP_LLM, NOTICE_NORMAL, NOTICE_RATE_LIMIT, NOTICE_ERROR } from '../../constants';
 import { isPageEmpty } from './utils';
 import { generateDuplicateCandidates, DuplicateCandidate } from './duplicate-detection';
 import { runAliasCompletion, runDeadLinkFixes, runEmptyPageFixes, runOrphanFixes, runDuplicateMerges, runRetagViolations, makeMirroredNotice } from './fix-runners';
@@ -879,7 +879,14 @@ export async function runLintWiki(ctx: LintContext, signal?: AbortSignal): Promi
               detail: `${emptyPagesFilled}/${emptyPages.length}`
             });
           }
-          new FixReportModal(ctx.app, phases, ctx.settings.language).open();
+          // v1.22.2 #204: Auto Smart Fix — show Notice with hint to History Panel
+          // rather than blocking FixReportModal.
+          const historyHint = getText(ctx.settings.language, 'ingestionNoticeHistoryHint');
+          const phaseCount = allResults.filter(r => r !== 'skipped').length;
+          new Notice(
+            `${t.lintFixAllComplete}: ${phaseCount} phases. ${historyHint}`,
+            NOTICE_ERROR
+          );
           } finally {
             // Issue: status bar must persist throughout all 6 phases. Match the
             // startLintOperation call above so the user can click "cancel" at any point.

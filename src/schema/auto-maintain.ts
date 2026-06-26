@@ -7,6 +7,7 @@ import { WikiEngine } from '../wiki/wiki-engine';
 import { TEXTS } from '../texts';
 import { fixPollutedSources, scanPollutedSources } from '../core/sources-normalizer';
 import { findIncompletePages, cleanIncompletePages } from '../core/incomplete-page-cleaner';
+import { needsLogHeaderMigration, migrateLogHeader } from '../core/log-header';
 
 export class AutoMaintainManager {
   private app: App;
@@ -249,11 +250,11 @@ export class AutoMaintainManager {
     if (this.lintScheduled) return;
     if (this.settings.periodicLint === 'off') return;
 
-    const intervalMs = this.settings.periodicLint === 'hourly'
-      ? 60 * 60 * 1000
-      : this.settings.periodicLint === 'daily'
-        ? 24 * 60 * 60 * 1000
-        : 7 * 24 * 60 * 60 * 1000;
+    const intervalMs = this.settings.periodicLint === 'daily'
+      ? 24 * 60 * 60 * 1000
+      : this.settings.periodicLint === 'weekly'
+        ? 7 * 24 * 60 * 60 * 1000
+        : 30 * 24 * 60 * 60 * 1000;
 
     this.lintIntervalId = this.plugin.registerInterval(
       window.setInterval(() => {
@@ -419,6 +420,25 @@ export class AutoMaintainManager {
     const hasIndex = await this.wikiEngine.tryReadFile(indexPath);
     const indexStatus = hasIndex ? '' : ' — index.md missing';
     console.debug(`[QuickFixes] Phase 4: Wiki health — ${pages.length} pages (entities=${entities}, concepts=${concepts}, sources=${sources})${indexStatus}`);
+
+    // ---- Phase 4.5: log.md old-format auto-migration (v1.22.2) ----
+    // Non-destructive: replaces the legacy single-line header with the
+    // new multi-line header (which now points to Operation History Panel).
+    // All existing ## [date time] entries are preserved.
+    try {
+      const logPath = `${wikiFolder}/log.md`;
+      const existingLog = await this.wikiEngine.tryReadFile(logPath);
+      const lang = this.settings.language;
+      if (existingLog && needsLogHeaderMigration(existingLog, lang)) {
+        const migrated = migrateLogHeader(existingLog, lang);
+        if (migrated !== null && migrated !== existingLog) {
+          await this.wikiEngine.createOrUpdateFile(logPath, migrated);
+          console.debug(`[QuickFixes] Phase 4.5: log.md header migrated to v1.22.2 format`);
+        }
+      }
+    } catch (e) {
+      console.warn('[QuickFixes] Phase 4.5 failed:', e);
+    }
 
     // ---- Phase 5: Build notice ----
     const structureLabel = structureOk

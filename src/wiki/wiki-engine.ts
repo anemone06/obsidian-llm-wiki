@@ -40,6 +40,7 @@ import { mergeDuplicatePages } from './lint/merge-duplicates';
 import { fixPollutedPage } from './lint/fix-polluted-page';
 import { ContradictionManager } from './contradictions';
 import { fixPollutedSources } from '../core/sources-normalizer';
+import { buildLogHeader } from '../core/log-header';
 import { UNIVERSAL_LINK_CONSTRAINTS } from './prompts/constraints';
 import { SourceAnalyzer } from './source-analyzer';
 import { TOKENS_PAGE_GENERATION, NOTICE_ABORT, NOTICE_RATE_LIMIT, NOTICE_NORMAL, PAGES_CACHE_TTL_MS, COMPATIBLE_SOURCE_EXTENSIONS } from '../constants';
@@ -1289,7 +1290,7 @@ export class WikiEngine {
       }
     }
 
-    const existingLog = await this.tryReadFile(logPath) || `# Wiki ${lang === 'zh' ? '操作日志' : 'Operation Log'}\n\n`;
+    const existingLog = await this.tryReadFile(logPath) || buildLogHeader(lang);
     await this.createOrUpdateFile(logPath, existingLog + entry);
   }
 
@@ -1334,7 +1335,7 @@ export class WikiEngine {
     try {
       let existingLog = await this.tryReadFile(logPath);
       if (!existingLog) {
-        existingLog = `# Wiki ${lang === 'zh' ? '操作日志' : 'Operation Log'}\n\n`;
+        existingLog = buildLogHeader(lang);
       }
       // Cap the existing log at a reasonable size to avoid Obsidian choking on
       // a multi-megabyte file. If existingLog + entry would exceed MAX_LOG_BYTES,
