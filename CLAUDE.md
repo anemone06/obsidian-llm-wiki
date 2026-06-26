@@ -4,7 +4,13 @@
 
 ---
 
-## Current Phase: v1.22.2 (released) → v1.23.0 (Graph Engine direction)
+## Current Phase: v1.22.3 (released) → v1.23.0 (Graph Engine direction)
+
+### Completed (v1.22.3) — Hotfix hardening (2026-06-26)
+- ✅ **log header detection hardened to language-agnostic structural marker.** Switched from text-based detection (`view operation history` / `操作历史`) to embedded `<!-- llm-wiki-log-header-start -->` HTML-comment marker. v1.22.2 log files auto-upgrade on next startup.
+- ✅ **log header strings consolidated into `src/texts/<lang>.ts`.** Removed 60 lines of duplicated `HEADER_LABELS` from `core/log-header.ts`. Translators and i18n-parity tests now cover them automatically.
+- ✅ **`generation_complete` no longer stamped onto `log.md` / `index.md` / `schema/`.** New `isInWikiContentFolder()` guard restricts `markPageComplete` to `wiki/{entities,concepts,sources}/...` only. 5 regression tests.
+- ✅ **Tests: 1064 passing.** +5 since v1.22.2.
 
 ### Completed (v1.22.2) — UX improvements + tech debt (2026-06-26)
 - ✅ **#204 — Auto Ingest blocking modal fixed.** New `onAutoIngestDone()` routes watch-mode completions to a configurable Notice (non-blocking) instead of IngestReportModal. `autoIngestNotificationLevel: 'notice' | 'modal'` setting with conditional UI dropdown.

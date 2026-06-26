@@ -14,6 +14,16 @@
 
 ---
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+Un Hotfix centrado que refuerza el mecanismo de encabezado de log de la v1.22.2 y evita la contaminación de frontmatter en archivos que no son de contenido.
+
+- **🔧 Detección del encabezado de log ahora agnóstica del idioma y robusta.** Cambio de detección basada en texto (que no funcionaba para DE/JA/KO/etc. y podía confundirse con el contenido natural de una entrada de log) a un marcador estructural de comentario HTML `<!-- llm-wiki-log-header-start -->` incrustado en el encabezado. Los archivos log v1.22.2 existentes se actualizan automáticamente en el próximo inicio.
+- **🧹 Cadenas del encabezado de log consolidadas en `src/texts/<lang>.ts`.** Las cuatro cadenas localizadas previamente duplicadas en `core/log-header.ts` ahora viven junto con todas las demás cadenas UI — los traductores y las pruebas de paridad las cubren automáticamente.
+- **🚫 `generation_complete` ya no se estampa en `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` antes llamaba a `markPageComplete` para **cada** escritura, lo que anteponía un bloque frontmatter completamente nuevo con `generation_complete: true` a archivos sin frontmatter — contaminación visible del cuerpo de log.md. La nueva guarda `isInWikiContentFolder()` restringe el estampado solo a `wiki/{entities,concepts,sources}/...`.
+
+Recomendamos actualizar — log.md ya no acumula frontmatter disperso con cada ejecución de corrección rápida, y la detección funciona en todos los idiomas sin casos especiales por idioma.
+
 **⚡ Aviso de actualización rápida：** Este proyecto evoluciona rápidamente – correcciones de errores, mejoras de rendimiento, nuevas funciones y optimizaciones de UX se publican con frecuencia. Recomendamos actualizar regularmente en Obsidian (**Configuración → Plugins comunitarios → Buscar actualizaciones**) o activar la actualización automática de plugins.
 
 ## 📑 Contents

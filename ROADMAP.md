@@ -2,11 +2,20 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.2 → 1.23.0 (PATCH released) | **Updated:** 2026-06-26
+**Version:** 1.22.3 → 1.23.0 (PATCH released) | **Updated:** 2026-06-26
 
 ---
 
 ## Current Status
+
+### Implemented (v1.22.3) — Hotfix hardening (2026-06-26)
+
+Three issues found in v1.22.2 user testing — kept in PATCH scope because all three are parity/latent-bug fixes:
+
+- ✅ **log header detection hardened to language-agnostic structural marker.** v1.22.2's text-based detection (`view operation history` / `操作历史`) broke for German/Japanese/Korean (would re-stamp with English header on every locale that didn't have its keyword) and false-matched when log entry bodies naturally contained the keyword phrase. Switched to `<!-- llm-wiki-log-header-start -->` HTML-comment marker embedded in the header. Existing v1.22.2 log files are auto-upgraded on next startup.
+- ✅ **log header strings consolidated into `src/texts/<lang>.ts`.** Four localised header strings previously duplicated in `core/log-header.ts` now live alongside every other UI string, so translators and i18n-parity tests cover them automatically.
+- ✅ **`generation_complete` no longer stamped onto `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` previously called `markPageComplete` for every write, which would prepend a brand-new frontmatter block (`---...generation_complete: true...---`) to files without frontmatter — visibly polluting log.md body on every QuickFix run. New `isInWikiContentFolder()` guard restricts the stamp to `wiki/{entities,concepts,sources}/...` only.
+- ✅ **Tests: 1064 passing.** +5 since v1.22.2 (5 path-rule guard regression tests).
 
 ### Implemented (v1.22.2) — UX improvements + tech debt (2026-06-26)
 

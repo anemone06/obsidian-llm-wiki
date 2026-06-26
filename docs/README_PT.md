@@ -182,6 +182,16 @@ Este PATCH melhora a UX de ingestão automática, localiza o registro de operaç
 - **🧹 Código morto removido.**
 - **♻️ Migração automática do cabeçalho do registro.**
 
+### v1.22.3 — 2026-06-26 (PATCH)
+
+Um Hotfix focado que fortalece o mecanismo de cabeçalho de log da v1.22.2 e evita poluição de frontmatter em arquivos que não são de conteúdo.
+
+- **🔧 Detecção de cabeçalho de log agora agnóstica de idioma e robusta.** Mudança da detecção baseada em texto (que não funcionava para DE/JA/KO/etc. e podia ser confundida pelo conteúdo natural de uma entrada de log) para um marcador estrutural de comentário HTML `<!-- llm-wiki-log-header-start -->` embutido no cabeçalho. Arquivos log v1.22.2 existentes são atualizados automaticamente no próximo arranque.
+- **🧹 Strings do cabeçalho de log consolidadas em `src/texts/<lang>.ts`.** As quatro strings localizadas previamente duplicadas em `core/log-header.ts` agora vivem junto com todas as outras strings UI — tradutores e testes de paridade as cobrem automaticamente.
+- **🚫 `generation_complete` não é mais carimbado em `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` antes chamava `markPageComplete` para **cada** escrita, o que prefixava um bloco de frontmatter totalmente novo com `generation_complete: true` em arquivos sem frontmatter — poluição visível do corpo do log.md. A nova guarda `isInWikiContentFolder()` restringe o carimbo apenas a `wiki/{entities,concepts,sources}/...`.
+
+Atualização recomendada — log.md não acumula mais frontmatter disperso a cada execução de correção rápida, e a detecção funciona em todos os idiomas sem casos especiais por idioma.
+
 Atualização recomendadaAtualização recomendada.
 
 ## ✨ Funcionalidades
