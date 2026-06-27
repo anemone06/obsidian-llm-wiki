@@ -110,6 +110,14 @@ startupCheck: boolean;
 autoSmartFix: boolean;
 autoIngestNotificationLevel: 'modal' | 'notice';
 
+  // v1.23.0: Phase 5.1.5 — first-run Welcome note. When enabled (default),
+  // the plugin detects tier on every onload (no vault state change =
+  // short-circuit) and creates <wikiFolder>/Welcome.md on Tier B transitions.
+  // Tier A users get a Notice only; Tier C users are silent. Setting is
+  // respected at all times — disabling stops both create-on-onload and the
+  // "Recreate Wiki Welcome Note" command.
+  createWelcomeNote: boolean;
+
   // Ingestion acceleration
   pageGenerationConcurrency: number;
   batchDelayMs: number;
@@ -527,6 +535,7 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   startupCheck: true,  // Issue #81: default ON for low-level format fixes
   autoSmartFix: false,
   autoIngestNotificationLevel: 'notice',  // v1.22.2: default to Notice (no blocking Modal) for auto-ingest
+  createWelcomeNote: true,  // v1.23.0: Phase 5.1.5 — Tier-B first-run Welcome note (D8: 1 EN template + LLM dynamic translation)
 
   // Ingestion acceleration (default: 3 parallel for most providers)
   pageGenerationConcurrency: 3,

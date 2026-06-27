@@ -122,6 +122,7 @@ describe('getActiveSourceTags (Issue #85 v7)', () => {
     autoSmartFix: false,
     autoIngestNotificationLevel: 'notice',
     slugCase: 'lower' as const,
+    createWelcomeNote: true,
   };
 
   it('returns the hardcoded VALID_SOURCE_TAGS list', () => {

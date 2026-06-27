@@ -650,4 +650,12 @@ export const ES_TEXTS = {
     historyCustomRangeTo: 'Hasta',
     historyCustomRangeApply: 'Aplicar',
     historyCustomRangeClear: 'Limpiar',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki: el vault está vacío. Crea tu primera nota fuente y ejecuta Ingest para empezar.',
+    welcomeNoteTierBNotice: 'Karpathy Wiki: se creó una nota Welcome. Ábrela para declarar tus dominios y elegir 2-3 notas fuente para sembrar el grafo de enlaces.',
+    welcomeNoteRecreateCommand: 'Recrear nota Welcome Wiki',
+    welcomeNoteRecreateCommandTooltip: 'Recrea la nota Welcome en <wikiFolder>/Welcome.md con los dominios actuales y la prueba de configuración LLM. El archivo existente se sobrescribe.',
+    welcomeNoteSettingsToggle: 'Crear nota Welcome Wiki en el primer inicio',
+    welcomeNoteSettingsToggleDesc: 'Cuando está habilitado, el plugin crea una nota Welcome Wiki la primera vez que detecta un vault existente sin wiki. Los usuarios Tier A (vault vacío) reciben un breve aviso; los usuarios Tier C (wiki existente) no se ven afectados.',
+    welcomeNoteRunConfigTest: 'Nota Welcome escrita en inglés. Abre Configuración → LLM Provider → Test Connection para localizarla en la próxima recreación.',
 } as const;

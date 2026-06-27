@@ -650,4 +650,12 @@ export const DE_TEXTS = {
     historyCustomRangeTo: 'Bis',
     historyCustomRangeApply: 'Anwenden',
     historyCustomRangeClear: 'Zurücksetzen',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki: Vault ist leer. Erstelle deine erste Quellennotiz und führe Ingest aus, um zu beginnen.',
+    welcomeNoteTierBNotice: 'Karpathy Wiki: Eine Welcome-Notiz wurde erstellt. Öffne sie, um deine Themenbereiche zu deklarieren und 2-3 Quellnotizen als Seed für den Link-Graphen auszuwählen.',
+    welcomeNoteRecreateCommand: 'Wiki-Willkommen-Notiz neu erstellen',
+    welcomeNoteRecreateCommandTooltip: 'Erstellt die Welcome-Notiz unter <wikiFolder>/Welcome.md mit aktuellen Themen-Seeds und LLM-Konfigurationstest neu. Existierende Datei wird überschrieben.',
+    welcomeNoteSettingsToggle: 'Wiki-Willkommen-Notiz beim ersten Start erstellen',
+    welcomeNoteSettingsToggleDesc: 'Wenn aktiviert, erstellt das Plugin eine Wiki-Willkommen-Notiz, wenn es zum ersten Mal einen bestehenden Vault ohne Wiki erkennt. Tier-A-Benutzer (leerer Vault) erhalten einen kurzen Hinweis; Tier-C-Benutzer (bestehendes Wiki) sind nicht betroffen.',
+    welcomeNoteRunConfigTest: 'Wiki-Willkommen-Notiz wurde auf Englisch geschrieben. Öffne Einstellungen → LLM Provider → Test Connection, um sie beim nächsten Erstellen zu lokalisieren.',
 } as const;

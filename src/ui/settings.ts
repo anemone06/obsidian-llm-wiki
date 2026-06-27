@@ -1004,5 +1004,14 @@ export class LLMWikiSettingTab extends PluginSettingTab {
         .setValue(this.tempSettings.autoSmartFix)
         .onChange((value) => { this.tempSettings.autoSmartFix = value; }));
 
+    // v1.23.0 Phase 5.1.5: first-run Welcome note toggle. Sits next to
+    // autoSmartFix because both are "auto behaviors on plugin load" knobs.
+    new Setting(containerEl)
+      .setName(this.getText('welcomeNoteSettingsToggle'))
+      .setDesc(this.getText('welcomeNoteSettingsToggleDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.tempSettings.createWelcomeNote)
+        .onChange((value) => { this.tempSettings.createWelcomeNote = value; }));
+
   }
 }

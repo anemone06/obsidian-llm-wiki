@@ -1,18 +1,32 @@
 // ensure-welcome-note.ts — v1.23.0 first-run Welcome note orchestrator
 //
 // Async side-effectful (file I/O). Glue between tier-detection,
-// smoke-test, and welcome-note-template. The caller (main.ts onload)
-// injects a real VaultAdapter over the Obsidian vault plus a smoke
-// test probe that calls the actual LLM client. Tests inject fakes.
+// smoke-test, welcome-note-template, and localize-welcome-note. The
+// caller (main.ts onload) injects a real VaultAdapter over the
+// Obsidian vault, a smoke test probe that calls the actual LLM
+// client, and a language string. Tests inject fakes.
 //
 // The function does NOT show Notices — that is the caller's
 // responsibility (main.ts hooks into the Obsidian Notice system).
 // We return the OnboardingAction so the caller can decide what UI
 // to surface (Notice, Modal, ribbon, etc.).
+//
+// D8 (user-locked 2026-06-23): the Welcome note body is built in
+// English by buildWelcomeNote, then translated into the user's
+// wikiLanguage by localizeWelcomeNote (which uses the LLM). If the
+// LLM call fails, the English body is written and the caller can
+// surface a "Run Configuration Test" Notice.
 
 import { decideOnboardingAction, type VaultProbe, type OnboardingAction, type UserTier } from './tier-detection';
 import { smokeTest, type LlmConfigStatus } from './smoke-test';
 import { buildWelcomeNote, type VaultCandidate } from './welcome-note-template';
+
+// Re-export VaultCandidate so callers (main.ts wiring, tests) can name
+// the candidate type alongside the adapter without importing from
+// welcome-note-template directly.
+export type { VaultCandidate } from './welcome-note-template';
+import { localizeWelcomeNote, type LocalizeResult } from './localize-welcome-note';
+import type { LLMClient } from '../types';
 
 /**
  * Minimal vault contract that ensure-welcome-note needs. The real
@@ -30,7 +44,8 @@ export interface EnsureWelcomeNoteArgs {
     wikiFolder: string;
     createWelcomeNote: boolean;
   };
-  i18n: { t: (key: string) => string };
+  /** Language to translate the Welcome body into. Pass settings.wikiLanguage. */
+  targetLanguage: string;
   createdAt: string;
   /** Probe function passed to smokeTest. Production: minimal LLM call. */
   smokeTestProbe: () => Promise<LlmConfigStatus>;
@@ -41,6 +56,14 @@ export interface EnsureWelcomeNoteArgs {
    * performance; tests pass explicit fixtures.
    */
   vaultCandidates?: VaultCandidate[];
+  /**
+   * Optional LLM client for D8 dynamic translation. When omitted, the
+   * English body is written directly (Tier A users with no LLM get
+   * an English Welcome note regardless).
+   */
+  llmClient?: LLMClient;
+  /** Model name to use for the translation. Required if llmClient is provided. */
+  model?: string;
 }
 
 export interface EnsureResult {
@@ -48,10 +71,21 @@ export interface EnsureResult {
   action: OnboardingAction;
   /** Path to the Welcome note if it was created. Undefined otherwise. */
   welcomeNotePath?: string;
+  /**
+   * Set when a Welcome note was written. `localized=true` means the body
+   * was LLM-translated to targetLanguage; `false` means the English
+   * fallback was used (LLM not configured, or translation failed).
+   * Caller can use this to decide whether to show a "Run Configuration
+   * Test" Notice.
+   */
+  localizeResult?: LocalizeResult;
 }
 
 export async function ensureWelcomeNote(args: EnsureWelcomeNoteArgs): Promise<EnsureResult> {
-  const { vault, settings, i18n, createdAt, smokeTestProbe, vaultCandidates } = args;
+  const {
+    vault, settings, targetLanguage, createdAt, smokeTestProbe,
+    vaultCandidates, llmClient, model,
+  } = args;
 
   // Step 1: probe vault state.
   const probe = await probeVaultState(vault, settings.wikiFolder, vaultCandidates);
@@ -75,16 +109,43 @@ export async function ensureWelcomeNote(args: EnsureWelcomeNoteArgs): Promise<En
   const candidates = vaultCandidates ?? await vault.listMarkdown();
   // Step 7: run LLM smoke test.
   const llmConfig = await smokeTest(smokeTestProbe);
-  // Step 8: build the Welcome note body.
-  const body = buildWelcomeNote({
+  // Step 8: build the English Welcome note body.
+  const englishBody = buildWelcomeNote({
     candidates,
     llmConfig,
-    i18n,
     createdAt,
   });
-  // Step 9: write to vault.
-  await vault.create(welcomePath, body);
-  return { tier: action.tier, action, welcomeNotePath: welcomePath };
+  // Step 9: D8 dynamic LLM translation. If no LLM client, or LLM smoke
+  // test failed, fall back to English. We pass `llmConfig.ok` as a
+  // pre-check so we don't waste an LLM call on a clearly-broken config.
+  let bodyToWrite: string;
+  let localizeResult: LocalizeResult | undefined;
+  if (llmClient && model && llmConfig.ok) {
+    localizeResult = await localizeWelcomeNote({
+      englishBody,
+      targetLanguage,
+      llmClient,
+      model,
+    });
+    bodyToWrite = localizeResult.body;
+  } else {
+    // No LLM client, no model, or smoke test failed — write English.
+    bodyToWrite = englishBody;
+    localizeResult = {
+      ok: false,
+      body: englishBody,
+      localized: false,
+      error: llmConfig.ok ? undefined : (llmConfig.error ?? 'LLM not configured'),
+    };
+  }
+  // Step 10: write to vault.
+  await vault.create(welcomePath, bodyToWrite);
+  return {
+    tier: action.tier,
+    action,
+    welcomeNotePath: welcomePath,
+    localizeResult,
+  };
 }
 
 async function probeVaultState(

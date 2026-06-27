@@ -4,39 +4,18 @@
 // and writes it to the vault. Combines:
 //   - tier-detection (decide tier + onboarding action)
 //   - smoke-test (LLM smoke check)
-//   - welcome-note-template (render markdown)
+//   - welcome-note-template (render English markdown body)
+//   - localize-welcome-note (D8: LLM-translate to user language)
 //
 // Dependency-inverted: instead of touching the Obsidian vault
 // directly, the function takes a VaultAdapter interface that the
 // caller (main.ts onload) implements with the real app.vault. Tests
 // fake the adapter to assert behavior across the 3 tiers.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ensureWelcomeNote } from '../../core/ensure-welcome-note';
-import type { VaultAdapter, VaultCandidate } from '../../core/ensure-welcome-note';
-
-// Test i18n table — mirrors production English locale.
-const testI18n = {
-  t: (key: string): string => {
-    const table: Record<string, string> = {
-      'welcome.title': 'Welcome to your Wiki',
-      'welcome.intro': 'Welcome intro.',
-      'welcome.domains': 'Domains',
-      'welcome.domains.description': 'List domains.',
-      'welcome.initial_source_suggestions': 'Initial Source Suggestions',
-      'welcome.initial_source_suggestions.description': 'Pick 2-3.',
-      'welcome.wiki_scope': 'Wiki Scope',
-      'welcome.wiki_scope.description': 'Describe.',
-      'welcome.configuration_test': 'Configuration Test',
-      'welcome.config_ok': 'LLM Configuration: OK',
-      'welcome.config_provider': 'Provider',
-      'welcome.config_model': 'Model',
-      'welcome.config_failed': 'LLM Configuration: Failed',
-      'welcome.config_error': 'Error',
-    };
-    return table[key] ?? key;
-  },
-};
+import type { VaultAdapter } from '../../core/ensure-welcome-note';
+import type { VaultCandidate } from '../../core/welcome-note-template';
 
 // Test vault adapter — records what was written.
 function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter & { written: Map<string, string> } {
@@ -56,13 +35,25 @@ function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter 
   return adapter;
 }
 
+// Helper: returns a fake LLM client that always "translates" by
+// prepending a marker. Tests can inspect the marker to confirm
+// the translation was actually invoked.
+function makeTranslatingClient(marker = '[ZH]') {
+  return {
+    createMessage: vi.fn().mockImplementation(async (params: { messages: Array<{role: string; content: string}> }) => {
+      const userMsg = params.messages.find(m => m.role === 'user')?.content ?? '';
+      return JSON.stringify({ translated: marker + userMsg });
+    }),
+  };
+}
+
 describe('ensureWelcomeNote — Tier A (empty vault)', () => {
   it('does NOT create welcome note (no source notes to seed from)', async () => {
     const vault = makeFakeVault();
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });
@@ -80,7 +71,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
       vaultCandidates: candidates,
@@ -101,7 +92,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
       vaultCandidates: candidates,
@@ -118,7 +109,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: false },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
       vaultCandidates: candidates,
@@ -134,7 +125,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'API key not configured' }),
       vaultCandidates: candidates,
@@ -145,13 +136,121 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
   });
 });
 
+describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
+  it('translates the body to targetLanguage when LLM client is provided', async () => {
+    const vault = makeFakeVault();
+    const candidates: VaultCandidate[] = [
+      { path: 'notes/a.md', title: 'A', size: 5000 },
+    ];
+    const llmClient = makeTranslatingClient('[TRANSLATED]');
+    await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'zh',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
+      vaultCandidates: candidates,
+      llmClient: llmClient,
+      model: 'gpt-4o-mini',
+    });
+    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(content).toMatch(/\[TRANSLATED\]/);
+    expect(llmClient.createMessage).toHaveBeenCalled();
+  });
+
+  it('skips LLM translation when targetLanguage is en (writes English directly)', async () => {
+    const vault = makeFakeVault();
+    const candidates: VaultCandidate[] = [
+      { path: 'notes/a.md', title: 'A', size: 5000 },
+    ];
+    const llmClient = makeTranslatingClient('[SHOULD_NOT_APPEAR]');
+    await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'en',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
+      vaultCandidates: candidates,
+      llmClient: llmClient,
+      model: 'gpt-4o-mini',
+    });
+    expect(llmClient.createMessage).not.toHaveBeenCalled();
+    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(content).not.toMatch(/SHOULD_NOT_APPEAR/);
+  });
+
+  it('falls back to English when LLM client throws during translation', async () => {
+    const vault = makeFakeVault();
+    const candidates: VaultCandidate[] = [
+      { path: 'notes/a.md', title: 'A', size: 5000 },
+    ];
+    const llmClient = {
+      createMessage: vi.fn().mockRejectedValue(new Error('rate limit')),
+    };
+    const result = await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'zh',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
+      vaultCandidates: candidates,
+      llmClient: llmClient,
+      model: 'gpt-4o-mini',
+    });
+    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(content).toMatch(/Welcome to your Wiki/);  // English fallback
+    expect(result.localizeResult?.localized).toBe(false);
+    expect(result.localizeResult?.error).toMatch(/rate limit/);
+  });
+
+  it('skips LLM translation when smoke test failed (no wasted LLM call)', async () => {
+    const vault = makeFakeVault();
+    const candidates: VaultCandidate[] = [
+      { path: 'notes/a.md', title: 'A', size: 5000 },
+    ];
+    const llmClient = makeTranslatingClient();
+    await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'zh',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: false, error: 'API key not configured' }),
+      vaultCandidates: candidates,
+      llmClient: llmClient,
+      model: 'gpt-4o-mini',
+    });
+    expect(llmClient.createMessage).not.toHaveBeenCalled();
+    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(content).toMatch(/Welcome to your Wiki/);  // English, not Chinese
+  });
+
+  it('writes English without LLM client when none is provided', async () => {
+    const vault = makeFakeVault();
+    const candidates: VaultCandidate[] = [
+      { path: 'notes/a.md', title: 'A', size: 5000 },
+    ];
+    const result = await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'zh',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
+      vaultCandidates: candidates,
+      // no llmClient
+    });
+    expect(result.localizeResult?.localized).toBe(false);
+    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(content).toMatch(/Welcome to your Wiki/);
+  });
+});
+
 describe('ensureWelcomeNote — Tier C (existing wiki)', () => {
   it('does NOT create welcome note when wiki already exists', async () => {
     const vault = makeFakeVault({ 'wiki/entities/A.md': '# Existing entity' });
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
       vaultCandidates: [],
@@ -166,7 +265,7 @@ describe('ensureWelcomeNote — return value', () => {
     const result = await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      i18n: testI18n,
+      targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });

@@ -652,4 +652,12 @@ export const ZH_HANT_TEXTS = {
     historyCustomRangeTo: '結束',
     historyCustomRangeApply: '應用',
     historyCustomRangeClear: '清除',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki：vault 為空。請建立你的第一個 source note 並執行 Ingest 以開始使用。',
+    welcomeNoteTierBNotice: 'Karpathy Wiki：已建立 Welcome note。開啟它以宣告你的領域並選擇 2-3 個 source note 來為連結圖提供種子。',
+    welcomeNoteRecreateCommand: '重建 Wiki Welcome note',
+    welcomeNoteRecreateCommandTooltip: '使用目前的 domain seed 和 LLM 配置測試在 <wikiFolder>/Welcome.md 重新建立 Welcome note。已存在的檔案將被覆蓋。',
+    welcomeNoteSettingsToggle: '首次執行時建立 Wiki Welcome note',
+    welcomeNoteSettingsToggleDesc: '啟用時，外掛在偵測到現有 vault 但沒有 wiki 時首次建立 Wiki Welcome note。Tier A 使用者（空 vault）收到簡要通知；Tier C 使用者（已有 wiki）不受影響。',
+    welcomeNoteRunConfigTest: 'Welcome note 已用英文寫入。開啟 設定 → LLM Provider → Test Connection 以便下次重建時本地化。',
 } as const;

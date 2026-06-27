@@ -1,9 +1,10 @@
 // welcome-note-template.ts — Tier-B first-run Welcome note generator
 //
-// Pure function. Renders the full markdown body of the v1.23.0
+// Pure function. Renders the English-template body of the v1.23.0
 // Welcome note (frontmatter + 4 sections + closing auto-generated
-// marker). The caller passes vault candidates, LLM smoke-test result,
-// and an i18n translator. No I/O.
+// marker). The caller passes vault candidates and LLM smoke-test
+// result. No I/O. No i18n — D8 decision: 1 English template, LLM
+// translates to user language at write time via localize-welcome-note.ts.
 //
 // The Welcome note is the Tier-B onboarding artifact (per the
 // v1.23.0 three-tier design, refined 2026-06-27). Tier A users
@@ -25,6 +26,10 @@
 // Bigger notes likely have more substantive content, so they're
 // better candidates for "ingest first to give the link graph
 // structure". This is intentionally simple — the user can rearrange.
+//
+// D8 NOTE: All section headers and descriptions are English hardcoded
+// here. Do NOT extract these into per-locale files. The LLM translator
+// (localize-welcome-note.ts) will produce the localized version.
 
 export interface VaultCandidate {
   /** Vault-relative path. Becomes the wikilink target in the suggestion. */
@@ -46,8 +51,6 @@ export interface LlmConfigStatus {
 export interface BuildWelcomeNoteArgs {
   candidates: VaultCandidate[];
   llmConfig: LlmConfigStatus;
-  /** I18n translator. Should resolve keys like 'welcome.domains' to localized strings. */
-  i18n: { t: (key: string) => string };
   /** ISO date for the frontmatter `created` field. */
   createdAt: string;
 }
@@ -55,16 +58,17 @@ export interface BuildWelcomeNoteArgs {
 const CANDIDATE_LIMIT = 10;
 
 export function buildWelcomeNote(args: BuildWelcomeNoteArgs): string {
-  const { candidates, llmConfig, i18n, createdAt } = args;
-  const t = i18n.t;
+  const { candidates, llmConfig, createdAt } = args;
 
   const frontmatter = renderFrontmatter(createdAt);
-  const title = t('welcome.title');
-  const intro = t('welcome.intro');
-  const domainsSection = renderDomainsSection(t);
-  const candidatesSection = renderCandidatesSection(candidates, t);
-  const scopeSection = renderScopeSection(t);
-  const configSection = renderConfigSection(llmConfig, t);
+  const title = 'Welcome to your Wiki';
+  const intro = 'This note is the **founding declaration** for your wiki. ' +
+    'Edit it freely to define your domain scope and seed the link graph. ' +
+    'After saving, run Ingest on 2-3 source notes to bootstrap the wiki.';
+  const domainsSection = renderDomainsSection();
+  const candidatesSection = renderCandidatesSection(candidates);
+  const scopeSection = renderScopeSection();
+  const configSection = renderConfigSection(llmConfig);
   const closing = '<!-- end auto-generated -->';
 
   const parts = [
@@ -91,11 +95,12 @@ function renderFrontmatter(createdAt: string): string {
   ].join('\n');
 }
 
-function renderDomainsSection(t: (k: string) => string): string {
+function renderDomainsSection(): string {
   return [
-    `## ${t('welcome.domains')}`,
+    '## Domains',
     '',
-    t('welcome.domains.description'),
+    'List the domains this wiki should cover, one per line. ' +
+      'Each becomes a tag category and a query-time retrieval basin.',
     '',
     `- (your domain 1)`,
     `- (your domain 2)`,
@@ -103,9 +108,11 @@ function renderDomainsSection(t: (k: string) => string): string {
   ].join('\n');
 }
 
-function renderCandidatesSection(candidates: VaultCandidate[], t: (k: string) => string): string {
-  const header = `## ${t('welcome.initial_source_suggestions')}`;
-  const description = t('welcome.initial_source_suggestions.description');
+function renderCandidatesSection(candidates: VaultCandidate[]): string {
+  const header = '## Initial Source Suggestions';
+  const description =
+    'Pick 2-3 of these to ingest first — they give the link graph enough ' +
+    'structure for PPR retrieval to outperform pure keyword match.';
 
   // Sort by size descending — bigger notes likely have more content.
   const sorted = [...candidates]
@@ -126,29 +133,30 @@ function renderCandidatesSection(candidates: VaultCandidate[], t: (k: string) =>
   return [header, '', description, '', list].join('\n');
 }
 
-function renderScopeSection(t: (k: string) => string): string {
+function renderScopeSection(): string {
   return [
-    `## ${t('welcome.wiki_scope')}`,
+    '## Wiki Scope',
     '',
-    t('welcome.wiki_scope.description'),
+    'Describe in 1-2 sentences what this wiki covers. ' +
+      'The LLM reads this when ingesting to understand context.',
     '',
     '> (your wiki scope — 1-2 sentences)',
   ].join('\n');
 }
 
-function renderConfigSection(llmConfig: LlmConfigStatus, t: (k: string) => string): string {
-  const header = `## ${t('welcome.configuration_test')}`;
+function renderConfigSection(llmConfig: LlmConfigStatus): string {
+  const header = '## Configuration Test';
   const openMarker = '<!-- auto-generated by plugin: do not edit -->';
 
   let body: string;
   if (llmConfig.ok) {
-    const status = `✅ ${t('welcome.config_ok')}`;
-    const provider = `${t('welcome.config_provider')}: ${llmConfig.provider ?? 'unknown'}`;
-    const model = `${t('welcome.config_model')}: ${llmConfig.model ?? 'unknown'}`;
+    const status = '✅ LLM Configuration: OK';
+    const provider = `Provider: ${llmConfig.provider ?? 'unknown'}`;
+    const model = `Model: ${llmConfig.model ?? 'unknown'}`;
     body = [status, provider, model].join('\n');
   } else {
-    const status = `⚠️ ${t('welcome.config_failed')}`;
-    const error = `${t('welcome.config_error')}: ${llmConfig.error ?? 'unknown'}`;
+    const status = '⚠️ LLM Configuration: Failed';
+    const error = `Error: ${llmConfig.error ?? 'unknown'}`;
     body = [status, error].join('\n');
   }
 

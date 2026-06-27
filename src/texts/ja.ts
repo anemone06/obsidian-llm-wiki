@@ -650,4 +650,12 @@ export const JA_TEXTS = {
     historyCustomRangeTo: '終了',
     historyCustomRangeApply: '適用',
     historyCustomRangeClear: 'クリア',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki：vault が空です。最初のソースノートを作成して Ingest を実行してください。',
+    welcomeNoteTierBNotice: 'Karpathy Wiki：Welcome note を作成しました。開いてドメインを宣言し、2-3 個のソースノートを選んでリンクグラフのシードとしてください。',
+    welcomeNoteRecreateCommand: 'Wiki Welcome note を再作成',
+    welcomeNoteRecreateCommandTooltip: '現在のドメインシードと LLM 設定テストで <wikiFolder>/Welcome.md に Welcome note を再作成します。既存ファイルは上書きされます。',
+    welcomeNoteSettingsToggle: '初回実行時に Wiki Welcome note を作成',
+    welcomeNoteSettingsToggleDesc: '有効にすると、プラグインは wiki がない既存 vault を検出したときに初めて Wiki Welcome note を作成します。Tier A ユーザー（空 vault）は簡単な通知を受け取り、Tier C ユーザー（既存 wiki）は影響を受けません。',
+    welcomeNoteRunConfigTest: 'Welcome note は英語で書き込まれました。次回の再作成時にローカライズするには、設定 → LLM Provider → Test Connection を開いてください。',
 } as const;

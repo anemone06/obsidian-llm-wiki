@@ -650,4 +650,14 @@ export const FR_TEXTS = {
     historyCustomRangeTo: 'Au',
     historyCustomRangeApply: 'Appliquer',
     historyCustomRangeClear: 'Effacer',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    // Welcome content (5 sections + 14 keys) is LLM-dynamically translated at write time per D8.
+    // Only plugin UI surfaces are localized; no hardcoded 10-language template.
+    welcomeNoteTierANotice: 'Karpathy Wiki : le vault est vide. Créez votre première note source et lancez Ingest pour commencer.',
+    welcomeNoteTierBNotice: 'Karpathy Wiki : une note Welcome a été créée. Ouvrez-la pour déclarer vos domaines et choisir 2-3 notes sources pour amorcer le graphe de liens.',
+    welcomeNoteRecreateCommand: 'Recréer la note Welcome Wiki',
+    welcomeNoteRecreateCommandTooltip: 'Recrée la note Welcome dans <wikiFolder>/Welcome.md avec les domaines actuels et le test de configuration LLM. Le fichier existant est écrasé.',
+    welcomeNoteSettingsToggle: 'Créer une note Welcome Wiki au premier lancement',
+    welcomeNoteSettingsToggleDesc: 'Quand activé, le plugin crée une note Welcome Wiki la première fois qu\'il détecte un vault existant sans wiki. Les utilisateurs Tier A (vault vide) reçoivent un bref avis ; les utilisateurs Tier C (wiki existant) ne sont pas affectés.',
+    welcomeNoteRunConfigTest: 'Note Welcome écrite en anglais. Ouvre Paramètres → LLM Provider → Test Connection pour la localiser à la prochaine recréation.',
 } as const;

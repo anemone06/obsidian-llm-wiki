@@ -651,4 +651,12 @@ export const KO_TEXTS = {
     historyCustomRangeTo: '종료',
     historyCustomRangeApply: '적용',
     historyCustomRangeClear: '지우기',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki: vault가 비어 있습니다. 첫 번째 소스 노트를 만들고 Ingest를 실행하여 시작하세요.',
+    welcomeNoteTierBNotice: 'Karpathy Wiki: Welcome 노트를 만들었습니다. 열어 도메인을 선언하고 링크 그래프의 시드로 사용할 2-3 개 소스 노트를 선택하세요.',
+    welcomeNoteRecreateCommand: 'Wiki Welcome 노트 재생성',
+    welcomeNoteRecreateCommandTooltip: '현재 도메인 시드와 LLM 구성 테스트로 <wikiFolder>/Welcome.md에 Welcome 노트를 재생성합니다. 기존 파일은 덮어씁니다.',
+    welcomeNoteSettingsToggle: '첫 실행 시 Wiki Welcome 노트 생성',
+    welcomeNoteSettingsToggleDesc: '활성화하면 플러그인은 wiki가 없는 기존 vault를 처음 감지할 때 Wiki Welcome 노트를 생성합니다. Tier A 사용자(빈 vault)는 간략한 알림을 받고 Tier C 사용자(기존 wiki)는 영향을 받지 않습니다.',
+    welcomeNoteRunConfigTest: 'Welcome 노트가 영어로 작성되었습니다. 다음 재생성 시 현지화하려면 설정 → LLM Provider → Test Connection을 여세요.',
 } as const;

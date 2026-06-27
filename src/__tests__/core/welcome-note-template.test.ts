@@ -1,47 +1,25 @@
 // Pure-function tests for welcome-note-template.ts
 //
 // buildWelcomeNote is a pure function that produces the full
-// markdown body of the Welcome note (frontmatter + 5 sections).
-// The caller passes candidates (vault notes to suggest as seeds),
-// LLM smoke-test result, and an i18n translator.
+// English-template markdown body of the Welcome note (frontmatter +
+// 5 sections). The caller passes candidates (vault notes to suggest
+// as seeds) and LLM smoke-test result.
 //
 // This is a Tier-B-only artifact: Tier A users don't get a Welcome
 // note, Tier C users don't get one either. The function assumes
 // "Tier B: create Welcome note" is the desired behavior.
+//
+// D8: output is always English. Localization is the caller's
+// responsibility (see core/localize-welcome-note.ts).
 
 import { describe, it, expect } from 'vitest';
 import { buildWelcomeNote, type VaultCandidate } from '../../core/welcome-note-template';
-
-// Test-local i18n table — mirrors the production English locale so
-// the rendered output matches what the user will see.
-const testI18n: { t: (key: string) => string } = {
-  t: (key: string): string => {
-    const table: Record<string, string> = {
-      'welcome.title': 'Welcome to your Wiki',
-      'welcome.intro': 'This note is the **founding declaration** for your wiki. Edit it freely to define your domain scope and seed the link graph.',
-      'welcome.domains': 'Domains',
-      'welcome.domains.description': 'List the domains this wiki should cover, one per line. Each becomes a tag category and a query-time retrieval basin.',
-      'welcome.initial_source_suggestions': 'Initial Source Suggestions',
-      'welcome.initial_source_suggestions.description': 'Pick 2-3 of these to ingest first — they give the link graph enough structure for PPR retrieval to outperform pure keyword match.',
-      'welcome.wiki_scope': 'Wiki Scope',
-      'welcome.wiki_scope.description': 'Describe in 1-2 sentences what this wiki covers. The LLM reads this when ingesting to understand context.',
-      'welcome.configuration_test': 'Configuration Test',
-      'welcome.config_ok': 'LLM Configuration: OK',
-      'welcome.config_provider': 'Provider',
-      'welcome.config_model': 'Model',
-      'welcome.config_failed': 'LLM Configuration: Failed',
-      'welcome.config_error': 'Error',
-    };
-    return table[key] ?? key;
-  },
-};
 
 describe('buildWelcomeNote — frontmatter', () => {
   it('always sets type: welcome in frontmatter', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/^---/);
@@ -52,7 +30,6 @@ describe('buildWelcomeNote — frontmatter', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/created:\s*2026-06-27/);
@@ -62,7 +39,6 @@ describe('buildWelcomeNote — frontmatter', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/^---[\s\S]*?---\n\n#\s+Welcome/);
@@ -74,23 +50,11 @@ describe('buildWelcomeNote — ## Domains section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/##\s+Domains/);
     expect(body).toMatch(/-\s*\(your domain 1\)/);
     expect(body).toMatch(/-\s*\(your domain 3\)/);
-  });
-
-  it('translates the Domains section header when i18n.t is provided', () => {
-    const fr: { t: (k: string) => string } = { t: (k) => k === 'welcome.domains' ? 'Domaines' : k };
-    const body = buildWelcomeNote({
-      candidates: [],
-      llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: fr,
-      createdAt: '2026-06-27',
-    });
-    expect(body).toMatch(/##\s+Domaines/);
   });
 });
 
@@ -104,7 +68,6 @@ describe('buildWelcomeNote — ## Initial Source Suggestions section', () => {
     const body = buildWelcomeNote({
       candidates,
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     // Cap at 10.
@@ -119,7 +82,6 @@ describe('buildWelcomeNote — ## Initial Source Suggestions section', () => {
     const body = buildWelcomeNote({
       candidates,
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/- \[[ ]\] \[\[notes\/cardiology\.md\]\]/);
@@ -134,7 +96,6 @@ describe('buildWelcomeNote — ## Initial Source Suggestions section', () => {
     const body = buildWelcomeNote({
       candidates,
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     const bigIdx = body.indexOf('big.md');
@@ -149,7 +110,6 @@ describe('buildWelcomeNote — ## Initial Source Suggestions section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     // Section may still be present (as instruction-only), but it
@@ -166,7 +126,6 @@ describe('buildWelcomeNote — ## Wiki Scope section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/##\s+Wiki Scope/);
@@ -179,7 +138,6 @@ describe('buildWelcomeNote — ## Configuration Test section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/##\s+Configuration Test/);
@@ -192,7 +150,6 @@ describe('buildWelcomeNote — ## Configuration Test section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: false, error: 'API key not configured' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/⚠/);
@@ -203,7 +160,6 @@ describe('buildWelcomeNote — ## Configuration Test section', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/<!--\s*auto-generated[\s\S]*?-->/);
@@ -216,7 +172,6 @@ describe('buildWelcomeNote — structural invariants', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     expect(body).toMatch(/end auto-generated -->/);
@@ -226,7 +181,6 @@ describe('buildWelcomeNote — structural invariants', () => {
     const body = buildWelcomeNote({
       candidates: [],
       llmConfig: { ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' },
-      i18n: testI18n,
       createdAt: '2026-06-27',
     });
     const domainsIdx = body.indexOf('## Domains');
