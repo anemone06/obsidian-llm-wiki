@@ -481,46 +481,49 @@ export class FixReportModal extends Modal {
  * in-place ingest avoids breaking the source-path provenance).
  */
 export class MultiFileSuggestModal extends Modal {
-  onConfirm: (files: TFile[]) => void;
+  /** The shared ingest queue. Modal reads + subscribes; never owns
+   * the data. */
+  private ingestQueue: import('../core/ingest-queue').IngestQueue;
+  /** Folder name used to filter wiki files out of the candidate set.
+   * Comes from settings (the user-configurable wiki folder). */
   private wikiFolder: string;
-  /**
-   * Async check whether a file has already been ingested. Optional —
-   * if not provided the modal shows files without an "ingested"
-   * marker (no UX regression; the in-batch dedup is independent).
-   */
-  private isAlreadyIngested: ((file: TFile) => Promise<boolean>) | null;
-  /** Selected files, deduplicated. Order is the order the user clicked. */
-  private selected: TFile[] = [];
-  private available: TFile[] = [];
-  /** Files the user has already ingested (memoized result of the callback). */
-  private alreadyIngestedSet: Set<string> = new Set();
+  /** Called when the user clicks "Add to queue" with the current
+   * selection of files to enqueue. main.ts wires this to its
+   * `runBatchIngest` so the worker picks them up. If null, the
+   * button is hidden and the user is expected to drive ingest
+   * from elsewhere (e.g. for tests). */
+  private onStartIngest: ((files: TFile[]) => void) | null;
   private leftEl!: HTMLElement;
   private rightEl!: HTMLElement;
   private counterEl!: HTMLElement;
-  private confirmBtn!: HTMLButtonElement;
-  private clearBtn!: HTMLButtonElement;
   private searchInput!: HTMLInputElement;
+  private confirmBtn!: HTMLButtonElement;
   /**
-   * Nested folder tree built once in onOpen from the available
-   * TFiles. Single-element array containing the synthetic root, or
-   * empty when no files are available. Recursive walk in
-   * renderLeftPane produces the Obsidian-file-explorer-style
-   * nested <details> UI. v1.23.0 fix (2026-06-28): the previous
-   * flat Map<string, TFile[]> collapsed 3+ levels of nesting into a
-   * single row.
+   * Unsubscribe function returned by `ingestQueue.subscribe`. Called
+   * in onClose to detach the listener so a re-opened modal doesn't
+   * fire on a dead DOM.
+   */
+  private unsubscribeQueue: (() => void) | null = null;
+  /**
+   * Nested folder tree built once in onOpen. Recursive walk in
+   * buildLeftPane produces the Obsidian-file-explorer-style
+   * nested <details> UI. The left pane DOM is built ONCE per
+   * onOpen; subsequent updates are in-place via
+   * `updateLeftPaneSelections` so user-collapsed folders stay
+   * collapsed.
    */
   private treeRoots: import('../core/build-folder-tree').TreeNode[] = [];
 
   constructor(
     app: App,
     wikiFolder: string,
-    onConfirm: (files: TFile[]) => void,
-    isAlreadyIngested?: (file: TFile) => Promise<boolean>,
+    ingestQueue: import('../core/ingest-queue').IngestQueue,
+    onStartIngest?: (files: TFile[]) => void,
   ) {
     super(app);
     this.wikiFolder = wikiFolder;
-    this.onConfirm = onConfirm;
-    this.isAlreadyIngested = isAlreadyIngested ?? null;
+    this.ingestQueue = ingestQueue;
+    this.onStartIngest = onStartIngest ?? null;
   }
 
   onOpen(): void {
@@ -535,22 +538,19 @@ export class MultiFileSuggestModal extends Modal {
     contentEl.addClass('llm-wiki-multi-file-modal');
     modalEl.addClass('llm-wiki-multi-file-modal');
 
-    // Initial: load all candidate files (non-wiki, non-configDir).
-    this.available = this.app.vault.getMarkdownFiles()
+    // Build the candidate list (non-wiki, non-configDir) and the
+    // nested folder tree ONCE. The tree is then rendered once and
+    // updated in place — re-rendering on every queue change would
+    // close every <details> and force the user to re-expand
+    // folders (the bug v2 fixes).
+    const available = this.app.vault.getMarkdownFiles()
       .filter(f => !f.path.startsWith(this.wikiFolder) && !f.path.startsWith(this.app.vault.configDir))
       .sort((a, b) => a.path.localeCompare(b.path));
-
-    // Build a nested folder tree (single pass, sorted). Pure function
-    // — see core/build-folder-tree.ts for the algorithm + tests.
-    this.treeRoots = buildFolderTree(this.available);
-
-    // Pre-compute the already-ingested set so the tree can show
-    // "(ingested)" markers without round-tripping async per row.
-    void this.computeIngestedSet();
+    this.treeRoots = buildFolderTree(available);
 
     contentEl.createEl('h3', { text: 'Ingest multiple files' });
     contentEl.createEl('p', {
-      text: 'Select source notes to ingest. They are processed in order; no files are moved.',
+      text: 'Select source notes to ingest. The right pane shows the live ingest queue and progress.',
       cls: 'llm-wiki-modal-hint',
     });
 
@@ -559,7 +559,10 @@ export class MultiFileSuggestModal extends Modal {
       placeholder: 'Filter files by path…',
       cls: 'llm-wiki-multi-file-search',
     });
-    this.searchInput.addEventListener('input', () => this.renderLeftPane());
+    // Search re-runs the LEFT pane only (the tree's visible
+    // set changes). The right pane is driven by the queue, not
+    // the search query.
+    this.searchInput.addEventListener('input', () => this.buildLeftPane());
 
     const panes = contentEl.createDiv({ cls: 'llm-wiki-multi-file-panes' });
     this.leftEl = panes.createDiv({ cls: 'llm-wiki-multi-file-left' });
@@ -567,33 +570,34 @@ export class MultiFileSuggestModal extends Modal {
 
     const actions = contentEl.createDiv({ cls: 'llm-wiki-multi-file-actions' });
     this.counterEl = actions.createEl('span', { cls: 'llm-wiki-multi-file-count' });
-    this.clearBtn = actions.createEl('button', { text: 'Clear queue' });
-    this.clearBtn.addEventListener('click', () => {
-      this.selected = [];
-      this.renderLeftPane();
-      this.renderRightPane();
-    });
-    this.confirmBtn = actions.createEl('button', { text: 'Start ingest', cls: 'mod-cta' });
+    this.confirmBtn = actions.createEl('button', { text: 'Add to queue', cls: 'mod-cta' });
     this.confirmBtn.addEventListener('click', () => {
-      const files = [...this.selected];
-      this.close();
-      this.onConfirm(files);
+      // Collect every checked file and enqueue them. enqueue is
+      // idempotent against in-flight jobs, so re-clicking the
+      // button is harmless.
+      const checkedFiles = this.collectCheckedFiles();
+      if (checkedFiles.length === 0) return;
+      const newIds = this.ingestQueue.enqueue(checkedFiles);
+      if (newIds.length > 0 && this.onStartIngest) {
+        this.onStartIngest(checkedFiles);
+      }
+      // The modal stays open — the user can watch the right pane
+      // for live progress, or close it (the ingest continues in
+      // the background).
     });
 
-    this.renderLeftPane();
+    // Build the left pane once. Subsequent changes to the queue
+    // are reflected by updateLeftPaneSelections() in place.
+    this.buildLeftPane();
+    // Subscribe AFTER the initial build so we don't double-render
+    // on the first notify.
+    this.unsubscribeQueue = this.ingestQueue.subscribe(() => {
+      this.renderRightPane();
+      this.updateLeftPaneSelections();
+      this.updateCounter();
+    });
     this.renderRightPane();
-  }
-
-  private async computeIngestedSet(): Promise<void> {
-    if (!this.isAlreadyIngested) return;
-    const checks = await Promise.all(
-      this.available.map(async f => ({ path: f.path, ok: await this.isAlreadyIngested!(f) })),
-    );
-    for (const c of checks) {
-      if (c.ok) this.alreadyIngestedSet.add(c.path);
-    }
-    // Re-render to flip the markers from "(checking…)" to "(ingested)".
-    this.renderLeftPane();
+    this.updateCounter();
   }
 
   onClose(): void {
@@ -602,28 +606,49 @@ export class MultiFileSuggestModal extends Modal {
     // on the same `modalEl` doesn't accidentally inherit our width.
     // Same lifecycle pattern as SchemaDiffModal (v1.22.0 #97).
     this.modalEl.removeClass('llm-wiki-multi-file-modal');
-  }
-
-  private isSelected(file: TFile): boolean {
-    return this.selected.some(f => f.path === file.path);
-  }
-
-  private isIngested(file: TFile): boolean {
-    return this.alreadyIngestedSet.has(file.path);
-  }
-
-  private toggle(file: TFile): void {
-    const idx = this.selected.findIndex(f => f.path === file.path);
-    if (idx >= 0) {
-      this.selected.splice(idx, 1);
-    } else {
-      this.selected.push(file);
+    // Detach the queue listener. Without this, a re-opened modal
+    // would fire its renderRightPane on a DOM that no longer
+    // exists in the visible modal.
+    if (this.unsubscribeQueue) {
+      this.unsubscribeQueue();
+      this.unsubscribeQueue = null;
     }
-    this.renderLeftPane();
-    this.renderRightPane();
   }
 
-  private renderLeftPane(): void {
+  /**
+   * Toggle a file's presence in the queue. Reads the current
+   * checkbox state (already updated by the user's click) and
+   * either enqueues a new job or removes the existing one.
+   *
+   * Removing by path (not id) is safe because enqueue's dedup
+   * keeps at most one in-flight job per path. The remove call is
+   * a no-op if no job exists for this path.
+   */
+  private toggle(file: TFile): void {
+    const queue = this.ingestQueue.getSnapshot();
+    const existingJob = queue.find(j => j.file.path === file.path && j.status !== 'completed');
+    // The checkbox's `checked` property has already been toggled
+    // by the click. We read it to decide which way to go.
+    const checkbox = this.leftEl.querySelector<HTMLInputElement>(
+      `input[data-file-path="${cssEscape(file.path)}"]`
+    );
+    const shouldBeQueued = checkbox?.checked ?? false;
+
+    if (shouldBeQueued) {
+      if (!existingJob) {
+        this.ingestQueue.enqueue([file]);
+        if (this.onStartIngest) this.onStartIngest([file]);
+      }
+      // else: already in queue — no-op
+    } else {
+      if (existingJob) {
+        this.ingestQueue.remove(existingJob.id);
+      }
+      // else: not in queue — no-op
+    }
+  }
+
+  private buildLeftPane(): void {
     this.leftEl.empty();
     const q = this.searchInput?.value?.trim().toLowerCase() ?? '';
 
@@ -723,13 +748,16 @@ export class MultiFileSuggestModal extends Modal {
     selectAllBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      for (const f of visibleFiles) {
-        if (!this.isIngested(f) && !this.isSelected(f)) {
-          this.selected.push(f);
-        }
+      // Only enqueue files that are NOT already in the queue
+      // (pending/running/completed). enqueue() is also idempotent
+      // but skipping the call avoids a notify storm on no-op adds.
+      const queue = this.ingestQueue.getSnapshot();
+      const inQueuePaths = new Set(queue.map(j => j.file.path));
+      const newFiles = visibleFiles.filter(f => !inQueuePaths.has(f.path));
+      if (newFiles.length > 0) {
+        this.ingestQueue.enqueue(newFiles);
+        if (this.onStartIngest) this.onStartIngest(newFiles);
       }
-      this.renderLeftPane();
-      this.renderRightPane();
     });
 
     // Direct-child files
@@ -748,32 +776,68 @@ export class MultiFileSuggestModal extends Modal {
   }
 
   /**
-   * Render a single file row. Pulled out so the synthetic root
-   * and any folder can share the same DOM.
+   * Render a single file row. The checkbox carries a data attribute
+   * so `updateLeftPaneSelections` can find it without re-walking
+   * the tree structure.
    */
   private renderFileRow(file: TFile, container: HTMLElement): void {
-    const ingested = this.isIngested(file);
-    const row = container.createDiv({
-      cls: 'llm-wiki-multi-file-row' + (ingested ? ' llm-wiki-multi-file-row-ingested' : ''),
-    });
+    const row = container.createDiv({ cls: 'llm-wiki-multi-file-row' });
     const checkbox = row.createEl('input', { type: 'checkbox' });
-    checkbox.checked = this.isSelected(file);
-    if (ingested) {
-      checkbox.disabled = true;
-    }
+    checkbox.dataset.filePath = file.path;
     checkbox.addEventListener('change', () => this.toggle(file));
     const basename = file.path.split('/').pop() ?? file.path;
     row.createEl('span', { text: basename, cls: 'llm-wiki-multi-file-basename' });
-    if (ingested) {
-      row.createEl('span', { text: 'Ingested', cls: 'llm-wiki-multi-file-ingested-tag' });
-    }
-    if (!ingested) {
-      row.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).tagName !== 'INPUT') {
-          this.toggle(file);
-        }
-      });
-    }
+    // Whole row toggles selection (skip the checkbox itself).
+    row.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).tagName !== 'INPUT') {
+        checkbox.checked = !checkbox.checked;
+        this.toggle(file);
+      }
+    });
+  }
+
+  /**
+   * Update every checkbox in the left pane to reflect the current
+   * queue snapshot. Walks the live DOM via a single
+   * `querySelectorAll` and toggles `checked` + `disabled` based on
+   * the queue.
+   *
+   * Why we don't re-render the whole tree: rebuilding the tree
+   * would close every <details> the user had expanded, which was
+   * the v1 UX bug. In-place updates preserve the user's tree
+   * state.
+   *
+   * Performance: O(N) in the number of file rows (~thousands max).
+   * Acceptable — this fires on every queue mutation.
+   */
+  private updateLeftPaneSelections(): void {
+    const queue = this.ingestQueue.getSnapshot();
+    const inQueuePaths = new Set(
+      queue
+        .filter(j => j.status === 'pending' || j.status === 'running' || j.status === 'completed')
+        .map(j => j.file.path)
+    );
+    const completedPaths = new Set(
+      queue.filter(j => j.status === 'completed').map(j => j.file.path)
+    );
+    const rows = this.leftEl.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-file-path]');
+    rows.forEach(checkbox => {
+      const path = checkbox.dataset.filePath;
+      if (!path) return;
+      const isQueued = inQueuePaths.has(path);
+      const isCompleted = completedPaths.has(path);
+      checkbox.checked = isQueued;
+      // Grey out completed rows: the user shouldn't be able to
+      // re-toggle them; the in-batch dedup would also drop the
+      // add but the user feedback ("I checked it but it didn't
+      // add") would be confusing. The visual 'Ingested' tag is
+      // the cue.
+      checkbox.disabled = isCompleted;
+      const row = checkbox.closest<HTMLElement>('.llm-wiki-multi-file-row');
+      if (row) {
+        row.classList.toggle('llm-wiki-multi-file-row-ingested', isCompleted);
+      }
+    });
   }
 
   /**
@@ -790,22 +854,103 @@ export class MultiFileSuggestModal extends Modal {
     return node.children.some(c => this.nodeOrDescendantMatches(c, q));
   }
 
+  // ── Right pane: live queue snapshot ─────────────────────────
+
+  /**
+   * Render the right pane from the current queue snapshot. Fires
+   * on every queue mutation (via the subscription set up in
+   * onOpen). The simple "list of paths + status" rendering here
+   * is intentionally minimal — v1.23.0 Phase 5.1.5 stage 3 will
+   * add per-row status icons + cancel buttons.
+   */
   private renderRightPane(): void {
     this.rightEl.empty();
-    if (this.selected.length === 0) {
+    const jobs = this.ingestQueue.getSnapshot();
+    if (jobs.length === 0) {
       this.rightEl.createEl('p', {
-        text: 'No files selected.',
+        text: 'No files in the queue. Check files on the left to add them.',
         cls: 'llm-wiki-multi-file-empty',
       });
-    } else {
-      for (const file of this.selected) {
-        const row = this.rightEl.createDiv({ cls: 'llm-wiki-multi-file-row llm-wiki-multi-file-row-selected' });
-        row.createEl('span', { text: file.path, cls: 'llm-wiki-multi-file-path' });
-        const removeBtn = row.createEl('button', { text: '✕', cls: 'llm-wiki-multi-file-remove' });
-        removeBtn.addEventListener('click', () => this.toggle(file));
+      return;
+    }
+    for (const job of jobs) {
+      const row = this.rightEl.createDiv({
+        cls: `llm-wiki-multi-file-row llm-wiki-multi-file-row-${job.status}`,
+      });
+      const basename = job.file.path.split('/').pop() ?? job.file.path;
+      row.createEl('span', { text: basename, cls: 'llm-wiki-multi-file-basename' });
+      row.createEl('span', { text: job.status, cls: 'llm-wiki-multi-file-status' });
+      if (job.error) {
+        row.createEl('span', { text: job.error, cls: 'llm-wiki-multi-file-error' });
       }
     }
-    this.counterEl.setText(`${this.selected.length} file(s) selected`);
-    this.confirmBtn.disabled = this.selected.length === 0;
   }
+
+  /**
+   * Update the bottom counter ("N pending · M done · K failed")
+   * from the queue snapshot. Triggers on every queue mutation.
+   */
+  private updateCounter(): void {
+    const jobs = this.ingestQueue.getSnapshot();
+    const pending = jobs.filter(j => j.status === 'pending' || j.status === 'running').length;
+    const completed = jobs.filter(j => j.status === 'completed').length;
+    const failed = jobs.filter(j => j.status === 'failed').length;
+    this.counterEl.setText(
+      `${pending} pending · ${completed} done · ${failed} failed`
+    );
+  }
+
+  // ── "Add to queue" button support ───────────────────────────
+
+  /**
+   * Collect every file whose left-pane checkbox is currently
+   * checked. Used by the "Add to queue" button to translate DOM
+   * state into file references. Walks the treeRoots list (not the
+   * DOM) for the TFile references.
+   */
+  private collectCheckedFiles(): TFile[] {
+    const result: TFile[] = [];
+    const checkboxes = this.leftEl.querySelectorAll<HTMLInputElement>('input[type="checkbox"][data-file-path]');
+    checkboxes.forEach(cb => {
+      if (!cb.checked) return;
+      const path = cb.dataset.filePath;
+      if (!path) return;
+      const file = this.findFileByPath(path);
+      if (file) result.push(file);
+    });
+    return result;
+  }
+
+  private findFileByPath(path: string): TFile | null {
+    for (const root of this.treeRoots) {
+      const found = this.findFileInNode(root, path);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  private findFileInNode(
+    node: import('../core/build-folder-tree').TreeNode,
+    path: string,
+  ): TFile | null {
+    for (const f of node.files) if (f.path === path) return f;
+    for (const c of node.children) {
+      const found = this.findFileInNode(c, path);
+      if (found) return found;
+    }
+    return null;
+  }
+}
+
+/**
+ * Escape a string for use inside a CSS attribute selector. The
+ * file paths we pass to `querySelector` are user-controlled and
+ * may contain characters like '.', ':', '/', etc. that have
+ * meaning in CSS selectors. Most paths don't strictly need
+ * escaping but it's safer to always do it. Tiny inline
+ * implementation (no npm dep) — only needs to escape the common
+ * troublemakers.
+ */
+function cssEscape(value: string): string {
+  return value.replace(/[\\"]/g, '\\$&');
 }

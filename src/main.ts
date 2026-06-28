@@ -83,6 +83,7 @@ import { parseFrontmatter } from './core/frontmatter';
 import { applySettingsMigrations } from './core/settings-migrations';
 import { normalizeVocabularyCsv } from './core/tag-vocab';
 import { buildIngestStatusBarText, BatchProgress } from './core/status-bar';
+import { IngestQueue } from './core/ingest-queue';
 import { LLMWikiSettingTab } from './ui/settings';
 import { WikiEngine } from './wiki/wiki-engine';
 import { QueryView, VIEW_TYPE_QUERY } from './wiki/query-engine';
@@ -100,6 +101,16 @@ export default class LLMWikiPlugin extends Plugin {
   wikiEngine: WikiEngine;
   schemaManager: SchemaManager;
   autoMaintainManager: AutoMaintainManager;
+  /**
+   * v1.23.0 Phase 5.1.5: single source of truth for the current
+   * ingest session. Replaces the old "selected: TFile[]" inside the
+   * Multi-File Suggest modal. The modal subscribes to this queue to
+   * render a real-time right pane (pending / running / completed /
+   * failed). The ingest pipeline (runBatchIngest) calls start() /
+   * complete() / remove() around each file's wikiEngine.ingestSource
+   * call. Pure data layer; no IO lives here.
+   */
+  private ingestQueue: IngestQueue = new IngestQueue();
   private progressNotice: Notice | null = null;
   private ingestStatusBar: HTMLElement | null = null;
   // Tracks the current document position during a folder batch ingest so the
@@ -593,13 +604,14 @@ export default class LLMWikiPlugin extends Plugin {
     new MultiFileSuggestModal(
       this.app,
       this.settings.wikiFolder,
-      (files) => {
+      this.ingestQueue,
+      // v1.23.0 Phase 5.1.5: when the modal enqueues files, hand
+      // them to runBatchIngest. The modal stays open; the right
+      // pane subscribes to the queue and shows live progress.
+      (files: TFile[]) => {
         if (files.length === 0) return;
         void this.runBatchIngest(files, `${files.length} manually-selected files`);
       },
-      // Optional: enable the "(ingested)" tag in the tree so the
-      // user sees which files are already in the wiki and skips them.
-      (file) => this.isAlreadyIngested(file),
     ).open();
   }
 
@@ -675,23 +687,47 @@ export default class LLMWikiPlugin extends Plugin {
     // within the run and against pages already in the wiki.
     const batchCtx = this.wikiEngine.createBatchContext();
 
+    // v1.23.0 Phase 5.1.5: enqueue every new file up front so the
+    // Multi-File Suggest modal (and any other subscriber) can show a
+    // real-time right pane during ingest. enqueue() is idempotent
+    // against in-flight duplicates, but we already filtered those
+    // out above (newFiles has no overlap with the in-flight set).
+    const jobIds = this.ingestQueue.enqueue(newFiles);
+    // Build a path → id lookup for the loop below.
+    const idByPath = new Map<string, string>();
+    for (let idx = 0; idx < newFiles.length; idx++) {
+      const id = jobIds[idx];
+      if (id) idByPath.set(newFiles[idx].path, id);
+    }
+
     for (let i = 0; i < newFiles.length; i++) {
       const file = newFiles[i];
+      const jobId = idByPath.get(file.path);
 
       try {
+        // Mark running BEFORE the await so the modal (if open) sees
+        // a 'running' state for this file rather than a 'pending' that
+        // never resolves. The job is the only way to address the
+        // record across this await boundary.
+        if (jobId) this.ingestQueue.start(jobId);
         this.batchProgress = { current: i + 1, total: ingestCount };
         this.showProgress(`[${i + 1}/${ingestCount}] ${file.basename}`);
         console.debug(`(${i + 1}/${ingestCount}) ingesting: ${file.path}`);
         await this.wikiEngine.ingestSource(file, { batchCtx });
         if (this.wikiEngine.wasCancelled) {
           console.debug(`Batch ingestion cancelled at file ${i + 1}/${ingestCount}`);
+          // Mark the cancelled job as failed so the right pane
+          // shows the cancellation rather than leaving it as 'running'.
+          if (jobId) this.ingestQueue.complete(jobId, false, 'Cancelled by user');
           break;
         }
         console.debug(`(${i + 1}/${ingestCount}) ingestion success: ${file.path}`);
+        if (jobId) this.ingestQueue.complete(jobId, true);
       } catch (error) {
         console.error(`(${i + 1}/${ingestCount}) ingestion failed: ${file.path}`, error);
         const errMsg = error instanceof Error ? error.message : String(error);
         new Notice(texts.errorIngestFailed + file.basename + ': ' + errMsg, NOTICE_ERROR);
+        if (jobId) this.ingestQueue.complete(jobId, false, errMsg);
       }
     }
 
