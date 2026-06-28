@@ -666,6 +666,27 @@ export const ES_TEXTS = {
     startupCheckWelcomePending: 'Nota Welcome: generándose en segundo plano (aparecerá un aviso al terminar).',
     welcomeNoteFileName: 'Bienvenido a Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Nota Welcome creada en {path}',
+    // v1.23.0 Phase 5.1.5: botón "Cancelar todo" del modal de selección múltiple.
+    // Cancela todos los trabajos pendientes y en ejecución en la cola.
+    // Los trabajos completados y fallidos se conservan para su visualización.
+    cancelAllQueueJobs: 'Cancelar todo',
+    // v1.23.0 Phase 5.1.5: modal de selección múltiple (cmdIngestMultipleFiles).
+    // Título, sugerencia, marcador de búsqueda, botones, etiquetas de estado,
+    // marcador de cola vacía.
+    multiFileModalTitle: 'Ingerir múltiples archivos',
+    multiFileModalHint: 'Selecciona notas fuente para ingerir. El panel derecho muestra la cola en vivo y el progreso.',
+    multiFileSearchPlaceholder: 'Filtrar archivos por ruta…',
+    multiFileAddToQueue: 'Agregar a la cola',
+    multiFileSelectAll: 'Seleccionar todo',
+    multiFileFileCount: '{count} archivo(s)',
+    multiFileNoFilesAvailable: 'No hay archivos disponibles para ingerir.',
+    multiFileNoFilesMatch: 'No se encontraron archivos para "{q}".',
+    multiFileQueueEmpty: 'Cola vacía. Marca archivos a la izquierda para añadirlos.',
+    multiFileStatusPending: 'Pendiente',
+    multiFileStatusRunning: 'En curso',
+    multiFileStatusCompleted: 'Completado',
+    multiFileStatusFailed: 'Fallido',
+    multiFileCancelAria: 'Cancelar este archivo',
     startupCheckNoticeLevelName: 'Mostrar resultado de arreglos rápidos',
     startupCheckNoticeLevelDesc: 'Los QuickFixes siempre se ejecutan al iniciar el plugin (nota Welcome, estructura de carpetas, normalización de fuentes, páginas incompletas, encabezado del registro). Elige si mostrar el aviso resumen tras el inicio. El modo silencioso solo registra en la consola del desarrollador y en el panel Historial de operaciones.',
     startupCheckNoticeVisible: 'Visible (mostrar aviso)',

@@ -685,4 +685,29 @@ export const EN_TEXTS = {
     welcomeNoteFileName: 'Welcome to Karpathy LLM Wiki',
     startupCheckWelcomePending: 'Welcome note: generating in background (you will get a Notice when it finishes).',
     startupCheckWelcomeCreated: 'Welcome note created at {path}',
+    // v1.23.0 Phase 5.1.5: Multi-File Suggest modal (cmdIngestMultipleFiles).
+    // The modal's title, hint, search placeholder, action buttons,
+    // status labels and queue-empty placeholder all live here. Status
+    // labels double as both the right-pane text and the data-attribute
+    // keys for `updateLeftPaneSelections` to recognise, so they must
+    // remain stable English strings.
+    multiFileModalTitle: 'Ingest multiple files',
+    multiFileModalHint: 'Select source notes to ingest. The right pane shows the live ingest queue and progress.',
+    multiFileSearchPlaceholder: 'Filter files by path…',
+    multiFileAddToQueue: 'Add to queue',
+    multiFileSelectAll: 'Select all',
+    multiFileFileCount: '{count} file(s)',
+    multiFileNoFilesAvailable: 'No files available to ingest.',
+    multiFileNoFilesMatch: 'No files match "{q}".',
+    multiFileQueueEmpty: 'No files in the queue. Check files on the left to add them.',
+    multiFileStatusPending: 'Pending',
+    multiFileStatusRunning: 'Running',
+    multiFileStatusCompleted: 'Completed',
+    multiFileStatusFailed: 'Failed',
+    multiFileCancelAria: 'Cancel this file',
+    // v1.23.0 Phase 5.1.5: Multi-File Suggest modal action button
+    // that removes every pending and running job from the ingest
+    // queue. Completed and failed jobs are preserved so the user
+    // still sees what happened.
+    cancelAllQueueJobs: 'Cancel all',
 } as const;

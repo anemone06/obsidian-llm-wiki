@@ -679,6 +679,27 @@ export const IT_TEXTS = {
     startupCheckWelcomePending: 'Nota Welcome: generazione in background (apparirà un avviso al termine).',
     welcomeNoteFileName: 'Benvenuto in Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Nota Welcome creata in {path}',
+    // v1.23.0 Phase 5.1.5: pulsante "Annulla tutto" del modale di selezione multipla.
+    // Annulla tutti i lavori in attesa e in esecuzione nella coda.
+    // I lavori completati e falliti vengono mantenuti per la visualizzazione.
+    cancelAllQueueJobs: 'Annulla tutto',
+    // v1.23.0 Phase 5.1.5: modale di selezione multipla (cmdIngestMultipleFiles).
+    // Titolo, suggerimento, placeholder di ricerca, pulsanti, etichette di
+    // stato, placeholder di coda vuota.
+    multiFileModalTitle: 'Acquisisci più file',
+    multiFileModalHint: 'Seleziona le note di origine da acquisire. Il pannello destro mostra la coda in tempo reale e l\'avanzamento.',
+    multiFileSearchPlaceholder: 'Filtra file per percorso…',
+    multiFileAddToQueue: 'Aggiungi alla coda',
+    multiFileSelectAll: 'Seleziona tutto',
+    multiFileFileCount: '{count} file',
+    multiFileNoFilesAvailable: 'Nessun file disponibile per l\'acquisizione.',
+    multiFileNoFilesMatch: 'Nessun file corrisponde a "{q}".',
+    multiFileQueueEmpty: 'Coda vuota. Seleziona i file a sinistra per aggiungerli.',
+    multiFileStatusPending: 'In attesa',
+    multiFileStatusRunning: 'In esecuzione',
+    multiFileStatusCompleted: 'Completato',
+    multiFileStatusFailed: 'Fallito',
+    multiFileCancelAria: 'Annulla questo file',
     startupCheckNoticeLevelName: 'Mostra risultato correzioni rapide',
     startupCheckNoticeLevelDesc: 'Le QuickFixes vengono sempre eseguite all\'avvio del plugin (nota Welcome, struttura cartelle, normalizzazione sorgenti, pagine incomplete, intestazione log). Scegli se mostrare l\'avviso riepilogativo dopo l\'avvio. La modalità silenziosa registra solo nella console sviluppatore e nel pannello Cronologia operazioni.',
     startupCheckNoticeVisible: 'Visibile (mostra avviso)',

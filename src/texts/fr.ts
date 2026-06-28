@@ -668,6 +668,27 @@ export const FR_TEXTS = {
     startupCheckWelcomePending: 'Note Welcome : génération en arrière-plan (une notification apparaîtra à la fin).',
     welcomeNoteFileName: 'Bienvenue sur Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Note Welcome créée à {path}',
+    // v1.23.0 Phase 5.1.5 : bouton « Tout annuler » de la modale de sélection multiple.
+    // Annule tous les jobs en attente et en cours d'exécution dans la file.
+    // Les jobs terminés et échoués restent affichés.
+    cancelAllQueueJobs: 'Tout annuler',
+    // v1.23.0 Phase 5.1.5: modale de sélection multiple (cmdIngestMultipleFiles).
+    // Titre, indice, placeholder de recherche, boutons, étiquettes d'état,
+    // placeholder de file vide.
+    multiFileModalTitle: 'Importer plusieurs fichiers',
+    multiFileModalHint: 'Sélectionne les notes sources à importer. Le panneau droit affiche la file d\'attente en direct et la progression.',
+    multiFileSearchPlaceholder: 'Filtrer les fichiers par chemin…',
+    multiFileAddToQueue: 'Ajouter à la file',
+    multiFileSelectAll: 'Tout sélectionner',
+    multiFileFileCount: '{count} fichier(s)',
+    multiFileNoFilesAvailable: 'Aucun fichier disponible à importer.',
+    multiFileNoFilesMatch: 'Aucun fichier ne correspond à "{q}".',
+    multiFileQueueEmpty: 'File vide. Coche des fichiers à gauche pour les ajouter.',
+    multiFileStatusPending: 'En attente',
+    multiFileStatusRunning: 'En cours',
+    multiFileStatusCompleted: 'Terminé',
+    multiFileStatusFailed: 'Échoué',
+    multiFileCancelAria: 'Annuler ce fichier',
     startupCheckNoticeLevelName: 'Afficher le résultat des correctifs rapides',
     startupCheckNoticeLevelDesc: 'Les QuickFixes s\'exécutent toujours au démarrage du plugin (note Welcome, structure des dossiers, normalisation des sources, pages incomplètes, en-tête du journal). Choisis d\'afficher ou non la notice récapitulative après le démarrage. Le mode silencieux n\'écrit que dans la console développeur et le panneau Historique des opérations.',
     startupCheckNoticeVisible: 'Visible (afficher la notice)',

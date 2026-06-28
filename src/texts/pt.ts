@@ -666,6 +666,27 @@ export const PT_TEXTS = {
     startupCheckWelcomePending: 'Nota Welcome: a ser gerada em segundo plano (aparecerá um aviso quando terminar).',
     welcomeNoteFileName: 'Bem-vindo ao Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Nota Welcome criada em {path}',
+    // v1.23.0 Phase 5.1.5: botão "Cancelar tudo" do modal de seleção múltipla.
+    // Cancela todos os trabalhos pendentes e em execução na fila.
+    // Os trabalhos concluídos e falhados são preservados para visualização.
+    cancelAllQueueJobs: 'Cancelar tudo',
+    // v1.23.0 Phase 5.1.5: modal de seleção múltipla (cmdIngestMultipleFiles).
+    // Título, dica, placeholder de pesquisa, botões, rótulos de estado,
+    // placeholder de fila vazia.
+    multiFileModalTitle: 'Ingerir vários ficheiros',
+    multiFileModalHint: 'Seleciona notas de origem para ingerir. O painel direito mostra a fila em tempo real e o progresso.',
+    multiFileSearchPlaceholder: 'Filtrar ficheiros por caminho…',
+    multiFileAddToQueue: 'Adicionar à fila',
+    multiFileSelectAll: 'Selecionar tudo',
+    multiFileFileCount: '{count} ficheiro(s)',
+    multiFileNoFilesAvailable: 'Nenhum ficheiro disponível para ingerir.',
+    multiFileNoFilesMatch: 'Nenhum ficheiro encontrado para "{q}".',
+    multiFileQueueEmpty: 'Fila vazia. Marca ficheiros à esquerda para adicionar.',
+    multiFileStatusPending: 'Pendente',
+    multiFileStatusRunning: 'Em execução',
+    multiFileStatusCompleted: 'Concluído',
+    multiFileStatusFailed: 'Falhou',
+    multiFileCancelAria: 'Cancelar este ficheiro',
     startupCheckNoticeLevelName: 'Mostrar resultado das correções rápidas',
     startupCheckNoticeLevelDesc: 'Os QuickFixes são sempre executados no arranque do plugin (nota Welcome, estrutura de pastas, normalização de fontes, páginas incompletas, cabeçalho do registo). Escolhe se queres mostrar o aviso de resumo após o arranque. O modo silencioso apenas regista na consola do programador e no painel Histórico de Operações.',
     startupCheckNoticeVisible: 'Visível (mostrar aviso)',

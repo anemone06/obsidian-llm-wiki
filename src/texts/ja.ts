@@ -666,6 +666,26 @@ export const JA_TEXTS = {
     startupCheckWelcomePending: 'Welcome note：バックグラウンドで生成中（完了時に通知が表示されます）。',
     welcomeNoteFileName: 'Karpathy LLM Wiki へようこそ',
     startupCheckWelcomeCreated: '{path} に Welcome note を作成しました',
+    // v1.23.0 Phase 5.1.5: 複数ファイル取り込みモーダルの「すべてキャンセル」ボタン。
+    // キュー内のすべての pending + running ジョブを一度にキャンセルします。
+    // 完了済みと失敗のジョブは表示用に保持されます。
+    cancelAllQueueJobs: 'すべてキャンセル',
+    // v1.23.0 Phase 5.1.5: 複数ファイル取り込みモーダル (cmdIngestMultipleFiles)。
+    // タイトル、ヒント、検索プレースホルダー、ボタン、状態ラベル、キュー空のプレースホルダー。
+    multiFileModalTitle: '複数ファイルを取り込み',
+    multiFileModalHint: '取り込むソースノートを選択してください。右側パネルにライブキューと進行状況が表示されます。',
+    multiFileSearchPlaceholder: 'パスでファイルを絞り込む…',
+    multiFileAddToQueue: 'キューに追加',
+    multiFileSelectAll: 'すべて選択',
+    multiFileFileCount: '{count} 件のファイル',
+    multiFileNoFilesAvailable: '取り込み可能なファイルがありません。',
+    multiFileNoFilesMatch: '"{q}" に一致するファイルはありません。',
+    multiFileQueueEmpty: 'キューは空です。左側のファイルを選択してください。',
+    multiFileStatusPending: '待機中',
+    multiFileStatusRunning: '取り込み中',
+    multiFileStatusCompleted: '完了',
+    multiFileStatusFailed: '失敗',
+    multiFileCancelAria: 'このファイルを取り消す',
     startupCheckNoticeLevelName: 'クイック修正結果の表示',
     startupCheckNoticeLevelDesc: 'QuickFixes はプラグイン起動時に常に実行されます（Welcome note、フォルダ構造、ソース正規化、不完全ページ、ログヘッダー）。起動後にサマリー通知を表示するかどうかを選択します。サイレントモードでは開発者コンソールと操作履歴パネルのみに記録されます。',
     startupCheckNoticeVisible: '表示（通知を表示）',

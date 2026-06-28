@@ -666,6 +666,27 @@ export const DE_TEXTS = {
     startupCheckWelcomePending: 'Willkommen-Notiz: wird im Hintergrund erstellt (Benachrichtigung erscheint, wenn fertig).',
     welcomeNoteFileName: 'Willkommen bei Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Willkommen-Notiz erstellt unter {path}',
+    // v1.23.0 Phase 5.1.5: Schaltfläche "Alle abbrechen" im Multi-Datei-Auswahl-Modal.
+    // Bricht alle ausstehenden und laufenden Jobs in der Warteschlange ab.
+    // Abgeschlossene und fehlgeschlagene Jobs bleiben zur Ansicht erhalten.
+    cancelAllQueueJobs: 'Alle abbrechen',
+    // v1.23.0 Phase 5.1.5: Multi-File-Suggest-Modal (cmdIngestMultipleFiles).
+    // Titel, Hinweis, Suchplatzhalter, Schaltflächen, Statusbezeichnungen,
+    // Platzhalter für leere Warteschlange.
+    multiFileModalTitle: 'Mehrere Dateien importieren',
+    multiFileModalHint: 'Wähle Quellnotizen für den Import. Der rechte Bereich zeigt die Live-Warteschlange und den Fortschritt.',
+    multiFileSearchPlaceholder: 'Dateien nach Pfad filtern…',
+    multiFileAddToQueue: 'Zur Warteschlange hinzufügen',
+    multiFileSelectAll: 'Alle auswählen',
+    multiFileFileCount: '{count} Datei(en)',
+    multiFileNoFilesAvailable: 'Keine Dateien zum Importieren verfügbar.',
+    multiFileNoFilesMatch: 'Keine Dateien gefunden für "{q}".',
+    multiFileQueueEmpty: 'Warteschlange leer. Markiere links Dateien zum Hinzufügen.',
+    multiFileStatusPending: 'Ausstehend',
+    multiFileStatusRunning: 'Läuft',
+    multiFileStatusCompleted: 'Abgeschlossen',
+    multiFileStatusFailed: 'Fehlgeschlagen',
+    multiFileCancelAria: 'Diese Datei abbrechen',
     startupCheckNoticeLevelName: 'Quick-Fix-Ergebnis anzeigen',
     startupCheckNoticeLevelDesc: 'QuickFixes laufen beim Plugin-Start immer (Willkommensnotiz, Ordnerstruktur, Quellen-Normalisierung, unvollständige Seiten, Log-Header). Wähle, ob die Zusammenfassungs-Notiz nach dem Start angezeigt wird. Im Silent-Modus wird nur in die Entwicklerkonsole und das Operationsverlaufs-Panel geschrieben.',
     startupCheckNoticeVisible: 'Sichtbar (Notiz anzeigen)',

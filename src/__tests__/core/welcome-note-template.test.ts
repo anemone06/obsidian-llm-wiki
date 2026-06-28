@@ -45,18 +45,25 @@ describe('buildWelcomeNote — line-break correctness (regression: 2026-06-28)',
   // renderer auto-wraps to the viewport.
   it('paragraph continuations are SINGLE lines (no embedded \\n in a visual line)', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    // The intro paragraph's "verify the install" sentence should
-    // appear on one continuous line in the source, with no internal
-    // backslash-n that would force a hard break.
-    const introSection = body.match(/This note is generated[\s\S]*?Two ways to use/);
-    expect(introSection).toBeTruthy();
-    // No paragraph-line should be 1-9 chars long (a "tail" of a
-    // earlier hard-break artifact). We tolerate short titles like
-    // "Two ways to use" (15 chars) but reject truly broken tails.
-    const lines = introSection![0].split('\n');
+    // v1.23.0 stage 4: intro is now a single short sentence (the
+    // "Two ways to use" sub-list was removed). The body should
+    // still have NO lines shorter than 10 chars (no hard-break
+    // artifact tails from indented continuation text), except
+    // for known-structural short lines: frontmatter delimiters
+    // ("---") and code-fence markers ("```", "wiki/").
+    const lines = body.split('\n');
     for (const ln of lines) {
       if (ln.trim().length === 0) continue;
-      expect(ln.trim().length).toBeGreaterThan(10);
+      const trimmed = ln.trim();
+      // Frontmatter delimiters.
+      if (trimmed === '---') continue;
+      // Code-fence markers.
+      if (trimmed === '```') continue;
+      // The first line of the wiki/ folder tree (just the dir name).
+      if (trimmed === 'wiki/') continue;
+      // Skip markdown table separator lines (e.g. "| --- | --- |").
+      if (/^\|[-\s|]+\|$/.test(trimmed)) continue;
+      expect(trimmed.length).toBeGreaterThan(10);
     }
   });
 
@@ -116,7 +123,12 @@ describe('buildWelcomeNote — "How to use this plugin" section', () => {
 
   it('mentions the Ingest Multiple Files command (#130) as the day-one entry point', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/Day one\. This is the entry point\./);
+    // v1.23.0 stage 4 shortened the table — the entry point now
+    // reads "Day one — start here." (was "Day one. This is the
+    // entry point."). The key facts to keep are: the command name
+    // is present AND day-one is called out.
+    expect(body).toMatch(/Karpathy LLM Wiki: Ingest multiple files/);
+    expect(body).toMatch(/Day one/);
   });
 });
 

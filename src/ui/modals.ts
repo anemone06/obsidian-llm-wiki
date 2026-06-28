@@ -1,7 +1,7 @@
 // Reusable UI modals for the LLM Wiki Plugin
 
 import { App, TFile, TFolder, Modal, FuzzySuggestModal, MarkdownRenderer, Component } from 'obsidian';
-import { IngestReport } from '../types';
+import { IngestReport, type LLMWikiSettings } from '../types';
 import { TEXTS } from '../texts';
 import { getText } from '../core/i18n';
 import { buildFolderTree } from '../core/build-folder-tree';
@@ -487,12 +487,20 @@ export class MultiFileSuggestModal extends Modal {
   /** Folder name used to filter wiki files out of the candidate set.
    * Comes from settings (the user-configurable wiki folder). */
   private wikiFolder: string;
-  /** Called when the user clicks "Add to queue" with the current
-   * selection of files to enqueue. main.ts wires this to its
-   * `runBatchIngest` so the worker picks them up. If null, the
-   * button is hidden and the user is expected to drive ingest
-   * from elsewhere (e.g. for tests). */
-  private onStartIngest: ((files: TFile[]) => void) | null;
+  /** Called when the user clicks "Add to queue" with the newly
+   * enqueued job ids and the corresponding files. main.ts wires
+   * this to `runBatchIngest` so the worker picks them up using
+   * the pre-issued ids (re-enqueueing inside runBatchIngest would
+   * be a no-op — enqueue is idempotent against in-flight jobs,
+   * and the worker would then have no ids to publish start/
+   * complete transitions on). The ids+files arrays are aligned
+   * by index. If null, the button is hidden and the user is
+   * expected to drive ingest from elsewhere (e.g. for tests). */
+  private onStartIngest: ((ids: string[], files: TFile[]) => void) | null;
+  /** Settings (read-only). Only the `language` field is consulted
+   * (for i18n of the cancel-all button). Modal does not mutate
+   * settings. */
+  private settings: LLMWikiSettings;
   private leftEl!: HTMLElement;
   private rightEl!: HTMLElement;
   private counterEl!: HTMLElement;
@@ -516,12 +524,13 @@ export class MultiFileSuggestModal extends Modal {
 
   constructor(
     app: App,
-    wikiFolder: string,
+    settings: LLMWikiSettings,
     ingestQueue: import('../core/ingest-queue').IngestQueue,
-    onStartIngest?: (files: TFile[]) => void,
+    onStartIngest?: (ids: string[], files: TFile[]) => void,
   ) {
     super(app);
-    this.wikiFolder = wikiFolder;
+    this.settings = settings;
+    this.wikiFolder = settings.wikiFolder;
     this.ingestQueue = ingestQueue;
     this.onStartIngest = onStartIngest ?? null;
   }
@@ -548,15 +557,15 @@ export class MultiFileSuggestModal extends Modal {
       .sort((a, b) => a.path.localeCompare(b.path));
     this.treeRoots = buildFolderTree(available);
 
-    contentEl.createEl('h3', { text: 'Ingest multiple files' });
+    contentEl.createEl('h3', { text: getText(this.settings.language, 'multiFileModalTitle') });
     contentEl.createEl('p', {
-      text: 'Select source notes to ingest. The right pane shows the live ingest queue and progress.',
+      text: getText(this.settings.language, 'multiFileModalHint'),
       cls: 'llm-wiki-modal-hint',
     });
 
     this.searchInput = contentEl.createEl('input', {
       type: 'text',
-      placeholder: 'Filter files by path…',
+      placeholder: getText(this.settings.language, 'multiFileSearchPlaceholder'),
       cls: 'llm-wiki-multi-file-search',
     });
     // Search re-runs the LEFT pane only (the tree's visible
@@ -570,7 +579,29 @@ export class MultiFileSuggestModal extends Modal {
 
     const actions = contentEl.createDiv({ cls: 'llm-wiki-multi-file-actions' });
     this.counterEl = actions.createEl('span', { cls: 'llm-wiki-multi-file-count' });
-    this.confirmBtn = actions.createEl('button', { text: 'Add to queue', cls: 'mod-cta' });
+    // "Cancel all" sits next to the counter. Replaces the old
+    // "Clear queue" button (which was a UX dead-end — it never
+    // cancelled the background worker). One click removes every
+    // pending job and fires the AbortController on any running
+    // job; completed/failed jobs are preserved (the user can still
+    // see the result). v1.23.0 Phase 5.1.5 stage 3.
+    const cancelAllBtn = actions.createEl('button', {
+      text: getText(this.settings.language, 'cancelAllQueueJobs'),
+      cls: 'llm-wiki-multi-file-cancel-all',
+    });
+    cancelAllBtn.addEventListener('click', () => {
+      // Snapshot first — remove() mutates the underlying array.
+      const jobs = this.ingestQueue.getSnapshot();
+      for (const job of jobs) {
+        if (job.status === 'pending' || job.status === 'running') {
+          this.ingestQueue.remove(job.id);
+        }
+      }
+    });
+    this.confirmBtn = actions.createEl('button', {
+      text: getText(this.settings.language, 'multiFileAddToQueue'),
+      cls: 'mod-cta',
+    });
     this.confirmBtn.addEventListener('click', () => {
       // Collect every checked file and enqueue them. enqueue is
       // idempotent against in-flight jobs, so re-clicking the
@@ -579,7 +610,12 @@ export class MultiFileSuggestModal extends Modal {
       if (checkedFiles.length === 0) return;
       const newIds = this.ingestQueue.enqueue(checkedFiles);
       if (newIds.length > 0 && this.onStartIngest) {
-        this.onStartIngest(checkedFiles);
+        // Pass both the newly-issued ids and the corresponding
+        // files. The worker uses the ids to publish start/
+        // complete transitions on each job — without ids, it
+        // would have no way to update the queue (enqueue is
+        // idempotent and the second call would return no ids).
+        this.onStartIngest(newIds, checkedFiles);
       }
       // The modal stays open — the user can watch the right pane
       // for live progress, or close it (the ingest continues in
@@ -615,46 +651,13 @@ export class MultiFileSuggestModal extends Modal {
     }
   }
 
-  /**
-   * Toggle a file's presence in the queue. Reads the current
-   * checkbox state (already updated by the user's click) and
-   * either enqueues a new job or removes the existing one.
-   *
-   * Removing by path (not id) is safe because enqueue's dedup
-   * keeps at most one in-flight job per path. The remove call is
-   * a no-op if no job exists for this path.
-   */
-  private toggle(file: TFile): void {
-    const queue = this.ingestQueue.getSnapshot();
-    const existingJob = queue.find(j => j.file.path === file.path && j.status !== 'completed');
-    // The checkbox's `checked` property has already been toggled
-    // by the click. We read it to decide which way to go.
-    const checkbox = this.leftEl.querySelector<HTMLInputElement>(
-      `input[data-file-path="${cssEscape(file.path)}"]`
-    );
-    const shouldBeQueued = checkbox?.checked ?? false;
-
-    if (shouldBeQueued) {
-      if (!existingJob) {
-        this.ingestQueue.enqueue([file]);
-        if (this.onStartIngest) this.onStartIngest([file]);
-      }
-      // else: already in queue — no-op
-    } else {
-      if (existingJob) {
-        this.ingestQueue.remove(existingJob.id);
-      }
-      // else: not in queue — no-op
-    }
-  }
-
   private buildLeftPane(): void {
     this.leftEl.empty();
     const q = this.searchInput?.value?.trim().toLowerCase() ?? '';
 
     if (this.treeRoots.length === 0) {
       this.leftEl.createEl('p', {
-        text: 'No files available to ingest.',
+        text: getText(this.settings.language, 'multiFileNoFilesAvailable'),
         cls: 'llm-wiki-multi-file-empty',
       });
       return;
@@ -665,7 +668,9 @@ export class MultiFileSuggestModal extends Modal {
     const anyVisible = this.treeRoots.some(root => this.nodeOrDescendantMatches(root, q));
     if (!anyVisible) {
       this.leftEl.createEl('p', {
-        text: q ? `No files match "${q}".` : 'No files available to ingest.',
+        text: q
+          ? getText(this.settings.language, 'multiFileNoFilesMatch', { q })
+          : getText(this.settings.language, 'multiFileNoFilesAvailable'),
         cls: 'llm-wiki-multi-file-empty',
       });
       return;
@@ -678,6 +683,13 @@ export class MultiFileSuggestModal extends Modal {
     for (const root of this.treeRoots) {
       this.renderTreeNode(root, this.leftEl, q, /* depth */ 0);
     }
+    // Sync checkbox state with the queue snapshot. The DOM was
+    // rebuilt above with default unchecked state — this turns on
+    // the checkboxes for files that are already pending/running/
+    // completed. Called on every build (initial onOpen AND search
+    // input change) so the visual stays consistent with the
+    // store regardless of how the modal was last left.
+    this.updateLeftPaneSelections();
   }
 
   /**
@@ -738,26 +750,31 @@ export class MultiFileSuggestModal extends Modal {
     summary.createEl('span', { text: folderLabel, cls: 'llm-wiki-multi-file-folder-name' });
     summary.setAttribute('data-path', node.path);
     summary.createEl('span', {
-      text: `${visibleFiles.length} file(s)`,
+      text: getText(this.settings.language, 'multiFileFileCount', { count: String(visibleFiles.length) }),
       cls: 'llm-wiki-multi-file-folder-count',
     });
-    // Inline "select all" — direct children only, not recursive
-    // into subfolders. Each subfolder gets its own "select all"
-    // when the user opens it.
-    const selectAllBtn = summary.createEl('button', { text: 'Select all', cls: 'llm-wiki-multi-file-folder-bulk' });
+    // Inline "Select all" — ticks every visible checkbox in this
+    // folder (direct children only). Does NOT enqueue — that
+    // happens when the user clicks "Add to queue". The two-step
+    // flow (mark → commit) keeps the ingest start under explicit
+    // user control.
+    const selectAllBtn = summary.createEl('button', {
+      text: getText(this.settings.language, 'multiFileSelectAll'),
+      cls: 'llm-wiki-multi-file-folder-bulk',
+    });
     selectAllBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Only enqueue files that are NOT already in the queue
-      // (pending/running/completed). enqueue() is also idempotent
-      // but skipping the call avoids a notify storm on no-op adds.
-      const queue = this.ingestQueue.getSnapshot();
-      const inQueuePaths = new Set(queue.map(j => j.file.path));
-      const newFiles = visibleFiles.filter(f => !inQueuePaths.has(f.path));
-      if (newFiles.length > 0) {
-        this.ingestQueue.enqueue(newFiles);
-        if (this.onStartIngest) this.onStartIngest(newFiles);
-      }
+      // Tick every checkbox in THIS folder's direct file list.
+      // The `:scope >` selector restricts to direct children of
+      // the current <details> node so nested subfolders are NOT
+      // affected — each subfolder has its own "Select all".
+      const parent = summary.parentElement;
+      if (!parent) return;
+      const checkboxes = parent.querySelectorAll<HTMLInputElement>(
+        ':scope > .llm-wiki-multi-file-folder-list input[type="checkbox"][data-file-path]'
+      );
+      checkboxes.forEach(cb => { cb.checked = true; });
     });
 
     // Direct-child files
@@ -784,14 +801,24 @@ export class MultiFileSuggestModal extends Modal {
     const row = container.createDiv({ cls: 'llm-wiki-multi-file-row' });
     const checkbox = row.createEl('input', { type: 'checkbox' });
     checkbox.dataset.filePath = file.path;
-    checkbox.addEventListener('change', () => this.toggle(file));
+    // v1.23.0 Phase 5.1.5 stage 4: ticking a checkbox does NOT
+    // enqueue. The user has to explicitly click "Add to queue" to
+    // commit the selection. This matches the v1 git-style
+    // two-step flow (mark → commit) and prevents the modal from
+    // firing ingest on every click — which previously made the
+    // "Add to queue" button a no-op (everything was already in
+    // flight by the time the user found it).
+    //
+    // The checkbox state is purely a UI marker. The queue only
+    // changes when "Add to queue" fires enqueue() (or when the
+    // queue changes externally, e.g. the background worker
+    // completes a job — handled by updateLeftPaneSelections).
     const basename = file.path.split('/').pop() ?? file.path;
     row.createEl('span', { text: basename, cls: 'llm-wiki-multi-file-basename' });
-    // Whole row toggles selection (skip the checkbox itself).
+    // Whole row toggles the checkbox (skip the checkbox itself).
     row.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).tagName !== 'INPUT') {
         checkbox.checked = !checkbox.checked;
-        this.toggle(file);
       }
     });
   }
@@ -868,7 +895,7 @@ export class MultiFileSuggestModal extends Modal {
     const jobs = this.ingestQueue.getSnapshot();
     if (jobs.length === 0) {
       this.rightEl.createEl('p', {
-        text: 'No files in the queue. Check files on the left to add them.',
+        text: getText(this.settings.language, 'multiFileQueueEmpty'),
         cls: 'llm-wiki-multi-file-empty',
       });
       return;
@@ -877,11 +904,49 @@ export class MultiFileSuggestModal extends Modal {
       const row = this.rightEl.createDiv({
         cls: `llm-wiki-multi-file-row llm-wiki-multi-file-row-${job.status}`,
       });
+      // Status icon as a leading marker. The text is the user's
+      // language (no i18n here — these are single-glyph markers
+      // the same in every locale).
+      const statusIcon =
+        job.status === 'pending' ? '🟡' :
+        job.status === 'running' ? '🔵' :
+        job.status === 'completed' ? '✅' :
+        '❌';
+      row.createEl('span', { text: statusIcon, cls: 'llm-wiki-multi-file-status-icon' });
       const basename = job.file.path.split('/').pop() ?? job.file.path;
       row.createEl('span', { text: basename, cls: 'llm-wiki-multi-file-basename' });
-      row.createEl('span', { text: job.status, cls: 'llm-wiki-multi-file-status' });
+      // Status text is i18n'd. The internal `job.status` enum
+      // string stays English (data attribute on the row's class is
+      // used for CSS styling — `llm-wiki-multi-file-row-pending`
+      // etc.) so we keep the enum string in the class but use the
+      // localized label for display.
+      const statusTextKey =
+        job.status === 'pending' ? 'multiFileStatusPending' :
+        job.status === 'running' ? 'multiFileStatusRunning' :
+        job.status === 'completed' ? 'multiFileStatusCompleted' :
+        'multiFileStatusFailed';
+      row.createEl('span', { text: getText(this.settings.language, statusTextKey), cls: 'llm-wiki-multi-file-status' });
       if (job.error) {
         row.createEl('span', { text: job.error, cls: 'llm-wiki-multi-file-error' });
+      }
+      // Per-row cancel button. Disabled for terminal-state jobs
+      // (completed / failed) — remove() would drop the error
+      // info on a failed job, and a completed job has nothing to
+      // cancel. The visual signal is the icon next to the row.
+      // Only pending and running are cancellable: pending just
+      // removes from the queue; running fires the AbortController
+      // so the worker can stop mid-flight.
+      const cancelBtn = row.createEl('button', {
+        text: '✕',
+        cls: 'llm-wiki-multi-file-cancel',
+        attr: { 'aria-label': getText(this.settings.language, 'multiFileCancelAria') },
+      });
+      const isCancellable = job.status === 'pending' || job.status === 'running';
+      cancelBtn.disabled = !isCancellable;
+      if (isCancellable) {
+        cancelBtn.addEventListener('click', () => {
+          this.ingestQueue.remove(job.id);
+        });
       }
     }
   }
@@ -940,17 +1005,4 @@ export class MultiFileSuggestModal extends Modal {
     }
     return null;
   }
-}
-
-/**
- * Escape a string for use inside a CSS attribute selector. The
- * file paths we pass to `querySelector` are user-controlled and
- * may contain characters like '.', ':', '/', etc. that have
- * meaning in CSS selectors. Most paths don't strictly need
- * escaping but it's safer to always do it. Tiny inline
- * implementation (no npm dep) — only needs to escape the common
- * troublemakers.
- */
-function cssEscape(value: string): string {
-  return value.replace(/[\\"]/g, '\\$&');
 }

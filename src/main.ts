@@ -582,7 +582,7 @@ export default class LLMWikiPlugin extends Plugin {
         return;
       }
 
-      void this.runBatchIngest(files, `${files.length} files from ${folder.path}`);
+      void this.runBatchIngest(files, [], `${files.length} files from ${folder.path}`);
     }).open();
   }
 
@@ -603,14 +603,19 @@ export default class LLMWikiPlugin extends Plugin {
 
     new MultiFileSuggestModal(
       this.app,
-      this.settings.wikiFolder,
+      this.settings,
       this.ingestQueue,
-      // v1.23.0 Phase 5.1.5: when the modal enqueues files, hand
-      // them to runBatchIngest. The modal stays open; the right
-      // pane subscribes to the queue and shows live progress.
-      (files: TFile[]) => {
-        if (files.length === 0) return;
-        void this.runBatchIngest(files, `${files.length} manually-selected files`);
+      // v1.23.0 Phase 5.1.5 stage 5: pass the already-issued job
+      // ids to runBatchIngest. The modal does the enqueue (it
+      // owns the queue UI), and the worker uses those ids to
+      // publish start/complete transitions. Without passing the
+      // ids, runBatchIngest used to call enqueue() itself — but
+      // enqueue is idempotent against in-flight jobs, so the
+      // second call returned no ids and the loop never updated
+      // job statuses, leaving every job stuck in 'pending'.
+      (ids: string[], files: TFile[]) => {
+        if (files.length === 0 || ids.length === 0) return;
+        void this.runBatchIngest(files, ids, `${files.length} manually-selected files`);
       },
     ).open();
   }
@@ -638,16 +643,25 @@ export default class LLMWikiPlugin extends Plugin {
    * untouched (per #130, fixes the original "move to staging folder"
    * workaround).
    */
-  private async runBatchIngest(files: TFile[], sourceLabel: string): Promise<void> {
+  private async runBatchIngest(files: TFile[], jobIds: string[], sourceLabel: string): Promise<void> {
     this.showProgress('Checking for already-ingested files...');
     const alreadyIngestedFiles: TFile[] = [];
     const newFiles: TFile[] = [];
+    // Aligned with `files` by index — only entries whose id is in
+    // jobIds keep their jobId; already-ingested files map to ''.
+    // The modal pre-issued the ids; this method is now the
+    // single consumer of those ids (it used to enqueue itself,
+    // which was a no-op once the modal had already enqueued).
+    const alignedJobIds: string[] = [];
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const jobId = jobIds[i] ?? '';
       if (await this.isAlreadyIngested(file)) {
         alreadyIngestedFiles.push(file);
       } else {
         newFiles.push(file);
+        alignedJobIds.push(jobId);
       }
     }
 
@@ -687,29 +701,50 @@ export default class LLMWikiPlugin extends Plugin {
     // within the run and against pages already in the wiki.
     const batchCtx = this.wikiEngine.createBatchContext();
 
-    // v1.23.0 Phase 5.1.5: enqueue every new file up front so the
-    // Multi-File Suggest modal (and any other subscriber) can show a
-    // real-time right pane during ingest. enqueue() is idempotent
-    // against in-flight duplicates, but we already filtered those
-    // out above (newFiles has no overlap with the in-flight set).
-    const jobIds = this.ingestQueue.enqueue(newFiles);
-    // Build a path → id lookup for the loop below.
-    const idByPath = new Map<string, string>();
-    for (let idx = 0; idx < newFiles.length; idx++) {
-      const id = jobIds[idx];
-      if (id) idByPath.set(newFiles[idx].path, id);
+    // v1.23.0 Phase 5.1.5 stage 5: resolve the job ids for this
+    // batch. Two paths:
+    //
+    //   - Modal path: caller already issued ids via
+    //     ingestQueue.enqueue (so the modal's "Add to queue" click
+    //     immediately reflects in the queue snapshot). Use those
+    //     ids directly. alignedJobIds[] was built above aligned by
+    //     index with newFiles[] (already-ingested files drop out,
+    //     keeping the alignment).
+    //
+    //   - Folder / "everything else" path: caller passed an empty
+    //     jobIds array (the call site doesn't know ids yet). Issue
+    //     them here. enqueue() is idempotent against in-flight
+    //     duplicates, so re-enqueueing during an active batch is
+    //     safe.
+    let resolvedJobIds: string[];
+    if (jobIds.length > 0) {
+      resolvedJobIds = alignedJobIds;
+      console.debug(
+        `[runBatchIngest] using pre-issued ids (${sourceLabel}):`,
+        resolvedJobIds.length, 'jobs'
+      );
+    } else {
+      resolvedJobIds = this.ingestQueue.enqueue(newFiles);
+      console.debug(
+        `[runBatchIngest] enqueued ${resolvedJobIds.length}/${newFiles.length} jobs (${sourceLabel})`
+      );
     }
 
     for (let i = 0; i < newFiles.length; i++) {
       const file = newFiles[i];
-      const jobId = idByPath.get(file.path);
+      const jobId = resolvedJobIds[i];
 
       try {
         // Mark running BEFORE the await so the modal (if open) sees
         // a 'running' state for this file rather than a 'pending' that
         // never resolves. The job is the only way to address the
         // record across this await boundary.
-        if (jobId) this.ingestQueue.start(jobId);
+        if (jobId) {
+          this.ingestQueue.start(jobId);
+          console.debug(
+            `[runBatchIngest] [${i + 1}/${newFiles.length}] start ${file.path} (jobId=${jobId})`
+          );
+        }
         this.batchProgress = { current: i + 1, total: ingestCount };
         this.showProgress(`[${i + 1}/${ingestCount}] ${file.basename}`);
         console.debug(`(${i + 1}/${ingestCount}) ingesting: ${file.path}`);
@@ -718,11 +753,19 @@ export default class LLMWikiPlugin extends Plugin {
           console.debug(`Batch ingestion cancelled at file ${i + 1}/${ingestCount}`);
           // Mark the cancelled job as failed so the right pane
           // shows the cancellation rather than leaving it as 'running'.
-          if (jobId) this.ingestQueue.complete(jobId, false, 'Cancelled by user');
+          if (jobId) {
+            this.ingestQueue.complete(jobId, false, 'Cancelled by user');
+            console.debug(`[runBatchIngest] cancelled ${file.path} (jobId=${jobId})`);
+          }
           break;
         }
         console.debug(`(${i + 1}/${ingestCount}) ingestion success: ${file.path}`);
-        if (jobId) this.ingestQueue.complete(jobId, true);
+        if (jobId) {
+          this.ingestQueue.complete(jobId, true);
+          console.debug(
+            `[runBatchIngest] [${i + 1}/${newFiles.length}] complete ${file.path} (jobId=${jobId})`
+          );
+        }
       } catch (error) {
         console.error(`(${i + 1}/${ingestCount}) ingestion failed: ${file.path}`, error);
         const errMsg = error instanceof Error ? error.message : String(error);

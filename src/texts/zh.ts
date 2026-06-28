@@ -668,6 +668,25 @@ export const ZH_TEXTS = {
     startupCheckWelcomePending: 'Welcome note：正在后台生成（完成后会显示通知）。',
     welcomeNoteFileName: '欢迎使用 Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Welcome note 已创建于 {path}',
+    // v1.23.0 Phase 5.1.5: 多文件摄入 Modal 的"取消全部"按钮。一次取消
+    // 队列中所有 pending + running 任务。Completed / failed 保留可见。
+    cancelAllQueueJobs: '全部取消',
+    // v1.23.0 Phase 5.1.5: Multi-File Suggest modal (cmdIngestMultipleFiles).
+    // 标题、提示、搜索框占位、按钮、状态文字、队列空占位。
+    multiFileModalTitle: '多文件摄入',
+    multiFileModalHint: '选择源笔记加入队列。右侧面板实时显示队列与进度。',
+    multiFileSearchPlaceholder: '按路径筛选文件…',
+    multiFileAddToQueue: '加入队列',
+    multiFileSelectAll: '全选',
+    multiFileFileCount: '{count} 个文件',
+    multiFileNoFilesAvailable: '暂无可摄入的文件。',
+    multiFileNoFilesMatch: '未匹配到 "{q}"。',
+    multiFileQueueEmpty: '队列为空。勾选左侧文件即可加入。',
+    multiFileStatusPending: '等待中',
+    multiFileStatusRunning: '摄入中',
+    multiFileStatusCompleted: '已完成',
+    multiFileStatusFailed: '已失败',
+    multiFileCancelAria: '取消该文件',
     startupCheckNoticeLevelName: '显示快速修复结果',
     startupCheckNoticeLevelDesc: '快速修复在插件启动时始终运行（Welcome note、文件夹结构、源归一化、不完整页面、日志头）。选择启动后是否显示摘要通知。静默模式仅记录到开发者控制台和操作历史面板。',
     startupCheckNoticeVisible: '显示（弹出通知）',

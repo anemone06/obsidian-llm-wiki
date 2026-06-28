@@ -668,6 +668,25 @@ export const ZH_HANT_TEXTS = {
     startupCheckWelcomePending: 'Welcome note：正在背景產生中（完成後會顯示通知）。',
     welcomeNoteFileName: '歡迎使用 Karpathy LLM Wiki',
     startupCheckWelcomeCreated: 'Welcome note 已建立於 {path}',
+    // v1.23.0 Phase 5.1.5: 多檔案攝入 Modal 的「全部取消」按鈕。一次取消
+    // 佇列中所有 pending + running 任務。Completed / failed 保留可見。
+    cancelAllQueueJobs: '全部取消',
+    // v1.23.0 Phase 5.1.5: 多檔案攝入 Modal 的標題、提示、搜尋框佔位、
+    // 按鈕、狀態文字、佇列空佔位。
+    multiFileModalTitle: '多檔案攝入',
+    multiFileModalHint: '選擇來源筆記加入佇列。右側面板即時顯示佇列與進度。',
+    multiFileSearchPlaceholder: '依路徑篩選檔案…',
+    multiFileAddToQueue: '加入佇列',
+    multiFileSelectAll: '全選',
+    multiFileFileCount: '{count} 個檔案',
+    multiFileNoFilesAvailable: '暫無可攝入的檔案。',
+    multiFileNoFilesMatch: '未匹配到「{q}」。',
+    multiFileQueueEmpty: '佇列為空。勾選左側檔案即可加入。',
+    multiFileStatusPending: '等待中',
+    multiFileStatusRunning: '攝入中',
+    multiFileStatusCompleted: '已完成',
+    multiFileStatusFailed: '已失敗',
+    multiFileCancelAria: '取消該檔案',
     startupCheckNoticeLevelName: '顯示快速修復結果',
     startupCheckNoticeLevelDesc: '快速修復在外掛啟動時始終執行（Welcome note、資料夾結構、來源正規化、不完整頁面、日誌標頭）。選擇啟動後是否顯示摘要通知。靜默模式僅記錄到開發者控制台與操作歷史面板。',
     startupCheckNoticeVisible: '顯示（彈出通知）',

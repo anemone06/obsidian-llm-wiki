@@ -667,6 +667,26 @@ export const KO_TEXTS = {
     startupCheckWelcomePending: 'Welcome 노트: 백그라운드에서 생성 중(완료 시 알림이 표시됩니다).',
     welcomeNoteFileName: 'Karpathy LLM Wiki에 오신 것을 환영합니다',
     startupCheckWelcomeCreated: '{path}에 Welcome 노트가 생성되었습니다',
+    // v1.23.0 Phase 5.1.5: 다중 파일 수집 모달의 "모두 취소" 버튼.
+    // 대기열의 모든 pending + running 작업을 한 번에 취소합니다.
+    // 완료 및 실패한 작업은 표시용으로 유지됩니다.
+    cancelAllQueueJobs: '모두 취소',
+    // v1.23.0 Phase 5.1.5: 다중 파일 수집 모달(cmdIngestMultipleFiles).
+    // 제목, 안내, 검색 입력, 버튼, 상태 레이블, 빈 큐 안내.
+    multiFileModalTitle: '다중 파일 수집',
+    multiFileModalHint: '수집할 소스 노트를 선택하세요. 오른쪽 패널에 실시간 큐와 진행률이 표시됩니다.',
+    multiFileSearchPlaceholder: '경로로 파일 필터링…',
+    multiFileAddToQueue: '큐에 추가',
+    multiFileSelectAll: '모두 선택',
+    multiFileFileCount: '파일 {count}개',
+    multiFileNoFilesAvailable: '수집 가능한 파일이 없습니다.',
+    multiFileNoFilesMatch: '"{q}"와(과) 일치하는 파일이 없습니다.',
+    multiFileQueueEmpty: '큐가 비어 있습니다. 왼쪽에서 파일을 선택하세요.',
+    multiFileStatusPending: '대기 중',
+    multiFileStatusRunning: '수집 중',
+    multiFileStatusCompleted: '완료됨',
+    multiFileStatusFailed: '실패함',
+    multiFileCancelAria: '이 파일 취소',
     startupCheckNoticeLevelName: '빠른 수정 결과 표시',
     startupCheckNoticeLevelDesc: 'QuickFixes는 플러그인 시작 시 항상 실행됩니다(Welcome 노트, 폴더 구조, 소스 정규화, 불완전한 페이지, 로그 헤더). 시작 후 요약 알림을 표시할지 선택합니다. 무음 모드는 개발자 콘솔 및 작업 기록 패널에만 기록됩니다.',
     startupCheckNoticeVisible: '표시(알림 표시)',
