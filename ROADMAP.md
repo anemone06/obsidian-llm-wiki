@@ -156,7 +156,7 @@ Stays local until user-in-the-wild signals other P0 issues for a single release.
 
 ## Next Milestone: v1.23.0 — Graph Engine (current sprint)
 
-**Phase 5.1.5 COMPLETE** (Welcome note onboarding + Multi-File Suggest modal + IngestQueue). **Core PPR modules IMPLEMENTED** (MC-PPR engine, section-extractor, hub-detection, PPR cold-start cascade). **1257 tests, 94 files.**
+**Phase 5.1.5 + Core PPR modules + P1-5 (Query Wiki integration) COMPLETE.** Eval baseline: cascade R@5 25.4%, cascade+seeds R@5 31.0% (target 55% — gap is fixture-size related, tracked as P2-4). 1284 tests, 96 files.
 
 ### v1.23.0 Priority Order
 
