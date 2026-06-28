@@ -185,14 +185,24 @@ Stays local until user-in-the-wild signals other P0 issues for a single release.
 #### 🔄 P1 — Remaining (in progress)
 | # | Module | LOC | Depends on | Status |
 |---|--------|-----|------------|--------|
-| P1-5 | Query Wiki integration (replace lex Tier A with PPR top-k) | ~30 | P1-2 + P1-4 | 🔄 pending |
+| P1-5 | Query Wiki integration (replace lex Tier A with PPR top-k + LLM seed selection) | — | ✅ done |
 | P1-6 | Lint integration: #157 path (hub-link strip uses PPR) | ~40 | P1-3 | ❌ not started |
 
 #### 🔄 P2 — Remaining (after P1-5)
 | # | Task | Effort | Status |
 |---|------|--------|--------|
 | P2-2 | Settings: cold-start threshold exposure (min_pages / min_edges) | 0.5 day | ❌ |
-| P2-3 | P0-2 eval report → ROADMAP as acceptance gate | 0.5 day | ❌ |
+| P2-3 | Eval report acceptance gate (vs fixture target) | 0.5 day | ❌ not started |
+| P2-4 | PPR parameter tuning (damping/numWalks/thresholds) for sample-50page | 1 day | ❌ not started |
+
+#### 🔄 P2-3 — Eval baseline (sample-50page, 2026-06-28)
+| Strategy | R@5 | R@10 | Target@5 |
+|----------|-----|------|----------|
+| lex-only | 13.3% | 13.3% | ≥ 30% (below) |
+| cascade (current pprCascade) | 25.4% | 37.8% | ≥ 55% (below) |
+| cascade + explicit seeds | **31.0%** | **40.4%** | ≥ 55% (below) |
+
+**Findings**: PPR graph walk improves recall by +12% R@5 over lex. Adding explicit seeds (LLM-augmented path) adds another +5.6%. All below target because the 53-page fixture is small (max top-5 coverage = 5/11 expected for "heart failure"). Eval script: `npx tsx src/__tests__/fixtures/wikis/sample-50page/eval-cascade.ts`.
 
 #### Deferred P1 — Cleanup (from v1.18.x, lower ROI)
 | # | Item | Effort | Status |
