@@ -345,6 +345,14 @@ Documented in `~/.claude/projects/.../memory/project_v1.23.0_graph_engine.md`.
 
 ---
 
+## Next Milestone: v1.23.1 — PATCH after v1.23.0
+
+### v1.23.1 Scope
+
+| Item | Issue/PR | Effort | Status |
+|------|----------|--------|--------|
+| #204 Auto Ingest modal regression (notice setting not wired into watch-mode path) | #204 | 0.5 days | Planned — see memory/project_v1.23.1_patch_204_auto_ingest_notice.md |
+
 ## Version Timeline
 
 | Version | Date | Headline |
