@@ -9,13 +9,17 @@
 //
 // Dependency-inverted: instead of touching the Obsidian vault
 // directly, the function takes a VaultAdapter interface that the
-// caller (main.ts onload) implements with the real app.vault. Tests
-// fake the adapter to assert behavior across the 3 tiers.
+// caller (auto-maintain.ts Phase 0 + Recreate command) implements
+// with the real app.vault. Tests fake the adapter.
+//
+// v1.23.0 refactor: VaultAdapter.listMarkdown() (with full VaultCandidate
+// metadata) was removed because the Welcome template no longer
+// renders an Initial Source Suggestions section. We use
+// getMarkdownFiles() (just paths) for tier probing.
 
 import { describe, it, expect, vi } from 'vitest';
 import { ensureWelcomeNote } from '../../core/ensure-welcome-note';
 import type { VaultAdapter } from '../../core/ensure-welcome-note';
-import type { VaultCandidate } from '../../core/welcome-note-template';
 
 // Test vault adapter — records what was written.
 function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter & { written: Map<string, string> } {
@@ -25,8 +29,11 @@ function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter 
     async exists(path: string): Promise<boolean> {
       return files.has(path);
     },
-    async listMarkdown(): Promise<VaultCandidate[]> {
-      return [];
+    async getMarkdownFiles(): Promise<string[]> {
+      // Vault state mirrors the written files (excluding the auto-managed
+      // Welcome file so re-ingestion tests don't trigger Tier C). We
+      // exclude ALL Welcome files (any language) for safety.
+      return [...files.keys()].filter(p => !/Welcome.*\.md$/.test(p));
     },
     async create(path: string, content: string): Promise<void> {
       files.set(path, content);
@@ -34,6 +41,12 @@ function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter 
   };
   return adapter;
 }
+
+// v1.23.0 i18n: the Welcome filename is localized per language. For
+// the default test fixture (en) it's "Welcome to Karpathy LLM Wiki".
+// Tests that need to assert the exact path should use this helper.
+const TEST_WELCOME_PATH = 'wiki/Welcome to Karpathy LLM Wiki.md';
+const TEST_WELCOME_PATH_ZH = 'wiki/欢迎使用 Karpathy LLM Wiki.md';
 
 // Helper: returns a fake LLM client that always "translates" by
 // prepending a marker. Tests can inspect the marker to confirm
@@ -49,9 +62,9 @@ function makeTranslatingClient(marker = '[ZH]') {
 
 describe('ensureWelcomeNote — Tier A (empty vault)', () => {
   it('does NOT create welcome note when LLM is not configured', async () => {
-    // Brand-new vault + no LLM → no useful Welcome content (the
-    // "Initial Source Suggestions" section would be empty anyway).
-    // Show Notice only, point user at "create your first source note".
+    // Brand-new vault + no LLM → tier A short-circuits. The user
+    // should run Configuration Test first; no Welcome is useful
+    // without a working LLM.
     const vault = makeFakeVault();
     await ensureWelcomeNote({
       vault,
@@ -60,7 +73,7 @@ describe('ensureWelcomeNote — Tier A (empty vault)', () => {
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'no API key' }),
     });
-    expect(vault.written.has('wiki/Welcome.md')).toBe(false);
+    expect(vault.written.has(TEST_WELCOME_PATH)).toBe(false);
   });
 
   it('CREATES welcome note when LLM is configured (Tier A with-LLM path, v1.23.0 follow-up)', async () => {
@@ -68,8 +81,7 @@ describe('ensureWelcomeNote — Tier A (empty vault)', () => {
     // Welcome note so the LLM-only-onboarding user has a guided entry
     // point instead of just a "go create a source note" Notice.
     // tier-detection learns "LLM is available" from the llmClient arg
-    // (which is the v1.23.0 simplification: no extra smoke test probe
-    // call for the tier decision).
+    // (no extra smoke test probe call for the tier decision).
     const vault = makeFakeVault();
     await ensureWelcomeNote({
       vault,
@@ -80,91 +92,81 @@ describe('ensureWelcomeNote — Tier A (empty vault)', () => {
       llmClient: { createMessage: vi.fn().mockResolvedValue(JSON.stringify({ translated: 'TRANSLATED' })) },
       model: 'gpt-4o-mini',
     });
-    expect(vault.written.has('wiki/Welcome.md')).toBe(true);
+    expect(vault.written.has(TEST_WELCOME_PATH)).toBe(true);
   });
 });
 
 describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
-  it('creates welcome note at <wikiFolder>/Welcome.md with seed suggestions', async () => {
+  it('creates welcome note at <wikiFolder>/Welcome.md', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-      { path: 'notes/b.md', title: 'B', size: 3000 },
-    ];
+    // Pre-existing non-wiki notes simulate Tier B state.
+    vault.written.set('notes/a.md', '# A');
+    vault.written.set('notes/b.md', '# B');
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
     });
-    expect(vault.written.has('wiki/Welcome.md')).toBe(true);
-    const content = vault.written.get('wiki/Welcome.md')!;
+    expect(vault.written.has(TEST_WELCOME_PATH)).toBe(true);
+    const content = vault.written.get(TEST_WELCOME_PATH)!;
     expect(content).toMatch(/type:\s*welcome/);
-    expect(content).toMatch(/notes\/a\.md/);  // seed candidate 1
-    expect(content).toMatch(/notes\/b\.md/);  // seed candidate 2
     expect(content).toMatch(/OpenAI/);
   });
 
   it('skips creation if Welcome note already exists (idempotent)', async () => {
-    const vault = makeFakeVault({ 'wiki/Welcome.md': 'existing content' });
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    const vault = makeFakeVault({ [TEST_WELCOME_PATH]: 'existing content' });
+    vault.written.set('notes/a.md', '# A');
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
     });
     // File should NOT be overwritten — content unchanged.
-    expect(vault.written.get('wiki/Welcome.md')).toBe('existing content');
+    expect(vault.written.get(TEST_WELCOME_PATH)).toBe('existing content');
   });
 
   it('honors createWelcomeNote=false setting (skips creation)', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: false },
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
     });
-    expect(vault.written.has('wiki/Welcome.md')).toBe(false);
+    expect(vault.written.has(TEST_WELCOME_PATH)).toBe(false);
   });
 
-  it('surfaces LLM smoke test failure in the note body', async () => {
+  it('surfaces LLM smoke test failure in the note frontmatter (hidden metadata)', async () => {
+    // v1.23.0 refactor (2026-06-28): LLM status is no longer rendered
+    // into the visible body — it lives in frontmatter only. The user
+    // sees the body as a clean reading guide; the install state is
+    // hidden in frontmatter, and the verify section points them to
+    // Settings → Test Connection for at-a-glance status.
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'API key not configured' }),
-      vaultCandidates: candidates,
     });
-    const content = vault.written.get('wiki/Welcome.md')!;
-    expect(content).toMatch(/Failed/);
-    expect(content).toMatch(/API key not configured/);
+    const content = vault.written.get(TEST_WELCOME_PATH)!;
+    expect(content).toMatch(/^llm_config_status:\s*failed\s*$/m);
+    expect(content).toMatch(/^llm_config_error:\s*"API key not configured"\s*$/m);
   });
 });
 
 describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
   it('translates the body to targetLanguage when LLM client is provided', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     const llmClient = makeTranslatingClient('[TRANSLATED]');
     await ensureWelcomeNote({
       vault,
@@ -172,20 +174,17 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
-    const content = vault.written.get('wiki/Welcome.md')!;
+    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
     expect(content).toMatch(/\[TRANSLATED\]/);
     expect(llmClient.createMessage).toHaveBeenCalled();
   });
 
   it('skips LLM translation when targetLanguage is en (writes English directly)', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     const llmClient = makeTranslatingClient('[SHOULD_NOT_APPEAR]');
     await ensureWelcomeNote({
       vault,
@@ -193,20 +192,17 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
     expect(llmClient.createMessage).not.toHaveBeenCalled();
-    const content = vault.written.get('wiki/Welcome.md')!;
+    const content = vault.written.get(TEST_WELCOME_PATH)!;
     expect(content).not.toMatch(/SHOULD_NOT_APPEAR/);
   });
 
   it('falls back to English when LLM client throws during translation', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     const llmClient = {
       createMessage: vi.fn().mockRejectedValue(new Error('rate limit')),
     };
@@ -216,21 +212,18 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
-    const content = vault.written.get('wiki/Welcome.md')!;
-    expect(content).toMatch(/Welcome to your Wiki/);  // English fallback
+    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
+    expect(content).toMatch(/Welcome to your LLM-Wiki/);  // English fallback (H1)
     expect(result.localizeResult?.localized).toBe(false);
     expect(result.localizeResult?.error).toMatch(/rate limit/);
   });
 
   it('skips LLM translation when smoke test failed (no wasted LLM call)', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     const llmClient = makeTranslatingClient();
     await ensureWelcomeNote({
       vault,
@@ -238,52 +231,43 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'API key not configured' }),
-      vaultCandidates: candidates,
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
     expect(llmClient.createMessage).not.toHaveBeenCalled();
-    const content = vault.written.get('wiki/Welcome.md')!;
-    expect(content).toMatch(/Welcome to your Wiki/);  // English, not Chinese
+    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
+    expect(content).toMatch(/Welcome to your LLM-Wiki/);  // English, not Chinese
   });
 
   it('writes English without LLM client when none is provided', async () => {
     const vault = makeFakeVault();
-    const candidates: VaultCandidate[] = [
-      { path: 'notes/a.md', title: 'A', size: 5000 },
-    ];
+    vault.written.set('notes/a.md', '# A');
     const result = await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: candidates,
       // no llmClient
     });
     expect(result.localizeResult?.localized).toBe(false);
-    const content = vault.written.get('wiki/Welcome.md')!;
-    expect(content).toMatch(/Welcome to your Wiki/);
+    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
+    expect(content).toMatch(/Welcome to your LLM-Wiki/);
   });
 });
 
 describe('ensureWelcomeNote — Tier C (existing wiki)', () => {
   it('does NOT create welcome note when wiki already exists', async () => {
+    // Existing wiki page → Tier C silent upgrade.
     const vault = makeFakeVault({ 'wiki/entities/A.md': '# Existing entity' });
-    // vaultCandidates must reflect the actual vault state so probe
-    // detects the existing wiki. Pass the wiki page as a candidate so
-    // probeVaultState sees wikiPageCount > 0 → Tier C.
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'en',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      vaultCandidates: [
-        { path: 'wiki/entities/A.md', title: 'A', size: 100 },
-      ],
     });
-    expect(vault.written.has('wiki/Welcome.md')).toBe(false);
+    expect(vault.written.has(TEST_WELCOME_PATH)).toBe(false);
   });
 });
 
