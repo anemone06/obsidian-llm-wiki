@@ -128,7 +128,10 @@ export default class LLMWikiPlugin extends Plugin {
       // to exist. This is intentional — reordering the assignments would break it.
       (path: string) => this.autoMaintainManager.watchWrite(path),
       (msg: string) => this.showProgress(msg),
-      (report: IngestReport) => this.onIngestDone(report)
+      // v1.22.6 #204: Dispatch based on report.trigger so watch-mode
+      // auto-ingest goes through onAutoIngestDone (Notice) while
+      // manual ingest keeps the legacy IngestReportModal behavior.
+      (report: IngestReport) => this.onIngestDoneDispatch(report)
     );
 
     // #164: when an interactive ingest hits a duplicate, ask the user whether to
@@ -420,9 +423,19 @@ export default class LLMWikiPlugin extends Plugin {
     }
   }
 
-  private onIngestDone(report: IngestReport): void {
-    this.dismissProgress();
-    new IngestReportModal(this.app, report, this.settings.language).open();
+  // v1.22.6 #204: Dispatch ingest completion by trigger. Routes
+  // watch-mode auto-ingest (trigger='auto') to onAutoIngestDone
+  // (Notice, respects autoIngestNotificationLevel), and manual
+  // ingest (trigger='manual' or undefined) to the legacy
+  // IngestReportModal. Keeps backward compatibility — legacy
+  // callers without trigger default to 'manual'.
+  private onIngestDoneDispatch(report: IngestReport): void {
+    if (report.trigger === 'auto') {
+      this.onAutoIngestDone(report);
+    } else {
+      this.dismissProgress();
+      new IngestReportModal(this.app, report, this.settings.language).open();
+    }
   }
 
   // v1.22.2 #204: notification-level done callback for watch-mode auto-ingest.
