@@ -233,7 +233,26 @@ v1.22.0 是一個**次要功能版本**，帶來長期期待的 Schema 一鍵更
 
 建議升級 —— gpt-5.x 模型開箱即用，Test Connection 介面會準確告訴你 Provider 拒絕了什麼，不必再翻控制台排查 baseUrl / 模型名 / API key。
 
-建議升級
+### v1.22.5 — 2026-06-29 (PATCH)
+
+聚焦的 PATCH：修復 OpenAI 推理模型族（gpt-5.1+ / gpt-5.5 / o1-o4）在 Test Connection 上的 400 錯誤（Issue #207 後續跟進），並將 Provider 真實錯誤訊息透傳到 Test Connection Notice。
+
+- **🛡️ 推理模型族現走 OpenAI Responses API（Issue #207 後續）。** v1.22.4 的 `max_tokens` ↔ `max_completion_tokens` 探測快取修復是必要但不充分的——`gpt-5.1-chat-latest`、`gpt-5.5` 以及 `o1` / `o3` / `o4-mini` 推理家族在 Chat Completions 端點仍報 400 錯誤，原因是 Chat Completions 對推理模型族存在相容性問題。OpenAI 官方 GPT-5.5 遷移指南明確指出「GPT-5.5 works best in the Responses API」，v1.22.5 因此將推理家族路由到 `/v1/responses` 並附帶 `reasoning: { effort: 'low' }`。`gpt-5-chat-latest`、`gpt-4.1`、`gpt-3.5-turbo` 以及所有非 OpenAI baseUrl（Ollama、LM Studio、DeepSeek 等）保持 `/v1/chat/completions` 路徑不變。檢測邏輯是純函式 `isResponsesApiModel(model, baseUrl)`，僅在 `https://api.openai.com/v1` 觸發——自訂端點完全相容。
+- **📜 Provider 錯誤訊息體到達 Test Connection Notice。** Obsidian 的 `requestUrl` 在 4xx（含 429）上拋錯但**不**把 Provider 回應體掛到 Error 物件上——所以 v1.22.4 的 `extractProviderErrorMessage()` 也拿不到 OpenAI 實際說的什麼。v1.22.5 在失敗請求上包一層 `window.fetch` 重新擷取（5 秒逾時），把 Provider body 合併到拋出的 `Error.message` 裡，使用者看到的是 `"status 429: You exceeded your current quota, please check your plan and billing details"` 而不是裸 `"status 429"`。原始 body 同時透過 `console.warn` 級別寫入 DevTools 方便排查。非 OpenAI baseUrl 走原有 Chat Completions 路徑獲得相同增強。
+- **⏱️ 429/5xx 限流錯誤在 Responses API 路徑上獲得指數退避重試。** v1.22.4 的 `withRetry`（3 次嘗試，1s/2s/4s + 抖動）原本只覆蓋 Chat Completions 路徑。v1.22.5 把新 Responses API 路徑也包了同樣的 `withRetry`，瞬時 429 配額顛簸不再立即讓 Test Connection 失敗。
+- **♻️ 測試夾具更新。** v1.22.4 時期針對 dot-naming gpt-5.x 模型的迴歸測試，以及 `thinking.type='disabled'` 遺留 Chat Completions 路徑的測試，現在分別使用 `gpt-5-mini` / `gpt-5-nano` / `gpt-4.1`——這些模型繼續走 Chat Completions 路徑，而推理模型族由新的 `src/__tests__/root/llm-client-responses-api.test.ts`（28 測試）完整覆蓋。
+
+建議升級 —— `gpt-5.1-chat-latest`、`gpt-5.5`、`o1` / `o3` / `o4-mini` 家族在 Test Connection 上開箱即用，連線失敗時顯示的是 Provider 真實錯誤（如 "insufficient_quota"）而不是裸 HTTP 狀態碼。
+
+### v1.22.6 — 2026-06-29 (PATCH)
+
+聚焦的 PATCH：把 `onAutoIngestDone` 接入 Watch Mode 自動擷取路徑（Issue #204），讓 Auto Smart Fix 完成提示具備上下文感知能力，並把 OpenAI Responses API 路由擴展到 `gpt-5.x-pro` 變體（Issue #207 後續跟進）。
+
+- **🤫 自動擷取終於尊重 `autoIngestNotificationLevel: notice` 設定（Issue #204）。** v1.22.2 引入了 `onAutoIngestDone` 輔助方法走 Notice 路徑，但從未接入 Watch Mode 自動擷取流程——每次自動擷取完成都走 `onIngestDone`（永遠開啟 `IngestReportModal`），導致設定面板裡「Notice（非阻塞）」選項完全失效。v1.22.6 在 `IngestReport`（和 `IngestOptions`）上新增 `trigger?: 'auto' | 'manual'` 欄位，沿 `WikiEngine.ingestSource` → `onDone` 傳遞，並把 `trigger='auto'` 路由到 `onAutoIngestDone`。手動擷取行為不變。升級後，之前的「Notice」設定真正生效——自動擷取完成時是臨時 Notice + History 面板提示，不再奪取焦點。
+- **🔇 Auto Smart Fix 完成提示同樣具備上下文感知。** 同樣的 trigger 模式應用到 `runLintWiki`（新增第三個 `trigger` 參數，預設 `'manual'`）。`AutoMaintainManager.schedulePeriodicLint` 傳 `trigger='auto'`。完成分發：手動 → `LintReportModal`（原 UX 不變）；自動 + `autoSmartFix=true` → Notice + 跑 fixAll（沿用 v1.22.2 路徑）；自動 + `autoSmartFix=false` → 僅 Notice 帶 History 面板提示，不彈模態框。即使沒啟用 Auto Smart Fix，週期性的自動 lint 也不再打斷你寫作。
+- **🛡️ GPT-5 Pro 變體（`gpt-5.x-pro`）現在路由到 `/v1/responses`（Issue #207 後續）。** 已透過 OpenAI 官方模型頁（`developers.openai.com/api/docs/models/gpt-5-pro`）驗證：「GPT-5 Pro is available in the Responses API only.」v1.22.5 的 `RESPONSES_API_MODEL_RE` 匹配 `gpt-5.x` 但漏了 `-pro` 後綴，導致 `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` 靜默走到了 `/v1/chat/completions` 而 Pro 模型在那裡根本不存在 → 404。v1.22.6 把正則擴到 `^(gpt-5\.[1-9]\d*(?:-pro)?|o1(?:-mini|-preview)?|o3(?:-mini|-pro)?|o4-mini)$`。`gpt-5-chat-latest` 排除邏輯保留（按設計就是 Chat Completions 模型）。升級後 `gpt-5.x-pro` 應可工作；若 `gpt-5.x-chat-latest` 變體仍報 400，請貼出 Notice 完整文字（現在已帶 Provider body）以便進一步診斷。
+
+建議升級 ——「自動擷取 Notice」設定終於生效，週期性自動 lint 不再中斷寫作，Pro 模型變體可經 Responses API 觸達。
 
 我們強烈建議升級——Schema 一鍵應用功能使 Schema 優化成爲一步操作，繁體中文語言顯著改善 zh-TW 用戶的體驗。
 

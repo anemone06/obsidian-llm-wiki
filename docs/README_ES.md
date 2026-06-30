@@ -53,6 +53,7 @@ Recomendamos actualizar — `gpt-5.1-chat-latest`, `gpt-5.5` y las familias `o1`
     - [v1.22.3 — 2026-06-26 (PATCH)](#v1223--2026-06-26-patch)
     - [v1.22.4 — 2026-06-27 (PATCH)](#v1224--2026-06-27-patch)
     - [v1.22.5 — 2026-06-29 (PATCH)](#v1225--2026-06-29-patch)
+    - [v1.22.6 — 2026-06-29 (PATCH)](#v1226--2026-06-29-patch)
   - [📑 Contents](#-contents)
   - [💡 ¿Qué es LLM-Wiki?](#-qué-es-llm-wiki)
   - [⚡ ¿Por qué Obsidian + LLM-Wiki?](#-por-qué-obsidian--llm-wiki)
@@ -113,6 +114,14 @@ LLM-Wiki invierte eso. En lugar de que construyas el grafo a mano, la IA lo cult
 ---
 
 ## 🚀 Inicio rápido
+
+### v1.22.6 — 2026-06-29 (PATCH)
+
+- **🤫 Auto Ingest ahora respeta `autoIngestNotificationLevel: notice` (Issue #204).** El helper `onAutoIngestDone` de v1.22.2 (ruta Notice) nunca se cableó en el flujo de auto-ingest en Watch Mode — cada completion de auto-ingest iba por `onIngestDone` que siempre abre `IngestReportModal`, haciendo que el ajuste "Notice (no bloqueante)" fuera un no-op. v1.22.6 añade `trigger?: 'auto' | 'manual'` a `IngestReport` e `IngestOptions`, lo propaga a través de `WikiEngine.ingestSource` → `onDone`, y enruta `trigger='auto'` a `onAutoIngestDone`. El comportamiento de ingest manual no cambia.
+- **🔇 La completion de Auto Smart Fix también es context-aware.** Mismo patrón de trigger aplicado a `runLintWiki` (nuevo tercer parámetro `trigger`, por defecto `'manual'`). El lint automático periódico pasa `trigger='auto'`. Dispatch: manual → `LintReportModal`; auto + `autoSmartFix=true` → Notice + fixAll; auto + `autoSmartFix=false` → solo Notice con pista al panel History.
+- **🛡️ Las variantes GPT-5 Pro (`gpt-5.x-pro`) ahora se enrutan correctamente a `/v1/responses` (Issue #207 follow-up).** Verificado contra la doc oficial de OpenAI: "GPT-5 Pro is available in the Responses API only." El regex de v1.22.5 matcheaba `gpt-5.x` pero no el sufijo `-pro` — `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` iban silenciosamente a `/v1/chat/completions` → 404. Regex ampliado a `^(gpt-5\.[1-9]\d*(?:-pro)?|...)`.
+
+Recomendamos actualizar — el ajuste "Auto Ingest Notice" finalmente funciona, el lint automático periódico deja de interrumpir tu escritura, y las variantes Pro son accesibles vía Responses API.
 
 ### 📦 Instalación
 

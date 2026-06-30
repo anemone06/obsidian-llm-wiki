@@ -32,6 +32,7 @@
     - [v1.22.3 — 2026-06-26 (PATCH)](#v1223--2026-06-26-patch)
     - [v1.22.4 — 2026-06-27 (PATCH)](#v1224--2026-06-27-patch)
     - [v1.22.5 — 2026-06-29 (PATCH)](#v1225--2026-06-29-patch)
+    - [v1.22.6 — 2026-06-29 (PATCH)](#v1226--2026-06-29-patch)
     - [v1.22.1 — 2026-06-24 (PATCH)](#v1221--2026-06-24-patch)
   - [✨ 核心特性](#-核心特性)
     - [📊 知识质量](#-知识质量)
@@ -249,6 +250,16 @@ v1.22.0 是一个**次要功能版本**，带来长期期待的 Schema 一键更
 - **♻️ 测试夹具更新。** v1.22.4 时期针对 dot-naming gpt-5.x 模型的回归测试，以及 `thinking.type='disabled'` 遗留 Chat Completions 路径的测试，现在分别使用 `gpt-5-mini` / `gpt-5-nano` / `gpt-4.1`——这些模型继续走 Chat Completions 路径，而推理模型族由新的 `src/__tests__/root/llm-client-responses-api.test.ts`（28 测试）完整覆盖。
 
 建议升级 —— `gpt-5.1-chat-latest`、`gpt-5.5`、`o1` / `o3` / `o4-mini` 家族在 Test Connection 上开箱即用，连接失败时显示的是 Provider 真实错误（如 "insufficient_quota"）而不是裸 HTTP 状态码。
+
+### v1.22.6 — 2026-06-29 (PATCH)
+
+聚焦的 PATCH：把 `onAutoIngestDone` 接入 watch-mode 自动摄取路径（Issue #204），让 Auto Smart Fix 完成提示具备上下文感知能力，并把 OpenAI Responses API 路由扩展到 `gpt-5.x-pro` 变体（Issue #207 后续跟进）。
+
+- **🤫 自动摄取终于尊重 `autoIngestNotificationLevel: notice` 设置（Issue #204）。** v1.22.2 引入了 `onAutoIngestDone` 辅助方法走 Notice 路径，但从未接入 watch-mode 自动摄取流程——每次自动摄取完成都走 `onIngestDone`（永远打开 `IngestReportModal`），导致设置面板里"Notice（非阻塞）"选项完全失效。v1.22.6 在 `IngestReport`（和 `IngestOptions`）上添加 `trigger?: 'auto' | 'manual'` 字段，沿 `WikiEngine.ingestSource` → `onDone` 传递，并把 `trigger='auto'` 路由到 `onAutoIngestDone`。手动摄取行为不变。升级后，之前的"Notice"设置真正生效——自动摄取完成时是临时 Notice + History 面板提示，不再抢夺焦点。
+- **🔇 Auto Smart Fix 完成提示同样具备上下文感知。** 同样的 trigger 模式应用到 `runLintWiki`（新增第三个 `trigger` 参数，默认 `'manual'`）。`AutoMaintainManager.schedulePeriodicLint` 传 `trigger='auto'`。完成分发：手动 → `LintReportModal`（原 UX 不变）；自动 + `autoSmartFix=true` → Notice + 跑 fixAll（沿用 v1.22.2 路径）；自动 + `autoSmartFix=false` → 仅 Notice 带 History 面板提示，不弹模态框。即使没启用 Auto Smart Fix，周期性的自动 lint 也不再打断你写作。
+- **🛡️ GPT-5 Pro 变体现在路由到 `/v1/responses`（Issue #207 后续）。** 已通过 OpenAI 官方模型页（`developers.openai.com/api/docs/models/gpt-5-pro`）核实："GPT-5 Pro is available in the Responses API only." v1.22.5 的 `RESPONSES_API_MODEL_RE` 匹配 `gpt-5.x` 但漏了 `-pro` 后缀，导致 `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` 静默走到了 `/v1/chat/completions` 而 Pro 模型在那里根本不存在 → 404。v1.22.6 把正则扩到 `^(gpt-5\.[1-9]\d*(?:-pro)?|o1(?:-mini|-preview)?|o3(?:-mini|-pro)?|o4-mini)$`。`gpt-5-chat-latest` 排除逻辑保留（按设计就是 Chat Completions 模型）。升级后 `gpt-5.x-pro` 应可工作；若 `gpt-5.x-chat-latest` 变体仍报 400，请贴出 Notice 完整文本（现在已带 Provider body）以便进一步诊断。
+
+建议升级 —— "自动摄取 Notice"设置终于生效，周期性自动 lint 不再中断写作，Pro 模型变体可经 Responses API 触达。
 
 详见 [CHANGELOG.md](../CHANGELOG.md)。
 

@@ -33,6 +33,7 @@
     - [v1.22.3 — 2026-06-26 (PATCH)](#v1223--2026-06-26-patch)
     - [v1.22.4 — 2026-06-27 (PATCH)](#v1224--2026-06-27-patch)
     - [v1.22.5 — 2026-06-29 (PATCH)](#v1225--2026-06-29-patch)
+    - [v1.22.6 — 2026-06-29 (PATCH)](#v1226--2026-06-29-patch)
   - [✨ Funzionalità](#-funzionalità)
     - [📊 Qualità della conoscenza](#-qualità-della-conoscenza)
     - [🛠️ Manutenzione](#️-manutenzione)
@@ -267,6 +268,14 @@ Aggiornamento consigliato — `gpt-5.1-chat-latest`, `gpt-5.5` e le famiglie `o1
 Aggiornamento consigliatoAggiornamento consigliato.
 
 ## ✨ Funzionalità
+
+### v1.22.6 — 2026-06-29 (PATCH)
+
+- **🤫 Auto Ingest ora rispetta `autoIngestNotificationLevel: notice` (Issue #204).** L'helper `onAutoIngestDone` introdotto in v1.22.2 (percorso Notice) non è mai stato collegato al flusso di auto-ingest in Watch Mode — ogni completion passava per `onIngestDone` che apre sempre `IngestReportModal`, rendendo l'impostazione Notice un no-op. v1.22.6 aggiunge `trigger?: 'auto' | 'manual'` a `IngestReport` e `IngestOptions`, lo propaga tramite `WikiEngine.ingestSource` → `onDone`, e instrada `trigger='auto'` verso `onAutoIngestDone`. Comportamento dell'ingest manuale invariato.
+- **🔇 Anche la completion di Auto Smart Fix è context-aware.** Stesso pattern di trigger applicato a `runLintWiki` (nuovo terzo parametro `trigger`, default `'manual'`). Il lint periodico passa `trigger='auto'`. Dispatch: manuale → `LintReportModal`; auto + `autoSmartFix=true` → Notice + fixAll; auto + `autoSmartFix=false` → solo Notice con suggerimento al pannello History.
+- **🛡️ Le varianti GPT-5 Pro (`gpt-5.x-pro`) ora vengono instradate correttamente verso `/v1/responses` (Issue #207 follow-up).** Verificato sulla doc ufficiale OpenAI: "GPT-5 Pro is available in the Responses API only." Il regex v1.22.5 matchava `gpt-5.x` ma mancava il suffisso `-pro` — `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` andavano silenziosamente a `/v1/chat/completions` → 404. Regex esteso a `^(gpt-5\.[1-9]\d*(?:-pro)?|...)`.
+
+Aggiornamento consigliato — l'impostazione "Auto Ingest Notice" funziona finalmente, il lint periodico non interrompe più la scrittura, e le varianti Pro sono raggiungibili via Responses API.
 
 ### 📊 Qualità della conoscenza
 
