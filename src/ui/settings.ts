@@ -24,10 +24,12 @@ export class LLMWikiSettingTab extends PluginSettingTab {
   }
 
   // Issue #137: merge tempSettings → plugin.settings, preserving any
-  // fields the form does not track but Test Connection mutates
-  // (currently: thinkingControlCache). Called by hide() (auto-save) and
-  // the explicit Save button. Adding a new probe-mutated field only
-  // requires extending this one helper, not every save site.
+  // fields the form does not track but Test Connection mutates.
+  // v1.23.0: thinkingControlCache is @deprecated (AI-SDK v6 handles
+  // internally) but still preserved here for data.json forward-compat.
+  // Called by hide() (auto-save) and the explicit Save button. Adding
+  // a new probe-mutated field only requires extending this one helper,
+  // not every save site.
   private commitTempSettings(): void {
     this.plugin.settings = {
       ...this.tempSettings,
@@ -572,11 +574,9 @@ export class LLMWikiSettingTab extends PluginSettingTab {
             // Issue #137: on test success, sync every field testLLMConnection
             // may have written back into tempSettings so that the auto-save
             // on tab close (and any later explicit Save click) preserves them.
-            // Without this, hide()'s { ...tempSettings } would wipe the
-            // freshly-cached thinkingControlCache[baseUrl] on the very next
-            // tab close, forcing a re-probe and producing a 400 on the next
-            // ingestion. The same race applies to any future field mutated
-            // by the test path.
+            // v1.23.0: thinkingControlCache is @deprecated (AI-SDK v6
+            // handles internally) but we still sync it here in case
+            // legacy code paths mutate it.
             this.tempSettings.thinkingControlCache = this.plugin.settings.thinkingControlCache;
           }
           this.tempSettings.llmReady = result.success;

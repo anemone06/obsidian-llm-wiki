@@ -1007,11 +1007,15 @@ export default class LLMWikiPlugin extends Plugin {
 
       const providerName = (PREDEFINED_PROVIDERS[this.settings.provider]?.nameEn || this.settings.provider);
 
-      // Issue #137: re-create the shared client so it picks up the
-      // freshly-cached thinkingControlDialect. The testClient is a temporary
-      // instance that only lives for the probe; the shared client used by
-      // wiki-engine, page-factory, query-engine, etc. must also reflect the
-      // probe result.
+      // v1.23.0: re-create the shared client so any settings change takes
+      // effect immediately. The testClient is a temporary instance that
+      // only lives for the probe; the shared client used by wiki-engine,
+      // page-factory, query-engine, etc. must also reflect the change.
+      // (Previously this comment mentioned "freshly-cached
+      // thinkingControlDialect" — that field is @deprecated in v1.23.0
+      // because AI-SDK v6 handles thinking-control internally per
+      // provider/model. The shared client re-init is still useful for
+      // non-thinking-control settings changes like baseURL/apiKey.)
       this.initializeLLMClient();
 
       return {

@@ -163,6 +163,15 @@ export interface LLMWikiSettings {
   //   'none'      → backend rejects both; skip thinking control entirely
   thinkingControlCache?: Record<string, 'anthropic' | 'openai' | 'none' | boolean>;
 
+  // v1.23.0: thinkingControlCache is now @deprecated. AI-SDK v6 handles
+  // thinking-control internally per provider/model — no plugin-side
+  // caching needed. The field is retained for forward-compat: existing
+  // data.json files keep the field without error, and the value is
+  // simply ignored. Will be removed in v1.24.0 unless a use case
+  // surfaces (e.g. introspecting the cache for diagnostics).
+  // See src/main.ts:1011 for the surviving comment.
+  //
+
   // v1.20.0: when true, the plugin explicitly sends a thinking-control
   // directive to the provider (with 3-tier dialect fallback). When false
   // (default), the plugin does NOT send any thinking-control field — the

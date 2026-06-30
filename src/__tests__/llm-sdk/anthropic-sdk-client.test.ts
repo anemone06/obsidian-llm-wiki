@@ -192,6 +192,49 @@ describe('AnthropicSdkClient', () => {
       const callOpts = mockCreateAnthropic.mock.calls.at(-1)![0] as Record<string, unknown>;
       expect(callOpts.baseURL).toBeUndefined();
     });
+
+    // v1.23.0 Day 3.5: Coding Plan verify — multiple Anthropic-compatible
+    // baseURLs (z.ai, GLM, DeepSeek) all accepted by createAnthropic and
+    // forwarded unchanged. Code-level only; no real HTTP call.
+    it.each([
+      ['z.ai', 'https://api.z.ai/v1'],
+      ['GLM-Anthropic', 'https://api.glm.ai/v1/anthropic'],
+      ['DeepSeek Anthropic-compat', 'https://api.deepseek.com/anthropic'],
+      ['MiniMax-Anthropic', 'https://api.MiniMax.chat/anthropic'],
+      ['OpenRouter Anthropic', 'https://openrouter.ai/api/v1/anthropic'],
+    ])('forwards %s baseURL unchanged to createAnthropic', async (_name, baseURL) => {
+      const client = new AnthropicSdkClient({ apiKey: 'sk-ant-test', baseURL });
+      await client.createMessage({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: 'hi' }],
+      });
+      const callOpts = mockCreateAnthropic.mock.calls.at(-1)![0] as Record<string, unknown>;
+      expect(callOpts.baseURL).toBe(baseURL);
+      // createAnthropic should also receive the apiKey alongside baseURL.
+      expect(callOpts.apiKey).toBe('sk-ant-test');
+    });
+
+    it('forwards the obsidian-fetch-bridge to createAnthropic (so baseURL hits the right host)', async () => {
+      // The fetch impl is what determines WHICH URL is hit. If
+      // createAnthropic is called without our bridge, the call would go to
+      // a different fetch implementation that may not respect the user's
+      // baseURL override. Verify the bridge is wired in.
+      const client = new AnthropicSdkClient({
+        apiKey: 'sk-ant-test',
+        baseURL: 'https://api.z.ai/v1',
+      });
+      await client.createMessage({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: 'hi' }],
+      });
+      const callOpts = mockCreateAnthropic.mock.calls.at(-1)![0] as Record<string, unknown>;
+      // The fetch field should be set (not undefined) — this is the
+      // bridge that carries activeDocument and respects the baseURL.
+      expect(callOpts.fetch).toBeDefined();
+      expect(typeof callOpts.fetch).toBe('function');
+    });
   });
 
   describe('error mapping', () => {
