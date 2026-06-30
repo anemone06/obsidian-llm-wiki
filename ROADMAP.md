@@ -2,7 +2,7 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.4 → 1.22.5 (PATCH for #207 follow-up) → 1.23.0 (Graph Engine: Phase 5.1.5 + PPR core + P1-5/P1-6 done; P1-7 AI-SDK + P2-2/P2-3/P2-4 pending) | **Updated:** 2026-06-29
+**Version:** 1.22.4 → 1.22.5 (shipped) → 1.23.0 (Graph Engine + AI-SDK migration: Phase 5.1.5 + PPR core + P1-5/P1-6 done; **P1-7 AI-SDK Day 1-3 done**, P2-2/P2-3/P2-4 + chunkToChars pending) | **Updated:** 2026-06-29
 
 ---
 
@@ -181,6 +181,22 @@ Stays local until user-in-the-wild signals other P0 issues for a single release.
 | P1-3 | `core/hub-detection.ts` (#117) — clustering retirement separate (P3-1) | 134 | ✅ |
 | P1-4 | `core/ppr-cascade.ts` (hybrid guard, replaces Web Worker) | 213 | ✅ |
 | P1-7 | Hybrid guard (lex fallback cascade) | — | ✅ (folded into P1-4) |
+
+#### ✅ P1-7 — AI-SDK Migration (D1-3 done, D3.5 pending)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `core/obsidian-fetch-bridge.ts` | ✅ done | requestUrl → fetch API (4xx body preservation) |
+| `llm-sdk/openai-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai v3 — auto Responses API routing for gpt-5.x |
+| `llm-sdk/anthropic-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/anthropic v3 — baseURL for Coding Plan / z.ai / GLM-Antropic |
+| `llm-sdk/openai-compat-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai-compatible v1 — 8 OpenAI-format baseURLs |
+| `llm-sdk/create-llm-client.ts` | ✅ done | Async + sync shim + preload pattern |
+| 8 old `llm-client*.test.ts` | ✅ deleted | Replaced by `llm-sdk/*.test.ts` + retained regression cases |
+| `llm-client.ts` (1625 LOC) | ✅ deleted | All hand-rolled workaround code removed |
+| `core/sse-parser.ts` (85 LOC) | ✅ deleted | Replaced by AI-SDK textStream |
+| 3-tier thinking-control probe | ✅ removed | AI-SDK handles internally |
+| `chunkToChars` adapter (real逐字 stream) | ❌ Day 3.5 | Q1 user feedback — current is token-level, not character-level |
+
+**Bundle size**: 1.24MB → 3.17MB (user accepted 2026-06-29). Obsidian manifest no size limit.
 
 #### 🔄 P1 — Remaining (in progress)
 | # | Module | LOC | Depends on | Status |
