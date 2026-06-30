@@ -33,9 +33,9 @@ export interface PPROptions {
   rng?: () => number;
 }
 
-const DEFAULT_NUM_WALKS = 1000;
+const DEFAULT_NUM_WALKS = 3000;
 const DEFAULT_MAX_STEPS = 50;
-const DEFAULT_DAMPING = 0.15;
+const DEFAULT_DAMPING = 0.05;
 
 export function personalizedPageRank(
   graph: Graph,

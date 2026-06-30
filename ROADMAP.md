@@ -2,7 +2,7 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-5/P1-6 + P1-7 AI-SDK Day 1-3 done; **P2-2 + P2-3 + P2-4 + chunkToChars + Coding Plan verification pending**, target 2026-07-02) | **Updated:** 2026-06-30
+**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-5/P1-6 + P1-7 AI-SDK Day 1-3 + **P2-4 PPR tuning done**; P2-2 + P2-3 pending, target 2026-07-02) | **Updated:** 2026-06-30
 
 ---
 
@@ -52,8 +52,8 @@ No proactive 11th language — **contributor-driven only** (replicate PR #159 It
 **Theme:** Replace the brittle hand-rolled LLM client (v1.22.x 1625-LOC `llm-client.ts` with 30+ provider-version workarounds accumulated since v1.20.0) with Vercel AI-SDK v6, then ship the Graph Engine PPR primitive on top.
 
 - ⭐ **P1-7 — Vercel AI-SDK v6 migration (Day 1-3 ✅ done, Day 3.5-5 in flight).** Replace `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC, activeDocument bridge for jsdom). Eliminates the entire class of provider-version regressions (#137 / #141 / #143 / #147 / #207 — the manual workarounds these Issues triggered). 1304 tests passing on AI-SDK branch. **Remaining Day 3.5-5**: chunkToChars adapter (real character-level streaming), Coding Plan / z.ai / GLM-Anthropic baseURL verification, lint cleanup.
-- ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph (P1-5/P1-6 ✅ done).** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Three-tier pipeline (lex fast path → LLM seeds → PPR walks) shipped in P1-5. Hub-link distinctiveness scanner shipped in P1-6 (229 LOC + 15 tests). **Remaining**: P2-4 PPR param tuning (cascade+seeds R@5 31% → target 35%), P2-2 cold-start settings UI, P2-3 eval acceptance gate.
-- 🔄 **PR #215 (open, approved) — `core/hub-retirement.ts`** by @DocTpoint. Hub-retirement crystallization signal (175 LOC + 12 tests). Pure module, percentile-based verdict with dual absolute guards. Merge target: `feat/v1.23.0-graph-engine-kickoff` (not AI-SDK branch). Closes the loop on #117/#157/#175.
+- ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph (P1-5/P1-6 ✅ done, P2-4 ✅ done).** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Three-tier pipeline (lex fast path → LLM seeds → PPR walks) shipped in P1-5. Hub-link distinctiveness scanner shipped in P1-6 (229 LOC + 15 tests). **P2-4 PPR tuning complete** (2026-06-30, on a 2142-page real vault): recommended parameters `damping=0.05, numWalks=3000, walkLength=20`. R@5 improved from 21.5% → 23.8% (+11% relative). See `src/__tests__/fixtures/wikis/sample-50page/REAL_VAULT_EVAL.md` for full tuning table. **P2-2 cold-start settings UI** and **P2-3 eval acceptance gate** remaining.
+- ✅ **PR #215 — Hub-retirement crystallization signal** by @DocTpoint. Merged into AI-SDK branch on 2026-06-30. `src/core/hub-retirement.ts` (175 LOC) + 136 tests + 12 unit tests. Pure percentile-based verdict with dual absolute guards.
 
 **Branch strategy:**
 - `feat/v1.23.0-graph-engine-kickoff` — frozen at P1-6 done (merge-base `4dec289`)
@@ -250,6 +250,7 @@ Strictly from v1.22.5 tag — no v1.23.0 work pulled in. See memory/project_v1.2
 |---|------|--------|--------|
 | P2-2 | Settings: cold-start threshold exposure (min_pages / min_edges) | 0.5 day | ❌ |
 | P2-3 | Eval report acceptance gate (vs fixture target) | 0.5 day | ❌ not started |
+| P2-4 | PPR parameter tuning: damping=0.05, numWalks=3000, walkLength=20 (real vault eval 2026-06-30) | 1 day | ✅ done — see REAL_VAULT_EVAL.md |
 | P2-4 | PPR parameter tuning (damping/numWalks/thresholds) for sample-50page | 1 day | ❌ not started |
 
 #### 🔄 P2-3 — Eval baseline (sample-50page, 2026-06-28)
