@@ -154,6 +154,31 @@ Stays local until user-in-the-wild signals other P0 issues for a single release.
 
 ---
 
+## Next Milestone: v1.22.6 — PATCH hotfix (#204 + #207 follow-up)
+
+**Rationale (2026-06-29):** Restructured from previously-planned v1.23.1 to ship as v1.22.6 hotfix on top of the known-good v1.22.5 baseline. v1.23.0 has the AI-SDK migration in flight with its own AI-SDK-internal untested risks; a focused hotfix on top of the v1.22.5 baseline is lower risk than bundling both fixes into v1.23.0. Replies posted to #204 and #207 explaining the restructuring (comment IDs 4839175597 and 4839174538).
+
+### v1.22.6 Scope
+
+| Item | Issue | Effort | Status |
+|------|-------|--------|--------|
+| **#204 — Wire `onAutoIngestDone` into watch-mode ingest path** (`IngestReport.trigger='auto'`, completion callback dispatches auto→Notice, manual→Modal; closes the `autoIngestNotificationLevel` no-op bug) | #204 | 0.5 day | 🔄 in progress |
+| **#204 follow-up — Context-aware Auto Smart Fix modal** (same `trigger` dispatch pattern for `LintReport`) | #204 | 0.25 day | 🔄 in progress |
+| **#207 — Broaden Responses API routing to `-pro` variants** (`RESPONSES_API_MODEL_RE` regex `/^(gpt-5\.[1-9]\d*(?:-pro)?|...)/`). Verified against OpenAI docs that Pro models are Responses-API-only. | #207 | 0.25 day | 🔄 in progress |
+
+**Root cause (verified 2026-06-29 against `developers.openai.com/api/docs/models/gpt-5.5` and `gpt-5-pro`):**
+- GPT-5 Pro: "available in the Responses API only" → v1.22.5's regex `/^(gpt-5\.[1-9]\d*|...)$/` did not match `gpt-5.x-pro` (trailing `-pro` broke the match) → request went to `/v1/chat/completions` where Pro models don't exist → 404.
+- `gpt-5.1-chat-latest` / `gpt-5.2-chat-latest`: not in OpenAI's public models list (only `gpt-5-chat-latest` documented). Likely preview/early-access aliases OpenAI didn't clean up from the listing API. Routed to Chat Completions (correct for chat-latest models). If they 400 on Chat Completions too, will need user-provided provider body to diagnose.
+
+### Branch
+```bash
+git checkout -b fix/v1.22.6-#204-#207 1.22.5
+```
+
+Strictly from v1.22.5 tag — no v1.23.0 work pulled in. See memory/project_v1.22.6_hotfix_plan.md.
+
+---
+
 ## Next Milestone: v1.23.0 — Graph Engine (current sprint)
 
 **Phase 5.1.5 + Core PPR modules + P1-5 (Query Wiki integration) COMPLETE.** Eval baseline: cascade R@5 25.4%, cascade+seeds R@5 31.0% (target 55% — gap is fixture-size related, tracked as P2-4). 1284 tests, 96 files.
@@ -312,16 +337,13 @@ Fallback arm selection:
 
 ## Next Milestone: v1.23.1 — PATCH after v1.23.0
 
-### v1.23.1 Scope
-
-| Item | Issue/PR | Effort | Status |
-|------|----------|--------|--------|
-| #204 Auto Ingest modal regression (notice setting not wired into watch-mode path) | #204 | 0.5 days | Planned — see memory/project_v1.23.1_patch_204_auto_ingest_notice.md |
+_Replaced 2026-06-29: #204 was promoted to v1.22.6 (see above). If a follow-up hotfix is needed after v1.23.0 release, it will be re-scoped here based on user feedback._
 
 ## Version Timeline
 
 | Version | Date | Headline |
 |---------|------|----------|
+| **1.22.6** | 2026-06-29 (planned today) | Hotfix — #204 wire onAutoIngestDone + Auto Smart Fix trigger dispatch + #207 broaden Responses API to -pro variants |
 | **1.22.5** | 2026-06-29 | Hotfix — Responses API path for reasoning model family (#207 follow-up) + provider body in Notice + withRetry on Responses path |
 | **1.22.4** | 2026-06-27 | Hotfix — GPT-5.x probe-then-cache (Closes #207) + provider error UX + lint knobs centralisation |
 | **1.22.3** | 2026-06-26 | Hotfix — language-agnostic log header + content-folder guard for `generation_complete` |
