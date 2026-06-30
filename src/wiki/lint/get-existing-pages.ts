@@ -21,6 +21,25 @@ export async function getExistingWikiPages(
     const relPath = f.path.replace(wikiFolder + '/', '').replace('.md', '');
     const content = await app.vault.read(f);
     const fm = parseFrontmatter(content);
+
+    // v1.23.0 P0-2 follow-up: skip Welcome notes. They have
+    // `type: welcome` frontmatter and a localized filename
+    // (e.g. "欢迎使用 Karpathy LLM Wiki.md" in Chinese), so we
+    // cannot filter by filename. The frontmatter is the only
+    // robust signal.
+    //
+    // Without this, Ingest would treat the welcome note as an
+    // existing entity page and Query Wiki would surface it in
+    // context — both are wrong: the welcome is onboarding
+    // content, not a knowledge page.
+    // Defensive: parseFrontmatter returns null for malformed
+    // frontmatter. Only skip pages with a valid `type: welcome`
+    // — any other shape (no frontmatter, malformed, no type) is
+    // kept and treated as a regular wiki page.
+    if (fm && fm.type === 'welcome') {
+      continue;
+    }
+
     pages.push({
       path: f.path,
       title: f.basename,

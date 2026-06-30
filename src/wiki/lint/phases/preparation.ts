@@ -2,6 +2,7 @@ import { TEXTS } from '../../../texts';
 import { getText } from '../../../core/i18n';
 import { fixDoubleNestedWikiLinks } from '../utils';
 import { scanPollutedSources, fixPollutedSources } from '../../../core/sources-normalizer';
+import { parseFrontmatter } from '../../../core/frontmatter';
 import { LINT_PREP_BATCH_READ } from '../../../constants';
 import { LintPhaseContext, ScannerPage } from '../types';
 
@@ -111,8 +112,49 @@ export async function runPreparationPhase(
     console.debug(`lintWiki: sources normalized in ${sourcesNormalizedFiles} files (${sourcesNormalizedEntries} entries)`);
   }
 
+  // v1.23.0 P0-2 follow-up: exclude Welcome notes from Lint.
+  //
+  // Welcome notes have `type: welcome` frontmatter and live in
+  // `${wikiFolder}/${getWelcomeFileName(lang)}.md` — the filename is
+  // localized to the user's wiki language, so we cannot filter by
+  // filename. Filter by frontmatter instead. This is the only
+  // robust signal that a page is a Welcome note.
+  //
+  // Without this filter, Lint would treat the welcome note as a
+  // regular wiki page and report false positives:
+  //   - "dead link" for every [[link]] in the welcome body
+  //   - "orphan" because the welcome page has no incoming links
+  //   - "ungrounded quote" for any quoted phrases in the welcome
+  //     template
+  //   - "tag violation" if the welcome note doesn't conform to
+  //     entity/concept tag vocab
+  //
+  // The same welcome-filter must apply to Ingest and Query Wiki's
+  // `getExistingWikiPages` (which also uses `wikiFolder/` filter).
+  // Search for `type: welcome` in those call sites — if missed, the
+  // LLM would treat welcome as an existing entity and try to update
+  // it during ingestion.
+  let welcomeSkipped = 0;
+  for (const [path, info] of pageMap) {
+    const fm = parseFrontmatter(info.content);
+    // Defensive: parseFrontmatter returns null for malformed
+    // frontmatter. Only skip pages with a valid `type: welcome` —
+    // any other shape (no frontmatter, malformed, no type) is
+    // kept for Lint to surface as a separate issue.
+    if (fm && fm.type === 'welcome') {
+      pageMap.delete(path);
+      welcomeSkipped += 1;
+      console.debug(`lintWiki: skipped welcome page ${path}`);
+    }
+  }
+  const filteredWikiFiles = wikiFiles.filter(f => pageMap.has(f.path));
+  console.debug(
+    `lintWiki: ${wikiFiles.length} wiki files, ${welcomeSkipped} welcome skipped, ` +
+    `${filteredWikiFiles.length} linted`
+  );
+
   return {
-    wikiFiles,
+    wikiFiles: filteredWikiFiles,
     pageMap,
     knownTargets,
     knownTargetsLower,
