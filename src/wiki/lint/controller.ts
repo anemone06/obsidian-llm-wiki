@@ -928,8 +928,11 @@ export async function runLintWiki(
         void fixCallbacks.onFixAll();
       } else {
         const historyHint = getText(ctx.settings.language, 'ingestionNoticeHistoryHint');
+        // v1.22.6: sum all LintCounts fields for a single human-readable
+        // summary number in the auto-lint completion Notice.
+        const totalFindings = (Object.values(counts) as number[]).reduce((sum, n) => sum + n, 0);
         new Notice(
-          `${t.lintFixAllComplete}: ${counts.totalFindings} findings. ${historyHint}`,
+          `${t.lintFixAllComplete}: ${totalFindings} findings. ${historyHint}`,
           NOTICE_NORMAL
         );
       }
