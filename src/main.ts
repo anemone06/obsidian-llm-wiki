@@ -152,7 +152,9 @@ export default class LLMWikiPlugin extends Plugin {
       this.settings,
       this.wikiEngine,
       this,
-      () => this.lintWiki()
+      // v1.22.6 #204: pass trigger='auto' so periodic/auto lint
+      // completion routes to Notice, not LintReportModal.
+      () => this.lintWiki('auto')
     );
 
     if (this.settings.autoWatchSources) {
@@ -694,7 +696,7 @@ export default class LLMWikiPlugin extends Plugin {
 
   // ==================== Lint ====================
 
-  async lintWiki() {
+  async lintWiki(trigger: 'auto' | 'manual' = 'manual'): Promise<void> {
     if (!this.requireLLMReady()) return;
     const signal = this.wikiEngine.startLintOperation();
     try {
@@ -704,7 +706,7 @@ export default class LLMWikiPlugin extends Plugin {
         llmClient: this.llmClient,
         wikiEngine: this.wikiEngine,
         onAnalyzeSchema: (context?: string) => { void this.suggestSchemaUpdate(context); },
-      }, signal);
+      }, signal, trigger);
     } finally {
       this.wikiEngine.endLintOperation();
     }
