@@ -1,12 +1,20 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-29
+**Last Updated:** 2026-06-30
 
 ---
 
-## Current Phase: v1.22.5 (released) → v1.23.0 (Graph Engine direction)
+## Current Phase: v1.22.6 (released 2026-06-30) → v1.23.0 (AI-SDK Migration + Graph Engine in flight)
 
-### Completed (v1.22.5) — Hotfix: Responses API for #207 follow-up (2026-06-29)
+### Completed (v1.22.6) — Hotfix: #204 + #207 follow-up (2026-06-30)
+
+Closed two user-reported bugs on the v1.22.5 baseline before pushing v1.23.0 (which has the AI-SDK migration in flight). Both are PATCH scope (backward-compatible bug fixes).
+
+- ✅ **#204 — Auto Ingest no longer opens a blocking modal when `autoIngestNotificationLevel: notice`.** v1.22.2 added `onAutoIngestDone` (Notice path) but never wired it into the watch-mode auto-ingest path — every ingest completion went through `onIngestDone` which always opens `IngestReportModal`, making the "Notice (non-blocking)" UI setting a no-op. Added `trigger?: 'auto' | 'manual'` field to `IngestReport` and `IngestOptions`, propagated through `WikiEngine.ingestSource` → `onDone` report. Completion callback `LLMWikiPlugin.onIngestDoneDispatch` routes `trigger='auto'` to `onAutoIngestDone` (Notice respecting `autoIngestNotificationLevel`) and otherwise keeps the legacy `IngestReportModal` path. Manual ingest behavior unchanged.
+- ✅ **#204 follow-up — Auto Smart Fix completion is now context-aware.** Same trigger pattern applied to `runLintWiki`: third `trigger` parameter (default `'manual'`). Periodic auto lint (`AutoMaintainManager.schedulePeriodicLint`) passes `trigger='auto'`; manual lint commands keep the default. Completion dispatch: manual → `LintReportModal` (unchanged UX); auto + `autoSmartFix=true` → Notice + run fixAll; auto + `autoSmartFix=false` → Notice only with History panel hint.
+- ✅ **#207 follow-up — GPT-5 Pro variants (`gpt-5.x-pro`) now route correctly to `/v1/responses`.** Verified against `developers.openai.com/api/docs/models/gpt-5-pro`: "GPT-5 Pro is available in the Responses API only." v1.22.5's `RESPONSES_API_MODEL_RE` matched `gpt-5.x` but missed the trailing `-pro` suffix, so `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` silently went to `/v1/chat/completions` where Pro models don't exist → 404. Broadened the regex to `^(gpt-5\.[1-9]\d*(?:-pro)?|o1(?:-mini|-preview)?|o3(?:-mini|-pro)?|o4-mini)$`. `gpt-5-chat-latest` exclusion kept (Chat Completions by design).
+- ✅ **Tests: 1118 passing.** +14 since v1.22.5 (new `auto-maintain-trigger.test.ts` with 6 tests, new `lint-trigger-dispatch.test.ts` with 4 tests, `llm-client-responses-api.test.ts` adds 4 `-pro` model IDs, `auto-maintain.test.ts` updated for trigger field round-trip).
+- ✅ **Release flow lessons captured:** v1.22.6 hotfix exposed an H2 boundary misidentification bug in 5/8 locale READMEs (line-number offset from EN applied blindly to i18n files whose WN H2 lands at different lines). 4 leftover doubled recommendation lines cleaned. New doc-review Phase 3d check + obsidian-plugin-release Step 3c per-file H2 boundary pre-check prevent regression. Recorded in `feedback_doc_h2_boundary_bulk_insert.md`.
 
 Closed the second half of #207 — reasoning model family (gpt-5.1+ / gpt-5.5 / o1-o4) now uses OpenAI's Responses API, and the Test Connection Notice surfaces the provider's full error body (e.g. "insufficient_quota") instead of bare "status 429". #207 stays open for real-world user testing before final close.
 
