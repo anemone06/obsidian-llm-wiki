@@ -2,7 +2,7 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.4 → 1.22.5 (shipped) → 1.23.0 (Graph Engine + AI-SDK migration: Phase 5.1.5 + PPR core + P1-5/P1-6 done; **P1-7 AI-SDK Day 1-3 done**, P2-2/P2-3/P2-4 + chunkToChars pending) | **Updated:** 2026-06-29
+**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-5/P1-6 + P1-7 AI-SDK Day 1-3 done; **P2-2 + P2-3 + P2-4 + chunkToChars + Coding Plan verification pending**, target 2026-07-02) | **Updated:** 2026-06-30
 
 ---
 
@@ -45,11 +45,26 @@ Closed 5 items from the v1.22.1 user-testing feedback loop:
 - ✅ **Periodic Lint refined: Off/Daily/Weekly/Monthly.** "Hourly" removed (unrealistic for LLM lint); existing `hourly` data auto-migrated to `daily`.
 - ✅ **Tests: 1054 passing.** +25 since v1.22.1.
 
-### Next Milestone: v1.23.0 — Graph Engine (current sprint)
+### Next Milestone: v1.23.0 — Graph Engine + AI-SDK v6 (current sprint, target 2026-07-02)
 
 No proactive 11th language — **contributor-driven only** (replicate PR #159 Italian pattern). Improving translation quality of existing 10 locales > adding the 11th.
 
-- ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph.** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR (Fogaras 2005) — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Clustering retirement deferred to v1.24.0.
+**Theme:** Replace the brittle hand-rolled LLM client (v1.22.x 1625-LOC `llm-client.ts` with 30+ provider-version workarounds accumulated since v1.20.0) with Vercel AI-SDK v6, then ship the Graph Engine PPR primitive on top.
+
+- ⭐ **P1-7 — Vercel AI-SDK v6 migration (Day 1-3 ✅ done, Day 3.5-5 in flight).** Replace `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC, activeDocument bridge for jsdom). Eliminates the entire class of provider-version regressions (#137 / #141 / #143 / #147 / #207 — the manual workarounds these Issues triggered). 1304 tests passing on AI-SDK branch. **Remaining Day 3.5-5**: chunkToChars adapter (real character-level streaming), Coding Plan / z.ai / GLM-Anthropic baseURL verification, lint cleanup.
+- ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph (P1-5/P1-6 ✅ done).** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Three-tier pipeline (lex fast path → LLM seeds → PPR walks) shipped in P1-5. Hub-link distinctiveness scanner shipped in P1-6 (229 LOC + 15 tests). **Remaining**: P2-4 PPR param tuning (cascade+seeds R@5 31% → target 35%), P2-2 cold-start settings UI, P2-3 eval acceptance gate.
+- 🔄 **PR #215 (open, approved) — `core/hub-retirement.ts`** by @DocTpoint. Hub-retirement crystallization signal (175 LOC + 12 tests). Pure module, percentile-based verdict with dual absolute guards. Merge target: `feat/v1.23.0-graph-engine-kickoff` (not AI-SDK branch). Closes the loop on #117/#157/#175.
+
+**Branch strategy:**
+- `feat/v1.23.0-graph-engine-kickoff` — frozen at P1-6 done (merge-base `4dec289`)
+- `refactor/v1.23.0-ai-sdk-migration` — 9 commits ahead of merge-base (AI-SDK + P2 improvements)
+- v1.23.0 release = merge both, switch PPR LLM call sites to AI-SDK adapters, resolve doc conflicts
+
+**Deferred to v1.23.1+:**
+- **v1.23.1 PATCH** — Sponsor section + any v1.23.0 hotfix follow-ups
+- **v1.24.0+ MINOR** — Cold-start vocabulary seeding (DocTpoint #198 follow-up), #213 configurable page categories (architectural/ROI question, keep open for community discussion), #36 source title in frontmatter (needs author clarification), LintFixer class → module-level functions
+
+
 
 ### Implemented (v1.21.1) — #173 Symptom A Hotfix (2026-06-22)
 

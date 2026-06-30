@@ -90,6 +90,65 @@ Closed two user-reported issues in v1.22.3 user testing — both PATCH scope (ba
 - ✅ **v1.20.1 — AnthropicClient prefill rejection fix (#141, #147).** Newer Claude models reject assistant prefill. Auto-fallback + caching. 775 tests.
 - ✅ **v1.20.0 — Provider-first thinking control.** Default `disableThinking: false`, 3-tier dialect fallback. Collapsible thinking UI in Query Wiki. +10 code-review fixes. 771 tests.
 
+### In Flight (v1.23.0) — Graph Engine PPR + AI-SDK v6 Migration (2026-06-30)
+
+**Two parallel branches, both targeting v1.23.0 release:**
+- `feat/v1.23.0-graph-engine-kickoff` — frozen at P1-6 done, awaiting PR #215 merge
+- `refactor/v1.23.0-ai-sdk-migration` — P1-7 AI-SDK migration Day 1-3 done, P2-4 + chunkToChars pending
+
+**Branch relationship**: parallel fork from merge-base `4dec289`. v1.23.0 release path = merge both, with care around AI-SDK branch LLM call sites (PPR in graph-engine branch needs to switch to AI-SDK).
+
+**Completed in v1.23.0 so far (across both branches):**
+- ✅ **Phase 5.1.5 — UX Onboarding + Multi-File Ingest** (Welcome note + D8 LLM dynamic translation, #130 IngestQueue modal, i18n in 10 locales)
+- ✅ **P0-1 / P0-2 / P0-3** — CC0 50-page eval fixture, baseline report, CLAUDE.md cleanup
+- ✅ **P1-1 / P1-2 / P1-3 / P1-4** — `core/section-extractor.ts` (Tier B), `core/monte-carlo-ppr.ts` (MC-PPR), `core/hub-detection.ts`, `core/ppr-cascade.ts` (hybrid guard)
+- ✅ **P1-5** — Query Wiki integration with LLM seed selection (three-tier pipeline: lex fast path → LLM seeds → PPR walks)
+- ✅ **P1-6** — Lint hub-link distinctiveness scanner (229 LOC + 15 tests, closes #157/#175)
+- ✅ **P1-7 (AI-SDK Day 1-3)** — Migrate to Vercel AI-SDK v6 (`@ai-sdk/openai@3`, `@ai-sdk/anthropic@3`, `@ai-sdk/openai-compatible@2`, `ai@6`). Deleted 1625-LOC `llm-client.ts` + 8 old test files. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC).
+- ✅ **P2-2 partial** — cascade + seeds token + LLM seed retrieval improvements
+- ✅ **PR #215 (open, approved)** — `core/hub-retirement.ts` (hub-retirement crystallization signal, 175 LOC + 136 LOC tests). Merge target: `feat/v1.23.0-graph-engine-kickoff` (not AI-SDK branch).
+
+**Remaining for v1.23.0 (priority order):**
+- 🔄 **P1 — chunkToChars adapter** (AI-SDK migration Day 3.5, ~2h): real character-level streaming UI (user feedback on Q1). AI-SDK `streamText` returns word-level chunks, current UI is not "true streaming" until adapter lands.
+- 🔄 **P1 — AI-SDK Coding Plan / z.ai / GLM-Anthropic baseURL verification** (Day 3.5, ~1h): confirm `createAnthropic({ baseURL })` works for non-Anthropic baseURLs (Q2 from user feedback). Edge case to lock in before release.
+- 🔄 **P2 — Lint disable warnings cleanup** (Day 3.5, ~1h): leftover from AI-SDK migration.
+- 🔄 **P2 — PPR parameter tuning** (P2-4, ~1 day): close R@5 gap (cascade+seeds 31% vs target 35% — eval fixture max top-5 coverage is 5/11, so reaching target on the small fixture is hard, but improve the param trajectory). Tune damping 0.15→0.10, numWalks 1000→5000, minPages threshold.
+- 🔄 **P2 — Cold-start settings UI** (P2-2, ~0.5 day): expose `min_pages` / `min_edges` thresholds in settings (currently only internal constants).
+- 🔄 **P2 — Integration tests + gradual rollout** (Day 4, ~1 day): test on sample-50page fixture end-to-end, then real-vault shadow test.
+- 🔄 **P2 — eval-cascade pre-existing errors cleanup** (24 lint + 2 tsc in `src/__tests__/fixtures/wikis/sample-50page/eval-cascade.ts`): cleanup during P2-4 tuning, not blocking.
+- 🔄 **P2 — Eval acceptance gate** (P2-3, Day 5): formal R@5 sign-off against the baseline report.
+- 🔄 **P1 — pre-release-gate + doc-review + v1.23.0 release** (Day 5, ~0.5 day): commit + push + tag + release notes.
+
+**v1.23.0 risk register:**
+- Bundle size 1.24MB → 3.17MB (user accepted 2026-06-29, monitor CDN experience)
+- Lazy import `await import()` for AI-SDK packages didn't reduce bundle (esbuild CJS inline); future ESM bundle / dynamic chunk can revisit
+- #207 close decision: user will close manually after real-world testing — separate commit `Closes #207`, not part of v1.23.0
+- Sponsor section: deferred to v1.23.1 PATCH
+- #213 (configurable page categories): deferred to v1.24.0+ (architectural/ROI question, keep open for community discussion, may convert to Discussion)
+
+**Deferred to v1.24.0+:**
+- #213 configurable page categories (architectural change, ROI TBD)
+- Cold-start vocabulary seeding (DocTpoint's #198 follow-up)
+- #36 Source title in frontmatter (needs author clarification)
+- LintFixer class → module-level functions (P3, 1 day)
+- Restore true streaming for 3rd-party providers
+
+**Branch merge strategy (when v1.23.0 is ready):**
+1. Land PR #215 to `feat/v1.23.0-graph-engine-kickoff` (approved, ready to merge)
+2. Cherry-pick / merge `feat/v1.23.0-graph-engine-kickoff` → `refactor/v1.23.0-ai-sdk-migration` (or vice versa — graph engine is older base)
+3. Switch PPR/seed selection LLM call sites in graph-engine code to AI-SDK adapters
+4. Resolve any conflicting CLAUDE.md / ROADMAP / CHANGELOG edits
+5. Pre-release-gate + doc-review on the combined branch
+6. Tag `1.23.0` on the combined branch
+
+---
+
+## 📋 CLAUDE.md Optimization — Deferred to Next Content Update
+
+- `## 📁 Project Structure` section below is **stale** (src/ tree at v1.21/v1.22 era, doesn't reflect AI-SDK v6 migration: `llm-client.ts` → `src/llm-sdk/` + `core/obsidian-fetch-bridge.ts`).
+- The b69916a "trim CLAUDE.md to 384 lines" commit message is misleading — actual file is 553 lines at b69916a, 513 lines at current 0ad297b (after v1.22.6 sync).
+- Plan: at next content update (v1.23.0 release prep), delete redundant + outdated sections, move `Project Structure` to `CONTRIBUTING.md` (where it belongs — it's contributor-facing, not maintainer-facing).
+
 ---
 
 ## 📁 Project Structure

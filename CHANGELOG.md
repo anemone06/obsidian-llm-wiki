@@ -7,7 +7,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.22.5] - 2026-06-29
+### In Flight — v1.23.0 (Graph Engine + AI-SDK v6, target 2026-07-02)
+
+**Branch state:** `refactor/v1.23.0-ai-sdk-migration` (9 commits ahead of main, 1304 tests passing, 3.0MB bundle). Graph Engine branch `feat/v1.23.0-graph-engine-kickoff` frozen at P1-6 done, awaiting PR #215 merge.
+
+#### Changed (so far in v1.23.0, across both branches)
+
+- **#198 Phase 5.1.5 — Multi-File Ingest + Welcome note overhaul.** #130 Multi-File Suggest modal (recursive folder tree, live IngestQueue progress), three-tier first-run Welcome note (D8 dynamic LLM translation), i18n across 10 locales (14 new keys per locale). IngestQueue pub/sub store with 25 tests.
+- **#198 P1-1 — `core/section-extractor.ts` (Tier B zero-LLM).** i18n-aware section parser for `## Description` / `## Definition` at query time. 173 LOC. Replaces LLM-based Tier B in v1.22.x for known schemas.
+- **#198 P1-2 — `core/monte-carlo-ppr.ts` (MC-PPR engine).** K short random walks per query page, O(K×L) cost independent of |V|. 99 LOC. Haveliwala 2002 / Fogaras 2005 reference. Pure function, zero LLM dependency.
+- **#198 P1-3 — `core/hub-detection.ts` (#117 consumer #1 of PPR).** Identifies high-degree, low-clustering pages as hub candidates. 134 LOC. Closes #117.
+- **#198 P1-4 — `core/ppr-cascade.ts` (hybrid retrieval guard).** Combines lex-match fast path with PPR graph walk. 213 LOC. Lex-fallback when graph too small (cold-start).
+- **#198 P1-5 — Query Wiki integration with LLM seed selection.** Three-tier pipeline: lex fast path → LLM seed selection (only when fast path is weak, top score < 2 or 0 hits) → PPR walks always. Reduces 99% of LLM seed-selection cost.
+- **#198 P1-6 — Lint hub-link distinctiveness scanner** (Issue #157 / #175). 229 LOC + 15 tests. Penalizes auto-link patterns that look like hub-link structure.
+- **P1-7 — Vercel AI-SDK v6 migration (Day 1-3).** Replaced hand-rolled `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC, 30+ provider-version workarounds) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2` / `ai@6`. New `src/llm-sdk/` (4 files: `create-llm-client.ts` 150 LOC, `openai-sdk-client.ts` 356 LOC, `anthropic-sdk-client.ts` 196 LOC, `openai-compat-sdk-client.ts` 247 LOC). `src/core/obsidian-fetch-bridge.ts` (326 LOC) provides activeDocument-aware fetch for jsdom. Deleted 8 old test files (2609 LOC) covering #99 / #128 / #137 / #141 / #143 / #147 / #207 workarounds. **Eliminates the entire class of provider-version regressions** — AI-SDK tracks model changes internally. Bundle size 1.24MB → 3.17MB (user accepted 2026-06-29; 3.0MB on dev build).
+- **P2 — Real-time streaming + Ctrl+Enter + persistence** (Query Wiki). Cancel button mid-stream, message-persistence across panel hide/show, Ctrl+Enter to send (replaces Cmd+Enter on macOS for parity with Edit mode).
+- **P2 — Cascade + LLM seed retrieval improvements.** Reduced tokens per cascade round, tightened seed-selection prompt.
+- **Welcome note refactor** — moved LLM config status from in-body text to frontmatter (hidden metadata). Local-check in Welcome note orchestrator (no LLM if config already valid).
+
+#### Pending (target 2026-07-02)
+
+- **chunkToChars adapter** (P1, Day 3.5) — real character-level streaming UI. AI-SDK `streamText` returns word-level chunks; current UI is not "true streaming" until adapter lands.
+- **AI-SDK Coding Plan / z.ai / GLM-Anthropic baseURL verification** (P1, Day 3.5) — confirm `createAnthropic({ baseURL })` works for non-Anthropic baseURLs (Vercel has no `@ai-sdk/anthropic-compatible` package).
+- **Lint disable warnings cleanup** (P2, Day 3.5) — leftover from AI-SDK migration.
+- **P2-4 PPR parameter tuning** — close R@5 gap (cascade+seeds 31% → target 35% on sample-50page fixture; current max top-5 coverage = 5/11). Tune damping 0.15→0.10, numWalks 1000→5000, minPages threshold.
+- **P2-2 Cold-start settings UI** — expose `min_pages` / `min_edges` thresholds in settings (currently internal constants only).
+- **P2-3 Eval acceptance gate** — formal R@5 sign-off against the baseline report.
+- **PR #215 — `core/hub-retirement.ts`** by @DocTpoint (open, approved, merge target `feat/v1.23.0-graph-engine-kickoff`). Hub-retirement crystallization signal — 175 LOC + 136 LOC tests + 12 tests. Percentile-based verdict with dual absolute guards (degree floor 30, optional absoluteClusteringFloor).
+- **eval-cascade pre-existing errors cleanup** (P2) — 24 lint + 2 tsc in `src/__tests__/fixtures/wikis/sample-50page/eval-cascade.ts`, fold into P2-4 tuning.
+- **pre-release-gate + doc-review + v1.23.0 release** (Day 5).
+
+#### Risk Register (v1.23.0)
+
+- Bundle size 1.24MB → 3.17MB (user accepted 2026-06-29). Monitor CDN download experience.
+- Lazy import `await import()` for AI-SDK packages did NOT reduce bundle size (esbuild CJS inlines everything). Future ESM bundle / dynamic chunk can revisit.
+- #207 close decision deferred to separate commit after real-world user testing — not part of v1.23.0 auto-close.
+- Sponsor section deferred to v1.23.1 PATCH.
+- #213 (configurable page categories) deferred to v1.24.0+ — architectural/ROI question, kept open for community discussion, may convert to Discussion.
+
+## [1.22.6] - 2026-06-30
 
 ### Fixed
 - **#207 follow-up — Reasoning model family (gpt-5.1+ / gpt-5.5 / o1-o4) no longer fails Test Connection with HTTP 400.** v1.22.4's `max_tokens` ↔ `max_completion_tokens` probe-then-cache fix was necessary but not sufficient — `gpt-5.1-chat-latest`, `gpt-5.5`, and the `o1` / `o3` / `o4-mini` reasoning families still failed Test Connection with 400 because the Chat Completions endpoint has compatibility issues for the reasoning model family. Per OpenAI's official GPT-5.5 migration guide ("GPT-5.5 works best in the Responses API"), v1.22.5 routes the reasoning family to `/v1/responses` with `reasoning: { effort: 'low' }`. Detection is a pure-function `isResponsesApiModel(model, baseUrl)` export, gated to `https://api.openai.com/v1` only — `gpt-5-chat-latest`, `gpt-4.1`, `gpt-3.5-turbo`, and all non-OpenAI baseUrls (Ollama, LM Studio, DeepSeek, etc.) continue on `/v1/chat/completions` unchanged. Issue #207 remains open pending real-world user testing; will be closed in a follow-up commit after confirmation.
