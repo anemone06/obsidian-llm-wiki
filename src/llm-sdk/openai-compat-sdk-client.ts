@@ -18,7 +18,7 @@
 // `supportsStructuredOutputs`, `includeUsage`) are set automatically
 // based on the `provider` id we pass in.
 
-import { type LanguageModel } from 'ai';
+import { type LanguageModel, APICallError } from 'ai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { LLMClient } from '../types';
 import { obsidianFetchBridge, streamWithFallback } from '../core/obsidian-fetch-bridge';
@@ -28,6 +28,7 @@ import {
   resolveBaseUrlWithFallback,
   isUrlError,
 } from '../core/url-fallback';
+import { TokenKeyProber } from './token-key-probe';
 
 export interface OpenAICompatSdkClientOptions {
   apiKey: string;
@@ -46,6 +47,14 @@ export class OpenAICompatSdkClient implements LLMClient {
   private readonly provider: string;
   private readonly fetchImpl: typeof obsidianFetchBridge;
   private readonly streamFetchImpl: typeof streamWithFallback;
+  /**
+   * v1.23.0 P1.5 follow-up: runtime probe-then-cache for token-key
+   * preference (max_tokens vs max_completion_tokens). Owned per client
+   * so cache lifetime == client lifetime. When the user changes baseURL
+   * or API key in settings, a new client is constructed and probing
+   * starts fresh.
+   */
+  private readonly tokenKeyProber = new TokenKeyProber();
 
   constructor(opts: OpenAICompatSdkClientOptions) {
     this.apiKey = opts.apiKey;
@@ -82,6 +91,25 @@ export class OpenAICompatSdkClient implements LLMClient {
       // don't return usage unless asked. AI-SDK's default is true for
       // OpenAI; we set it explicitly to ensure consistent token tracking.
       includeUsage: true,
+      // v1.23.0 P1.5 follow-up: token-key probe hook. Read the
+      // current cached key for this baseURL at request time — this
+      // closure captures `this` so each request consults the latest
+      // probe result. If we have no cached entry, the transform is
+      // a no-op and the request goes out with the AI-SDK default
+      // (max_tokens). On rejection we probe + cache + next request
+      // uses the swapped key.
+      transformRequestBody: (args: Record<string, unknown>) => {
+        const cached = this.tokenKeyProber.getCachedKey(this.baseURL);
+        if (!cached) return args;
+        if (cached === 'max_tokens') return args;
+        // cached === 'max_completion_tokens'
+        const body = { ...args };
+        if (body.max_tokens !== undefined) {
+          body.max_completion_tokens = body.max_tokens;
+          delete body.max_tokens;
+        }
+        return body;
+      },
     });
     return provider(modelId);
   }
@@ -157,6 +185,38 @@ export class OpenAICompatSdkClient implements LLMClient {
         });
         return result.text;
       }
+
+      // v1.23.0 P1.5 follow-up: token-key probe-then-retry fallback.
+      //
+      // On ANY HTTP 400 from the gateway, try the alternate token key
+      // exactly once. No error-body inspection needed: status 400 is
+      // sufficient signal that "something went wrong", and the cost
+      // of a false-positive retry is one extra HTTP call (<1s LAN).
+      //
+      // Guard: skip retry if we already have a cached key for this
+      // baseURL — means the first retry already happened (and failed),
+      // so retrying again would loop.
+      if (APICallError.isInstance(err) && err.statusCode === 400 && !this.tokenKeyProber.getCachedKey(this.baseURL)) {
+        // The default wire format is `max_tokens`. If the gateway
+        // rejected it, try `max_completion_tokens`.
+        this.tokenKeyProber.setCachedKey(this.baseURL, 'max_completion_tokens');
+        const retryLanguageModel = this.getProvider(model, this.fetchImpl);
+        const { generateText } = await import('ai');
+        const result = await generateText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+            responseFormat: response_format,
+          }) as unknown as Parameters<typeof generateText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
+        return result.text;
+      }
+
       throw mapAiSdkError(err);
     }
   }
@@ -322,6 +382,44 @@ export class OpenAICompatSdkClient implements LLMClient {
           ...(temperature !== undefined ? { temperature } : {}),
         });
 
+        let fullText = '';
+        for await (const chunk of result.textStream) {
+          fullText += chunk;
+          onChunk(chunk);
+        }
+        let reasoningContent = '';
+        try {
+          const reasoning = await result.reasoning;
+          if (typeof reasoning === 'string' && reasoning) {
+            reasoningContent = reasoning;
+          } else if (Array.isArray(reasoning)) {
+            reasoningContent = reasoning.map((r) => (r as { text?: string }).text || '').join('');
+          }
+        } catch { /* no reasoning */ }
+        if (reasoningContent) {
+          fullText = `<think>\n${reasoningContent}\n</think>\n\n${fullText}`;
+        }
+        return fullText;
+      }
+
+      // v1.23.0 P1.5 follow-up: token-key probe-then-retry for streaming.
+      // Same logic as createMessage — cache the alt key for this
+      // baseURL and retry. No error-body inspection.
+      if (APICallError.isInstance(err) && err.statusCode === 400 && !this.tokenKeyProber.getCachedKey(this.baseURL)) {
+        this.tokenKeyProber.setCachedKey(this.baseURL, 'max_completion_tokens');
+        const retryLanguageModel = this.getProvider(model, this.streamFetchImpl);
+        const { streamText } = await import('ai');
+        const result = streamText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+          }) as unknown as Parameters<typeof streamText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
         let fullText = '';
         for await (const chunk of result.textStream) {
           fullText += chunk;

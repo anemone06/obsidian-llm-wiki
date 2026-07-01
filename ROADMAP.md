@@ -25,6 +25,7 @@ No proactive 11th language — **contributor-driven only** (replicate PR #159 It
 **Theme:** Replace the brittle hand-rolled LLM client (v1.22.x 1625-LOC `llm-client.ts` with 30+ provider-version workarounds accumulated since v1.20.0) with Vercel AI-SDK v6, then ship the Graph Engine PPR primitive on top.
 
 - ⭐ **P1-7 — Vercel AI-SDK v6 migration (Day 1-3 ✅ done, Day 3.5-5 in flight).** Replace `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC, activeDocument bridge for jsdom). Eliminates the entire class of provider-version regressions (#137 / #141 / #143 / #147 / #207 — the manual workarounds these Issues triggered). 1304 tests passing on AI-SDK branch. **Remaining Day 3.5-5**: chunkToChars adapter (real character-level streaming), Coding Plan / z.ai / GLM-Anthropic baseURL verification, lint cleanup.
+- ✅ **Hotfix: LM Studio Test Connection blocked by API key gate** (#214). `testLLMConnection()` at `main.ts:962-964` only excludes `ollama` from API key validation but LM Studio (`apiKeyPlaceholder: 'optional'`) is equally a local provider accepting no-key access. Fix: add `lmstudio` to the exclusion list. Workaround available: switch to Custom OpenAI-Compatible provider with key. **Patch committed before v1.23.0 Day 5 release.**
 - ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph (P1-5/P1-6 ✅ done, P2-4 ✅ done).** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Three-tier pipeline (lex fast path → LLM seeds → PPR walks) shipped in P1-5. Hub-link distinctiveness scanner shipped in P1-6 (229 LOC + 15 tests). **P2-4 PPR tuning complete** (2026-06-30, on a 2142-page real vault): recommended parameters `damping=0.05, numWalks=3000, walkLength=20`. R@5 improved from 21.5% → 23.8% (+11% relative). See `src/__tests__/fixtures/wikis/sample-50page/REAL_VAULT_EVAL.md` for full tuning table. **#198 thread key finding (DocTpoint 2026-06-30):** knn baseline (bge-m3, no graph) on sample-50page = 24.1% R@5 / 36.4% R@10 — within 1-3pp of cascade (27.1% / 37.8%). Most of cascade's lift is *semantic-over-keyword*, not *graph-over-semantic*. Cascade's honest value: **embedding-grade R@k at zero embedding cost, offline, over links that exist anyway**. **P2-3 eval acceptance gate** remaining — adding knn baseline as control per @DocTpoint's #198 follow-up.
 - ✅ **PR #215 — Hub-retirement crystallization signal** by @DocTpoint. Merged into AI-SDK branch on 2026-06-30. `src/core/hub-retirement.ts` (175 LOC) + 136 tests + 12 unit tests. Pure percentile-based verdict with dual absolute guards.
 
@@ -33,9 +34,22 @@ No proactive 11th language — **contributor-driven only** (replicate PR #159 It
 - `refactor/v1.23.0-ai-sdk-migration` — 9 commits ahead of merge-base (AI-SDK + P2 improvements)
 - v1.23.0 release = merge both, switch PPR LLM call sites to AI-SDK adapters, resolve doc conflicts
 
-**Deferred to v1.23.1+ (none — all sponsor/PATCH scope folded into v1.23.0):**
-- ~~**v1.23.1 PATCH** — Sponsor section + any v1.23.0 hotfix follow-ups~~ — Sponsor section now part of v1.23.0 release flow
-- **v1.24.0+ MINOR** — #213 configurable page categories (Discussion-only, NOT confirmed for any minor release — needs broader community/architectural discussion), hub-retirement lint wire-up (`core/hub-retirement.ts` → call `assessHubs` in lint path), #36 source-title-in-extraction feature (closed 2026-05 with no follow-up, low ROI vs current PPR recall), LintFixer class → module-level functions (707-LOC god class split, 1 day)
+**Deferred to v1.23.1 PATCH (2026-07-02+):**
+- **#219 — Progress Notice suppression setting.** `showProgress()` in `main.ts:414` unconditionally creates a persistent `Notice(msg, 0)`. Add `progressNotificationLevel: 'both' | 'status' | 'notice' | 'silent'` (~30 LOC + 6 locale keys). Filed by @jameses-cyber (same author as #204). Approved: deferred.
+- **#221 — Query scroll-to-start setting.** `scrollToBottom()` in `query-engine.ts:802` unconditionally scrolls to bottom on every chunk; final call leaves user at end of long response. Add post-completion scroll-mode setting (~50 LOC + 6 locale keys). Filed by @jameses-cyber (same author as #204, #219). Approved: deferred. Batch with #219.
+
+**Deferred to v1.24.0+ MINOR:**
+- **#218 — PDF source ingest.** Design-track Discussion [#222](https://github.com/green-dalii/obsidian-llm-wiki/discussions/222) open for topology + path convergence. Target: `readDocument()` chokepoint in LLM client with extraction cache. Prerequisite: provider support matrix + cache invalidation strategy decided in Discussion.
+- **#220 — Source-revision awareness for merge.** DocTpoint's 4-tier design (Tier 0 fingerprint + replace self-revision, Tier 1 `supersedes:` frontmatter flag, Tier 2 cross-source disagreement open question, Tier 3 review-queue UI). Tiers 0-1 tractable for v1.24.0 MINOR; Tier 3 likely v1.25.0+. Prerequisite: open Discussion thread on fingerprint function design.
+- Hub-retirement lint wire-up (`core/hub-retirement.ts` → call `assessHubs` in lint path) — owned by @DocTpoint, post-#215 merge
+- P2-2 cold-start settings UI (advanced users only; default parameters validated in P2-4)
+- LintFixer class → module-level functions (707-LOC god class split, 1 day)
+
+**Deferred to v1.25.0+ (research / experimental):**
+- #213 configurable page categories (Discussion-only, NOT confirmed for any minor release — needs broader community/architectural discussion)
+- #36 source-title-in-extraction feature (closed 2026-05 with no follow-up, low ROI vs current PPR recall)
+- Cold-start vocabulary seeding (DocTpoint proposal in #198, design TBD)
+- knn + cascade by-query-type complement (if required by evidence)
 
 ### Implemented (v1.21.1) — 2026-06-22
 
