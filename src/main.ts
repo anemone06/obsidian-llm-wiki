@@ -959,8 +959,9 @@ export default class LLMWikiPlugin extends Plugin {
   async testLLMConnection(): Promise<{ success: boolean; message: string }> {
     const t = TEXTS[this.settings.language] || TEXTS.en;
 
-    const isOllama = this.settings.provider === 'ollama';
-    if (!isOllama && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
+    const localNoKeyProviders = ['ollama', 'lmstudio'];
+    const isLocalNoKeyProvider = localNoKeyProviders.includes(this.settings.provider);
+    if (!isLocalNoKeyProvider && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
       return { success: false, message: t.errorNoApiKey || 'API Key is not configured' };
     }
 

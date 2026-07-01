@@ -108,6 +108,35 @@ vi.mock('obsidian', () => ({
     load() {}
     unload() {}
   },
+  // PluginSettingTab base class — used by settings.ts, imported via main.ts
+  PluginSettingTab: class {
+    app: unknown;
+    containerEl: HTMLElement;
+    constructor(app: unknown) {
+      this.app = app;
+      this.containerEl = document.createElement('div');
+    }
+    display() {}
+  },
+  // Plugin base class — minimal stub so main.ts can be imported in tests
+  Plugin: class {
+    app: unknown;
+    manifest: unknown;
+    constructor(app: unknown, manifest: unknown) {
+      this.app = app;
+      this.manifest = manifest;
+    }
+    load() {}
+    unload() {}
+    addCommand() {}
+    registerView() {}
+    registerEditorSuggest() {}
+    addChild() {}
+    registerDomEvent() {}
+    registerInterval() {}
+    loadData() { return Promise.resolve({}); }
+    saveData() { return Promise.resolve(); }
+  },
   // Suggest modals (stubbed — used in settings.ts FolderSuggestModal)
   FuzzySuggestModal: class {
     constructor() {}
