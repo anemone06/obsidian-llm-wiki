@@ -32,6 +32,11 @@ import { type LanguageModel, APICallError, NoSuchModelError, InvalidPromptError 
 import { createOpenAI } from '@ai-sdk/openai';
 import { LLMClient } from '../types';
 import { obsidianFetchBridge, streamWithFallback } from '../core/obsidian-fetch-bridge';
+import {
+  getCachedUrl,
+  resolveBaseUrlWithFallback,
+  isUrlError,
+} from '../core/url-fallback';
 
 export interface OpenAISdkClientOptions {
   apiKey: string;
@@ -80,28 +85,51 @@ export class OpenAISdkClient implements LLMClient {
    * call is ignored at the provider level — we pass it per-request).
    * Tests can swap `this.model` via constructor option in future.
    */
-  private getProvider(modelId: string, fetchFn: typeof obsidianFetchBridge | typeof streamWithFallback = this.streamFetchImpl): LanguageModel {
-    // createOpenAI returns a provider factory; calling it with a modelId
-    // yields a LanguageModel instance. Stream path uses
-    // streamWithFallback (real streaming + CORS fallback); non-stream
-    // path uses obsidianFetchBridge (requestUrl, error body support).
+  private getProvider(modelId: string, fetchFn: typeof obsidianFetchBridge | typeof streamWithFallback = this.streamFetchImpl, baseURLOverride?: string): LanguageModel {
+    // v1.23.0 P1.5: baseURLOverride lets the fallback retry path pass a
+    // corrected URL (e.g., `/v1` appended for Kimi Coding Plan) without
+    // mutating this.baseURL. Cached resolved URLs flow through this.
+    const effectiveBaseURL = baseURLOverride ?? getCachedUrl(this.baseURL ?? '') ?? this.baseURL;
     const provider = createOpenAI({
       apiKey: this.apiKey,
-      ...(this.baseURL ? { baseURL: this.baseURL } : {}),
+      ...(effectiveBaseURL ? { baseURL: effectiveBaseURL } : {}),
       fetch: fetchFn as unknown as typeof fetch,
     });
     return provider(modelId);
+  }
+
+  /**
+   * Probe whether a baseURL works for OpenAI-compatible chat endpoint.
+   * Used by the URL fallback to test candidate URLs without committing
+   * the original request payload. Sends a minimal 1-token message and
+   * treats 404 as "wrong URL" (return false), all other errors as
+   * "auth/server error" (throw to propagate).
+   */
+  private async probeBaseURL(baseURL: string): Promise<boolean> {
+    try {
+      const languageModel = this.getProvider('gpt-4o-mini', this.fetchImpl, baseURL);
+      const { generateText } = await import('ai');
+      await generateText({
+        model: languageModel,
+        messages: [{ role: 'user', content: 'hi' }],
+        maxOutputTokens: 1,
+      });
+      return true;
+    } catch (err) {
+      if (isUrlError(err)) return false;
+      throw err;
+    }
   }
 
   async createMessage(params: LLMClient['createMessage'] extends (p: infer P) => unknown ? P : never): Promise<string> {
     // Type-safe params destructure (LLMClient.createMessage signature).
     const { model, max_tokens, system, messages, temperature, repetition_penalty, enableThinking, response_format } = params;
 
-    const languageModel = this.getProvider(model, this.fetchImpl);
-    // Lazy import to keep generateText on the same module surface.
-    const { generateText } = await import('ai');
-
     try {
+      const languageModel = this.getProvider(model, this.fetchImpl);
+      // Lazy import to keep generateText on the same module surface.
+      const { generateText } = await import('ai');
+
       const result = await generateText({
         model: languageModel,
         ...(system ? { system } : {}),
@@ -124,6 +152,33 @@ export class OpenAISdkClient implements LLMClient {
       });
       return result.text;
     } catch (err) {
+      // v1.23.0 P1.5: URL fallback for custom baseURLs (Kimi / z.ai / GLM).
+      // If user's baseURL is missing /v1, AI-SDK sends to wrong path and
+      // gets 404. Try candidate URLs and cache the first working one.
+      if (isUrlError(err) && this.baseURL) {
+        const mappedErr = mapAiSdkError(err);
+        const resolved = await resolveBaseUrlWithFallback({
+          baseUrl: this.baseURL,
+          testFn: (url) => this.probeBaseURL(url),
+          originalError: mappedErr,
+        });
+        // Retry with the resolved URL
+        const retryLanguageModel = this.getProvider(model, this.fetchImpl, resolved);
+        const { generateText } = await import('ai');
+        const result = await generateText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+            responseFormat: response_format,
+          }) as unknown as Parameters<typeof generateText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
+        return result.text;
+      }
       throw mapAiSdkError(err);
     }
   }
@@ -192,14 +247,12 @@ export class OpenAISdkClient implements LLMClient {
   }): Promise<string> {
     const { model, max_tokens, system, messages, onChunk, temperature, repetition_penalty, enableThinking } = params;
 
-    // v1.23.0 P1-7 follow-up: stream path uses streamWithFallback
-    // (real streaming via window.fetch with CORS fallback to
-    // requestUrl). The getProvider override below plumbs the
-    // streaming fetch into the AI-SDK provider.
-    const languageModel = this.getProvider(model, this.streamFetchImpl);
-    const { streamText } = await import('ai');
-
+    // v1.23.0 P1.5: same URL fallback as createMessage, so streaming
+    // (Query Wiki) is consistent with non-streaming (Ingest / Lint).
     try {
+      const languageModel = this.getProvider(model, this.streamFetchImpl);
+      const { streamText } = await import('ai');
+
       // v1.23.0 P2: AI-SDK v6 stream consumption fix.
       // See openai-compat-sdk-client.ts for full rationale — only consume
       // textStream to get true real-time chunk forwarding. Iterating
@@ -257,6 +310,51 @@ export class OpenAISdkClient implements LLMClient {
 
       return fullText;
     } catch (err) {
+      // v1.23.0 P1.5: URL fallback for streaming path (Query Wiki)
+      // — same logic as createMessage. If 404 on wrong URL, resolve
+      // to the correct baseURL via the module-level cache and retry.
+      if (isUrlError(err) && this.baseURL) {
+        const mappedErr = mapAiSdkError(err);
+        const resolved = await resolveBaseUrlWithFallback({
+          baseUrl: this.baseURL,
+          testFn: (url) => this.probeBaseURL(url),
+          originalError: mappedErr,
+        });
+        const retryLanguageModel = this.getProvider(model, this.streamFetchImpl, resolved);
+        const { streamText } = await import('ai');
+
+        const result = streamText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+          }) as unknown as Parameters<typeof streamText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
+
+        let fullText = '';
+        for await (const chunk of result.textStream) {
+          fullText += chunk;
+          onChunk(chunk);
+        }
+
+        let reasoningContent = '';
+        try {
+          const reasoning = await result.reasoning;
+          if (typeof reasoning === 'string' && reasoning) {
+            reasoningContent = reasoning;
+          } else if (Array.isArray(reasoning)) {
+            reasoningContent = reasoning.map((r) => (r as { text?: string }).text || '').join('');
+          }
+        } catch { /* no reasoning */ }
+        if (reasoningContent) {
+          fullText = wrapReasoningContent(reasoningContent, fullText);
+        }
+        return fullText;
+      }
       throw mapAiSdkError(err);
     }
   }

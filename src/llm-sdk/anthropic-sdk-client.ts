@@ -23,6 +23,11 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { LLMClient } from '../types';
 import { obsidianFetchBridge, streamWithFallback } from '../core/obsidian-fetch-bridge';
 import { mapAiSdkError } from './openai-sdk-client';
+import {
+  getCachedUrl,
+  resolveBaseUrlWithFallback,
+  isUrlError,
+} from '../core/url-fallback';
 
 // Re-export for callers that import from anthropic-sdk-client only.
 // Reuse the same error mapper as OpenAI — AI-SDK's APICallError shape is
@@ -62,22 +67,49 @@ export class AnthropicSdkClient implements LLMClient {
     this.streamFetchImpl = opts.streamFetch ?? streamWithFallback;
   }
 
-  private getProvider(modelId: string, fetchFn: typeof obsidianFetchBridge | typeof streamWithFallback = this.streamFetchImpl): LanguageModel {
+  private getProvider(modelId: string, fetchFn: typeof obsidianFetchBridge | typeof streamWithFallback = this.streamFetchImpl, baseURLOverride?: string): LanguageModel {
+    // v1.23.0 P1.5: baseURLOverride lets the fallback retry path pass a
+    // corrected URL (e.g., `/v1` appended for Kimi Coding Plan) without
+    // mutating this.baseURL. Cached resolved URLs flow through this.
+    const effectiveBaseURL = baseURLOverride ?? getCachedUrl(this.baseURL ?? '') ?? this.baseURL;
     const provider = createAnthropic({
       apiKey: this.apiKey,
-      ...(this.baseURL ? { baseURL: this.baseURL } : {}),
+      ...(effectiveBaseURL ? { baseURL: effectiveBaseURL } : {}),
       fetch: fetchFn as unknown as typeof fetch,
     });
     return provider(modelId);
   }
 
+  /**
+   * Probe whether a baseURL works for Anthropic messages endpoint.
+   * Used by the URL fallback to test candidate URLs without committing
+   * the original request payload. Sends a minimal 1-token message and
+   * treats 404 as "wrong URL" (return false), all other errors as
+   * "auth/server error" (throw to propagate).
+   */
+  private async probeBaseURL(baseURL: string): Promise<boolean> {
+    try {
+      const languageModel = this.getProvider('claude-haiku-4-5', this.fetchImpl, baseURL);
+      const { generateText } = await import('ai');
+      await generateText({
+        model: languageModel,
+        messages: [{ role: 'user', content: 'hi' }],
+        maxOutputTokens: 1,
+      });
+      return true;
+    } catch (err) {
+      if (isUrlError(err)) return false;
+      throw err;
+    }
+  }
+
   async createMessage(params: LLMClient['createMessage'] extends (p: infer P) => unknown ? P : never): Promise<string> {
     const { model, max_tokens, system, messages, temperature, repetition_penalty, enableThinking } = params;
 
-    const languageModel = this.getProvider(model, this.fetchImpl);
-    const { generateText } = await import('ai');
-
     try {
+      const languageModel = this.getProvider(model, this.fetchImpl);
+      const { generateText } = await import('ai');
+
       const result = await generateText({
         model: languageModel,
         // Anthropic accepts system at top-level; AI-SDK abstracts this.
@@ -92,6 +124,34 @@ export class AnthropicSdkClient implements LLMClient {
       });
       return result.text;
     } catch (err) {
+      // v1.23.0 P1.5: URL fallback for custom baseURLs (Kimi / z.ai / GLM).
+      // If the user's baseURL is missing /v1, AI-SDK sends to a wrong
+      // path and gets 404. Try candidate URLs and cache the first
+      // working one — subsequent calls (Ingest/Lint/Query) reuse it.
+      if (isUrlError(err) && this.baseURL) {
+        const mappedErr = mapAiSdkError(err);
+        const resolved = await resolveBaseUrlWithFallback({
+          baseUrl: this.baseURL,
+          testFn: (url) => this.probeBaseURL(url),
+          originalError: mappedErr,
+        });
+        // Retry with the resolved URL — separate try block so the
+        // fallback result is returned even if the retry somehow fails.
+        const retryLanguageModel = this.getProvider(model, this.fetchImpl, resolved);
+        const { generateText } = await import('ai');
+        const result = await generateText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+          }) as unknown as Parameters<typeof generateText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
+        return result.text;
+      }
       throw mapAiSdkError(err);
     }
   }
@@ -135,13 +195,14 @@ export class AnthropicSdkClient implements LLMClient {
   }): Promise<string> {
     const { model, max_tokens, system, messages, onChunk, temperature, repetition_penalty, enableThinking } = params;
 
-    // v1.23.0 P1-7 follow-up: stream path uses streamWithFallback
-    // (real streaming via window.fetch with CORS fallback to
-    // requestUrl). See obsidian-fetch-bridge.ts for rationale.
-    const languageModel = this.getProvider(model, this.streamFetchImpl);
-    const { streamText } = await import('ai');
-
+    // v1.23.0 P1.5: same URL fallback as createMessage, so streaming
+    // (Query Wiki) is consistent with non-streaming (Ingest / Lint /
+    // Fix). Use cached resolved URL when present; on 404, fall back
+    // to candidate URLs and retry.
     try {
+      const languageModel = this.getProvider(model, this.streamFetchImpl);
+      const { streamText } = await import('ai');
+
       const result = streamText({
         model: languageModel,
         ...(system ? { system } : {}),
@@ -187,6 +248,48 @@ export class AnthropicSdkClient implements LLMClient {
       }
       return fullText;
     } catch (err) {
+      // URL fallback for streaming — same logic as createMessage.
+      if (isUrlError(err) && this.baseURL) {
+        const mappedErr = mapAiSdkError(err);
+        const resolved = await resolveBaseUrlWithFallback({
+          baseUrl: this.baseURL,
+          testFn: (url) => this.probeBaseURL(url),
+          originalError: mappedErr,
+        });
+        const retryLanguageModel = this.getProvider(model, this.streamFetchImpl, resolved);
+        const { streamText } = await import('ai');
+
+        const result = streamText({
+          model: retryLanguageModel,
+          ...(system ? { system } : {}),
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+          maxOutputTokens: max_tokens,
+          providerOptions: this.buildProviderOptions({
+            enableThinking,
+            repetitionPenalty: repetition_penalty,
+          }) as unknown as Parameters<typeof streamText>[0]['providerOptions'],
+          ...(temperature !== undefined ? { temperature } : {}),
+        });
+
+        let fullText = '';
+        for await (const chunk of result.textStream) {
+          fullText += chunk;
+          onChunk(chunk);
+        }
+        let reasoningContent = '';
+        try {
+          const reasoning = await result.reasoning;
+          if (typeof reasoning === 'string' && reasoning) {
+            reasoningContent = reasoning;
+          } else if (Array.isArray(reasoning)) {
+            reasoningContent = reasoning.map((r) => (r as { text?: string }).text || '').join('');
+          }
+        } catch { /* no reasoning */ }
+        if (reasoningContent) {
+          fullText = `<think>\n${reasoningContent}\n</think>\n\n${fullText}`;
+        }
+        return fullText;
+      }
       throw mapAiSdkError(err);
     }
   }

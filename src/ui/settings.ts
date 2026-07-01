@@ -9,6 +9,7 @@ import { FolderSuggestModal } from './modals';
 import { HistoryModal } from './history-modal';
 import { classifyFetchError } from './settings-helpers';
 import { TagChipInputComponent } from './tag-chip-input';
+import { fetchModelsWithFallback } from '../core/url-fallback';
 
 export class LLMWikiSettingTab extends PluginSettingTab {
   plugin: LLMWikiPlugin;
@@ -308,54 +309,58 @@ export class LLMWikiSettingTab extends PluginSettingTab {
             };
             const modelFilter = getModelFilter(this.tempSettings.provider);
 
-            if (this.tempSettings.provider === 'anthropic' || this.tempSettings.provider === 'anthropic-compatible') {
-              if (this.tempSettings.provider === 'anthropic-compatible' && this.tempSettings.baseUrl?.trim()) {
-                const rawBase = this.tempSettings.baseUrl.trim();
-                const cleanBase = rawBase.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
-                const modelsUrl = cleanBase + '/v1/models';
-                try {
-                  const response = await requestUrl({ url: modelsUrl, headers: { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' } });
-                  if (response.status >= 200 && response.status < 300) {
-                    const data = response.json as { data?: Array<{ id: string }> };
-                    if (data.data?.length) {
-                      this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort();
-                    } else throw new Error('empty model list');
-                  } else throw new Error(`HTTP ${response.status}`);
-                } catch {
-                  const altUrl = cleanBase + '/models';
-                  const altResponse = await requestUrl({ url: altUrl, headers: { 'Authorization': `Bearer ${apiKey}` } });
-                  if (altResponse.status >= 200 && altResponse.status < 300) {
-                    const altData = altResponse.json as { data?: Array<{ id: string }> };
-                    if (altData.data?.length) {
-                      this.tempSettings.availableModels = altData.data.map(m => m.id).filter(modelFilter).sort();
-                    } else throw new Error('empty model list');
-                  } else throw new Error(`HTTP ${altResponse.status}`);
-                }
-              } else {
-                // Anthropic official or Anthropic-Compatible without custom baseUrl → fetch from api.anthropic.com
+            // v1.23.0 P1.5: use fetchModelsWithFallback for all providers
+            // (anthropic-compatible, openai-compatible, openai, anthropic).
+            // Unified fallback handles missing /v1 suffix (Kimi Anthropic
+            // case) — Test Connection and Fetch Models share the same
+            // module-level cache, so a resolved URL from one path
+            // applies to the other.
+            const providerForFallback =
+              this.tempSettings.provider === 'openai' ? 'openai' :
+              this.tempSettings.provider === 'anthropic' ? 'anthropic' :
+              this.tempSettings.provider as 'openai-compatible' | 'anthropic-compatible';
+
+            const fetchOneUrl = async (modelsUrl: string): Promise<string[]> => {
+              try {
                 const response = await requestUrl({
-                  url: 'https://api.anthropic.com/v1/models',
-                  headers: { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' }
+                  url: modelsUrl,
+                  method: 'GET',
+                  headers: this.tempSettings.provider === 'anthropic' || this.tempSettings.provider === 'anthropic-compatible'
+                    ? { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' }
+                    : { 'Authorization': `Bearer ${apiKey}` },
+                  throw: false,
                 });
                 if (response.status >= 200 && response.status < 300) {
                   const data = response.json as { data?: Array<{ id: string }> };
                   if (data.data?.length) {
-                    this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort();
-                  } else throw new Error('empty model list');
-                } else throw new Error(`HTTP ${response.status}`);
+                    return data.data.map((m: { id: string }) => m.id);
+                  }
+                }
+                return [];
+              } catch {
+                return [];
               }
-            } else {
-              const modelsUrl = (baseUrl || 'https://api.openai.com/v1') + '/models';
-              const response = await requestUrl({
-                url: modelsUrl,
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${apiKey}` }
+            };
+
+            const effectiveBaseUrl = baseUrl ?? (
+              this.tempSettings.provider === 'anthropic' ? 'https://api.anthropic.com/v1' :
+              this.tempSettings.provider === 'openai' ? 'https://api.openai.com/v1' :
+              ''
+            );
+
+            let models: string[];
+            try {
+              models = await fetchModelsWithFallback({
+                baseUrl: effectiveBaseUrl,
+                provider: providerForFallback,
+                fetchFn: fetchOneUrl,
               });
-              const data = response.json as { data?: Array<{ id: string }> };
-              if (data.data?.length) {
-                this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort().slice(0, 100);
-              } else throw new Error('empty model list');
+              if (models.length === 0) throw new Error('empty model list');
+            } catch {
+              throw new Error('All URL candidates failed');
             }
+
+            this.tempSettings.availableModels = models.filter(modelFilter).sort();
             if (this.tempSettings.availableModels.length > 0) {
               new Notice(this.getText('fetchSuccess').replace('{}', this.tempSettings.availableModels.length.toString()), NOTICE_NORMAL);
               if (!this.tempSettings.model || !this.tempSettings.availableModels.includes(this.tempSettings.model)) {
