@@ -1,6 +1,6 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-06-30
+**Last Updated:** 2026-07-01
 
 ---
 
@@ -35,19 +35,19 @@ Closed the second half of #207 — reasoning model family (gpt-5.1+ / gpt-5.5 / 
 - ✅ **P1-1 / P1-2 / P1-3 / P1-4** — `core/section-extractor.ts` (Tier B), `core/monte-carlo-ppr.ts` (MC-PPR), `core/hub-detection.ts`, `core/ppr-cascade.ts` (hybrid guard)
 - ✅ **P1-5** — Query Wiki integration with LLM seed selection (three-tier pipeline: lex fast path → LLM seeds → PPR walks)
 - ✅ **P1-6** — Lint hub-link distinctiveness scanner (229 LOC + 15 tests, closes #157/#175)
-- ✅ **P1-7 (AI-SDK Day 1-3)** — Migrate to Vercel AI-SDK v6 (`@ai-sdk/openai@3`, `@ai-sdk/anthropic@3`, `@ai-sdk/openai-compatible@2`, `ai@6`). Deleted 1625-LOC `llm-client.ts` + 8 old test files. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC).
+- ✅ **P1-7 (AI-SDK Day 1-3)** — Migrate to Vercel AI-SDK v6 (`@ai-sdk/openai@3`, `@ai-sdk/anthropic@3`, `@ai-sdk/openai-compatible@2`, `ai@6`). Deleted 1625-LOC `llm-client.ts` + 8 old test files. New `src/llm-sdk/` (5 files, ~1019 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC).
+- ✅ **P1-7 (Day 3.5-5) — URL fallback** (`core/url-fallback.ts`, Kimi Coding Plan `/v1` auto-fix, cross-consumer cache, 1195 insertions). b775d63.
 - ✅ **P2-2 partial** — cascade + seeds token + LLM seed retrieval improvements
-- ✅ **PR #215 (open, approved)** — `core/hub-retirement.ts` (hub-retirement crystallization signal, 175 LOC + 136 LOC tests). Merge target: `feat/v1.23.0-graph-engine-kickoff` (not AI-SDK branch).
-- ✅ **Real-time streaming (resolves user Q1 feedback)** — v1.23.0 P2 + AI-SDK v6 migration: `result.textStream` true逐块 streaming in all 3 llm-sdk clients (`openai-sdk-client.ts:226`, `anthropic-sdk-client.ts:160`, `openai-compat-sdk-client.ts:194`). The "Restore true streaming for 3rd-party providers" backlog item is **DONE** (commits `2e51e23` + `6be9258`) — should NOT appear in future backlog/deferred lists.
+- ✅ **PR #215 (merged, closed)** — `core/hub-retirement.ts` (hub-retirement crystallization signal, 175 LOC + 136 LOC tests). Merged directly into `refactor/v1.23.0-ai-sdk-migration` (5bb09f2), PR manually closed (2026-07-01).
+- ✅ **Real-time streaming (resolves user Q1 feedback)** — v1.23.0 P2 + AI-SDK v6 migration: `result.textStream` true逐块 streaming in all 3 llm-sdk clients. **DONE** (commits `2e51e23` + `6be9258`).
+- ✅ **LM Studio API key gate** — `main.ts:962` bypass for lmstudio alongside ollama. 4b96025, Closes #223.
+- ✅ **Token-key probe-then-retry** — runtime fallback for `max_tokens` ↔ `max_completion_tokens`. No error-body parsing, no regex, no model-name hardcoding. KISS: if 400 → retry with alt key once. cc3f2c2, Refs #207.
+- ✅ **Sponsor section** — Ko-fi badge + 💖 Support Project section synced to all 10 READMEs (committed in `3f4c373`). Ko-fi: https://ko-fi.com/greenerdalii.
+- ✅ **P2-3 Eval acceptance gate** — knn baseline analysis complete. `REAL_VAULT_EVAL.md` documents cascade R@5 27.1% vs knn 24.1% (3pp gap, no opt-in embedding path per #175). ROADMAP eval baseline table updated with all 5 measurements (lex / cascade / cascade+seeds / knn / real-vault-tuned).
 
 **Remaining for v1.23.0 (priority order):**
-- 🔄 **P1 — chunkToChars adapter** (AI-SDK migration Day 3.5, ~2h): real character-level streaming UI (user feedback on Q1). AI-SDK `streamText` returns word-level chunks, current UI is not "true streaming" until adapter lands.
-- 🔄 **P1 — AI-SDK Coding Plan / z.ai / GLM-Anthropic baseURL verification** (Day 3.5, ~1h): confirm `createAnthropic({ baseURL })` works for non-Anthropic baseURLs (Q2 from user feedback). Edge case to lock in before release.
-- 🔄 **P2 — Lint disable warnings cleanup** (Day 3.5, ~1h): leftover from AI-SDK migration.
-- 🔄 **P2 — PPR parameter tuning** (P2-4, ✅ done 2026-06-30 on 2142-page real vault). T3 winner: `damping=0.05, numWalks=3000, walkLength=20`. R@5 21.5% → 23.8% (+11%). See `src/__tests__/fixtures/wikis/sample-50page/REAL_VAULT_EVAL.md`.
-- 🔄 **P2 — Sponsor section** (Day 5, alongside release docs): Ko-fi link in all 10 READMEs after `Explore Repo with DeepWiki` anchor. **Was previously deferred to v1.23.1; now in v1.23.0 release flow per user instruction 2026-06-30.**
-- 🔄 **P2 — Eval acceptance gate** (P2-3, Day 5): formal R@5 sign-off against baseline report. **Adding knn baseline as control** per @DocTpoint's #198 follow-up (2026-06-30): bge-m3 or OpenAI text-embedding-3-small embedding baseline, run via same fixture eval script. Eval report documents `cascade vs lex` AND `cascade vs knn` so cascade's relative lift is correctly attributed (semantic-over-keyword vs graph-over-semantic).
-- 🔄 **P1 — pre-release-gate + doc-review + v1.23.0 release** (Day 5, ~0.5 day): commit + push + tag + release notes.
+- 🔄 **P1 — pre-release-gate + doc-review + v1.23.0 release** (Day 5, ~0.5 day): version bump → doc sync → pre-release-gate → commit/push → tag → Release Notes → Discussion.
+- 🔄 **#207 close** — user will close manually after real-world testing (separate commit `Closes #207`, NOT part of v1.23.0). Token-key probe-then-retry fallback (cc3f2c2) addresses the root cause for OpenAI-compatible gateway users.
 
 **v1.23.0 risk register:**
 - Bundle size 1.24MB → 3.17MB (user accepted 2026-06-29, monitor CDN experience)

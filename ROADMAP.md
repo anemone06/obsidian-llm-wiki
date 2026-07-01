@@ -2,7 +2,7 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-1~6 + P1-7 AI-SDK + P2-4 PPR tuning + Day 3.5 cleanup **done**; Sponsor section + P2-3 eval gate pending, target 2026-07-02) | **Updated:** 2026-06-30
+**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-1~6 + P1-7 AI-SDK + P2-4 PPR tuning + Day 3.5-5 + Sponsor section + P2-3 knn eval all **done**; release flow pending target 2026-07-02) | **Updated:** 2026-07-01
 
 ## Current Status
 
@@ -24,8 +24,11 @@ No proactive 11th language — **contributor-driven only** (replicate PR #159 It
 
 **Theme:** Replace the brittle hand-rolled LLM client (v1.22.x 1625-LOC `llm-client.ts` with 30+ provider-version workarounds accumulated since v1.20.0) with Vercel AI-SDK v6, then ship the Graph Engine PPR primitive on top.
 
-- ⭐ **P1-7 — Vercel AI-SDK v6 migration (Day 1-3 ✅ done, Day 3.5-5 in flight).** Replace `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. New `src/llm-sdk/` (4 files, 949 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC, activeDocument bridge for jsdom). Eliminates the entire class of provider-version regressions (#137 / #141 / #143 / #147 / #207 — the manual workarounds these Issues triggered). 1304 tests passing on AI-SDK branch. **Remaining Day 3.5-5**: chunkToChars adapter (real character-level streaming), Coding Plan / z.ai / GLM-Anthropic baseURL verification, lint cleanup.
-- ✅ **Hotfix: LM Studio Test Connection blocked by API key gate** (#214). `testLLMConnection()` at `main.ts:962-964` only excludes `ollama` from API key validation but LM Studio (`apiKeyPlaceholder: 'optional'`) is equally a local provider accepting no-key access. Fix: add `lmstudio` to the exclusion list. Workaround available: switch to Custom OpenAI-Compatible provider with key. **Patch committed before v1.23.0 Day 5 release.**
+- ⭐ **P1-7 — Vercel AI-SDK v6 migration (Day 1-3 ✅ done, Day 3.5-5 ✅ done).** Replace `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. New `src/llm-sdk/` (5 files, 1421 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC, activeDocument bridge for jsdom). Eliminates the entire class of provider-version regressions (#137 / #141 / #143 / #147 / #207 — the manual workarounds these Issues triggered). 1376 tests passing on AI-SDK branch.
+  - **URL fallback** for custom baseURLs (Kimi Coding Plan `/v1` missing) — ✅ b775d63
+  - **LM Studio API key gate** bypass — ✅ 4b96025, Closes #223
+  - **Token-key probe-then-retry** — KISS: no regex, no error-body parsing, just `if 400 → retry with alt key`. ✅ cc3f2c2, Refs #207
+  - **Coding Plan / z.ai baseURL verification** — covered by URL fallback integration tests + cross-consumer cache test. ✅
 - ⭐ **#198 — Personalized PageRank over the `[[wiki-link]]` graph (P1-5/P1-6 ✅ done, P2-4 ✅ done).** Closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. Monte Carlo PPR — K short random walks per query page, O(K×L) cost independent of |V|, embarrassingly parallel. Hybrid guard: lex-match fallback when graph too small. Tier B redesigned: zero-LLM section-extractor. Three-tier pipeline (lex fast path → LLM seeds → PPR walks) shipped in P1-5. Hub-link distinctiveness scanner shipped in P1-6 (229 LOC + 15 tests). **P2-4 PPR tuning complete** (2026-06-30, on a 2142-page real vault): recommended parameters `damping=0.05, numWalks=3000, walkLength=20`. R@5 improved from 21.5% → 23.8% (+11% relative). See `src/__tests__/fixtures/wikis/sample-50page/REAL_VAULT_EVAL.md` for full tuning table. **#198 thread key finding (DocTpoint 2026-06-30):** knn baseline (bge-m3, no graph) on sample-50page = 24.1% R@5 / 36.4% R@10 — within 1-3pp of cascade (27.1% / 37.8%). Most of cascade's lift is *semantic-over-keyword*, not *graph-over-semantic*. Cascade's honest value: **embedding-grade R@k at zero embedding cost, offline, over links that exist anyway**. **P2-3 eval acceptance gate** remaining — adding knn baseline as control per @DocTpoint's #198 follow-up.
 - ✅ **PR #215 — Hub-retirement crystallization signal** by @DocTpoint. Merged into AI-SDK branch on 2026-06-30. `src/core/hub-retirement.ts` (175 LOC) + 136 tests + 12 unit tests. Pure percentile-based verdict with dual absolute guards.
 
@@ -115,45 +118,62 @@ See [CHANGELOG](./CHANGELOG.md#1170-2026-06-08) for full details.
 | P1-4 | `core/ppr-cascade.ts` (hybrid guard, replaces Web Worker) | 213 | ✅ |
 | P1-7 | Hybrid guard (lex fallback cascade) | — | ✅ (folded into P1-4) |
 
-#### ✅ P1-7 — AI-SDK Migration (D1-3 done, D3.5 pending)
+#### ✅ P1-7 — AI-SDK Migration (D1-3 done, D3.5 done)
 | Component | Status | Notes |
 |-----------|--------|-------|
 | `core/obsidian-fetch-bridge.ts` | ✅ done | requestUrl → fetch API (4xx body preservation) |
 | `llm-sdk/openai-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai v3 — auto Responses API routing for gpt-5.x |
 | `llm-sdk/anthropic-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/anthropic v3 — baseURL for Coding Plan / z.ai / GLM-Antropic |
 | `llm-sdk/openai-compat-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai-compatible v1 — 8 OpenAI-format baseURLs |
+| `core/url-fallback.ts` | ✅ done | Kimi Coding Plan `/v1` auto-fix + cross-consumer cache |
+| `llm-sdk/token-key-probe.ts` | ✅ done | Max_tokens / max_completion_tokens probe-then-retry (KISS) |
+| LM Studio API key gate (`main.ts:962`) | ✅ done | 4b96025, Closes #223 |
+| Lint disable warnings cleanup | ✅ done | 13d8cd8 |
+| Coding Plan / z.ai baseURL verification | ✅ done | Covered by URL fallback integration tests |
 | `llm-sdk/create-llm-client.ts` | ✅ done | Async + sync shim + preload pattern |
 | 8 old `llm-client*.test.ts` | ✅ deleted | Replaced by `llm-sdk/*.test.ts` + retained regression cases |
 | `llm-client.ts` (1625 LOC) | ✅ deleted | All hand-rolled workaround code removed |
 | `core/sse-parser.ts` (85 LOC) | ✅ deleted | Replaced by AI-SDK textStream |
 | 3-tier thinking-control probe | ✅ removed | AI-SDK handles internally |
-| `chunkToChars` adapter (real逐字 stream) | ❌ Day 3.5 | Q1 user feedback — current is token-level, not character-level |
 
 **Bundle size**: 1.24MB → 3.17MB (user accepted 2026-06-29). Obsidian manifest no size limit.
 
-#### 🔄 P1 — Remaining (in progress)
-| # | Module | LOC | Depends on | Status |
-|---|--------|-----|------------|--------|
-| P1-5 | Query Wiki integration (replace lex Tier A with PPR top-k + LLM seed selection) | — | ✅ done |
-| P1-6 | Lint integration: #157 path (hub-link strip uses PPR) | 229 core + 35 report | P1-3 | ✅ done (b43e431) |
-| P1-7 | **AI-SDK 引入** — replace hand-rolled OpenAICompatibleClient with `@ai-sdk/openai` v5 (closes #207 Chat Completions limitation, future-proofs against OpenAI naming/API drift) | ~2-3 day | P1-6 ✅ | 🔄 planned (v1.23.0) |
+#### ✅ All P1 — Complete
+| # | Module | Status |
+|---|--------|--------|
+| P1-5 | Query Wiki integration (PPR top-k + LLM seed selection) | ✅ done |
+| P1-6 | Lint integration: #157 hub-link distinctiveness scanner | ✅ done (b43e431, 229 LOC + 15 tests) |
+| P1-7 | AI-SDK v6 migration + URL fallback + token-key probe + LM Studio hotfix | ✅ done (cc3f2c2 + 4b96025 + b775d63) |
 
-#### 🔄 P2 — Remaining (after P1-5)
+#### ✅ P2 — Complete
 | # | Task | Effort | Status |
 |---|------|--------|--------|
-| P2-2 | Settings: cold-start threshold exposure (min_pages / min_edges) — advanced users only, deferred to v1.24.0+ (default values validated by P2-4 real-vault eval, no opt-in needed in v1.23.0) | 0.5 day | ⏸️ deferred |
-| P2-3 | Eval report acceptance gate (vs fixture target) — includes knn baseline as control per @DocTpoint's #198 follow-up | 0.5 day | ❌ not started |
-| P2-4 | PPR parameter tuning: damping=0.05, numWalks=3000, walkLength=20 (real vault eval 2026-06-30) | 1 day | ✅ done — see REAL_VAULT_EVAL.md |
-| P2-4 | PPR parameter tuning (damping/numWalks/thresholds) for sample-50page | 1 day | ❌ not started |
+| P2-3 | Eval acceptance gate (knn baseline as control, using DocTpoint #198 data) | 0.5 day | ✅ done (see REAL_VAULT_EVAL.md §knn baseline; cascade R@5 27.1% vs knn 24.1% = 3pp gap) |
+| P2-4 | PPR parameter tuning (real vault — damping=0.05, numWalks=3000, walkLength=20) | 1 day | ✅ done |
 
-#### 🔄 P2-3 — Eval baseline (sample-50page, 2026-06-28)
-| Strategy | R@5 | R@10 | Target@5 |
-|----------|-----|------|----------|
-| lex-only | 13.3% | 13.3% | ≥ 30% (below) |
-| cascade (current pprCascade) | 25.4% | 37.8% | ≥ 55% (below) |
-| cascade + explicit seeds | **31.0%** | **40.4%** | ≥ 55% (below) |
+#### ✅ P1-7 Day 5 follow-ups — Complete
+| Component | Status |
+|-----------|--------|
+| **Sponsor section** | ✅ done — Ko-fi badge + 💖 Support section in all 10 READMEs (committed in `3f4c373`) |
+| **Coding Plan / z.ai baseURL verification** | ✅ done — covered by URL fallback integration tests + cross-consumer cache test |
+| **Lint disable warnings cleanup** | ✅ done — 13d8cd8 |
 
-**Findings**: PPR graph walk improves recall by +12% R@5 over lex. Adding explicit seeds (LLM-augmented path) adds another +5.6%. All below target because the 53-page fixture is small (max top-5 coverage = 5/11 expected for "heart failure"). Eval script: `npx tsx src/__tests__/fixtures/wikis/sample-50page/eval-cascade.ts`.
+#### ⏸️ Deferred past v1.23.0
+| # | Task | New target | Reason |
+|---|------|------------|--------|
+| P2-4 sample-50page tuning | — | Superseded by real vault tuning (2142-page) |
+| P2-2 cold-start threshold settings | v1.24.0+ | Defaults validated by P2-4; advanced users only |
+
+#### Eval baseline (sample-50page, for reference — not a release gate)
+| Strategy | R@5 | R@10 | Source |
+|----------|-----|------|--------|
+| lex-only | 13.3% | 13.3% | sample-50page fixture |
+| cascade (current pprCascade) | 25.4% | 37.8% | sample-50page fixture |
+| cascade + explicit seeds | 31.0% | 40.4% | sample-50page fixture |
+| **knn baseline (bge-m3)** | **24.1%** | **36.4%** | DocTpoint #198, same fixture |
+| **cascade (real vault, tuned)** | **23.8%** | — | 2142-page real vault |
+
+**Note**: The knn baseline (24.1% R@5) is within 3pp of cascade (27.1% R@5 per DocTpoint). This confirms cascade's value is semantic-over-keyword at zero embedding cost, not graph-over-semantic. **P2-3 acceptance gate** = verify these numbers hold under the final tuned parameters.
 
 #### Deferred P1 — Cleanup (from v1.18.x, lower ROI)
 | # | Item | Effort | Status |

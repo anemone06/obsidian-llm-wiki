@@ -54,6 +54,7 @@
     - [🔍 故障排查](#-故障排查)
   - [🔒 透明度与合规性](#-透明度与合规性)
   - [💖 支持项目](#-支持项目)
+    - [赞助者](#赞助者)
   - [📜 许可证](#-许可证)
   - [🙏 致谢](#-致谢)
   - [Star History](#star-history)
@@ -609,8 +610,6 @@ v1.21.0 的摄入前置检查已修复：空白/纯空白/仅含 frontmatter 的
 - [@jameses-cyber](https://github.com/jameses-cyber)
 
 ## 📜 许可证
-
-MIT License — 详见 [LICENSE](LICENSE)。
 
 MIT License — 详见 [LICENSE](LICENSE)。
 
