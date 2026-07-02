@@ -25,6 +25,14 @@ export interface ProviderSettings {
   apiKey: string;
   baseUrl?: string;
   useOfficialOpenAI?: boolean;
+  customProtocol?: 'openai-compatible' | 'anthropic-compatible';
+  customAuthHeaderMode?: 'auto' | 'bearer' | 'x-api-key';
+  codexCliPath?: string;
+  codexCwd?: string;
+  codexModel?: string;
+  codexSandbox?: 'read-only' | 'workspace-write';
+  codexApprovalPolicy?: 'never' | 'on-request';
+  codexExecTimeoutMs?: number;
 }
 
 /**
@@ -35,19 +43,32 @@ export async function createLLMClientFromSettings(settings: ProviderSettings): P
   const { OpenAISdkClient } = await import('./openai-sdk-client');
   const { AnthropicSdkClient } = await import('./anthropic-sdk-client');
   const { OpenAICompatSdkClient } = await import('./openai-compat-sdk-client');
+  const { CodexAppServerClient } = await import('./codex-app-server-client');
 
   const provider = settings.provider;
   const apiKey = settings.apiKey.trim();
   const baseUrl = settings.baseUrl?.trim() || undefined;
 
+  if (provider === 'codex-cli') {
+    return new CodexAppServerClient({
+      cliPath: settings.codexCliPath,
+      cwd: settings.codexCwd,
+      model: settings.codexModel,
+      sandbox: settings.codexSandbox,
+      approvalPolicy: settings.codexApprovalPolicy,
+      timeoutMs: settings.codexExecTimeoutMs,
+    });
+  }
+
   if (provider === 'anthropic') {
     return new AnthropicSdkClient({ apiKey });
   }
 
-  if (provider === 'anthropic-compatible') {
+  if (provider === 'anthropic-compatible' || (provider === 'custom' && settings.customProtocol === 'anthropic-compatible')) {
     return new AnthropicSdkClient({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      authHeaderMode: settings.customAuthHeaderMode,
     });
   }
 
@@ -62,6 +83,7 @@ export async function createLLMClientFromSettings(settings: ProviderSettings): P
     apiKey,
     baseURL: baseUrl ?? 'http://localhost:11434/v1',
     provider,
+    authHeaderMode: settings.customAuthHeaderMode,
   });
 }
 
@@ -75,6 +97,7 @@ export interface PreloadedSdkModules {
   OpenAISdkClient: typeof import('./openai-sdk-client').OpenAISdkClient;
   AnthropicSdkClient: typeof import('./anthropic-sdk-client').AnthropicSdkClient;
   OpenAICompatSdkClient: typeof import('./openai-compat-sdk-client').OpenAICompatSdkClient;
+  CodexAppServerClient: typeof import('./codex-app-server-client').CodexAppServerClient;
 }
 
 let preloadedModules: PreloadedSdkModules | null = null;
@@ -86,15 +109,17 @@ let preloadedModules: PreloadedSdkModules | null = null;
  * sync API contract).
  */
 export async function preloadLLMClientModules(): Promise<void> {
-  const [openai, anthropic, compat] = await Promise.all([
+  const [openai, anthropic, compat, codex] = await Promise.all([
     import('./openai-sdk-client'),
     import('./anthropic-sdk-client'),
     import('./openai-compat-sdk-client'),
+    import('./codex-app-server-client'),
   ]);
   preloadedModules = {
     OpenAISdkClient: openai.OpenAISdkClient,
     AnthropicSdkClient: anthropic.AnthropicSdkClient,
     OpenAICompatSdkClient: compat.OpenAICompatSdkClient,
+    CodexAppServerClient: codex.CodexAppServerClient,
   };
 }
 
@@ -111,20 +136,32 @@ export function createLLMClientFromSettingsSync(settings: ProviderSettings): LLM
       'Call `await preloadLLMClientModules()` during plugin onload() before any LLM call.'
     );
   }
-  const { OpenAISdkClient, AnthropicSdkClient, OpenAICompatSdkClient } = preloadedModules;
+  const { OpenAISdkClient, AnthropicSdkClient, OpenAICompatSdkClient, CodexAppServerClient } = preloadedModules;
 
   const provider = settings.provider;
   const apiKey = settings.apiKey.trim();
   const baseUrl = settings.baseUrl?.trim() || undefined;
 
+  if (provider === 'codex-cli') {
+    return new CodexAppServerClient({
+      cliPath: settings.codexCliPath,
+      cwd: settings.codexCwd,
+      model: settings.codexModel,
+      sandbox: settings.codexSandbox,
+      approvalPolicy: settings.codexApprovalPolicy,
+      timeoutMs: settings.codexExecTimeoutMs,
+    });
+  }
+
   if (provider === 'anthropic') {
     return new AnthropicSdkClient({ apiKey });
   }
 
-  if (provider === 'anthropic-compatible') {
+  if (provider === 'anthropic-compatible' || (provider === 'custom' && settings.customProtocol === 'anthropic-compatible')) {
     return new AnthropicSdkClient({
       apiKey,
       ...(baseUrl ? { baseURL: baseUrl } : {}),
+      authHeaderMode: settings.customAuthHeaderMode,
     });
   }
 
@@ -139,6 +176,7 @@ export function createLLMClientFromSettingsSync(settings: ProviderSettings): LLM
     apiKey,
     baseURL: baseUrl ?? 'http://localhost:11434/v1',
     provider,
+    authHeaderMode: settings.customAuthHeaderMode,
   });
 }
 

@@ -30,11 +30,34 @@ import {
 } from '../core/url-fallback';
 import { TokenKeyProber } from './token-key-probe';
 
+type FetchAdapter = typeof obsidianFetchBridge | typeof streamWithFallback;
+
+export function withAuthHeaderMode<T extends FetchAdapter>(
+  fetchFn: T,
+  apiKey: string,
+  mode: 'auto' | 'bearer' | 'x-api-key'
+): T {
+  if (mode === 'auto') return fetchFn;
+  return (async (url: string, init?: Parameters<T>[1]) => {
+    const headers = new Headers(init?.headers);
+    if (mode === 'bearer') {
+      headers.delete('x-api-key');
+      headers.set('authorization', `Bearer ${apiKey}`);
+    } else {
+      headers.delete('authorization');
+      headers.set('x-api-key', apiKey);
+    }
+    return fetchFn(url, { ...init, headers });
+  }) as T;
+}
+
 export interface OpenAICompatSdkClientOptions {
   apiKey: string;
   baseURL: string;
   /** Provider id used as the `name` (e.g. 'gemini', 'openrouter'). */
   provider: string;
+  /** Optional auth-header override for custom gateways. */
+  authHeaderMode?: 'auto' | 'bearer' | 'x-api-key';
   /** Override non-streaming fetch (used in tests). */
   fetch?: typeof obsidianFetchBridge;
   /** Override streaming fetch (default: streamWithFallback). */
@@ -47,6 +70,7 @@ export class OpenAICompatSdkClient implements LLMClient {
   private readonly provider: string;
   private readonly fetchImpl: typeof obsidianFetchBridge;
   private readonly streamFetchImpl: typeof streamWithFallback;
+  private readonly authHeaderMode: 'auto' | 'bearer' | 'x-api-key';
   /**
    * v1.23.0 P1.5 follow-up: runtime probe-then-cache for token-key
    * preference (max_tokens vs max_completion_tokens). Owned per client
@@ -60,8 +84,9 @@ export class OpenAICompatSdkClient implements LLMClient {
     this.apiKey = opts.apiKey;
     this.baseURL = opts.baseURL;
     this.provider = opts.provider;
-    this.fetchImpl = opts.fetch ?? obsidianFetchBridge;
-    this.streamFetchImpl = opts.streamFetch ?? streamWithFallback;
+    this.authHeaderMode = opts.authHeaderMode ?? 'auto';
+    this.fetchImpl = withAuthHeaderMode(opts.fetch ?? obsidianFetchBridge, this.apiKey, this.authHeaderMode);
+    this.streamFetchImpl = withAuthHeaderMode(opts.streamFetch ?? streamWithFallback, this.apiKey, this.authHeaderMode);
   }
 
   /**

@@ -30,7 +30,7 @@ void aiSdkModulesLoaded.catch((err) => {
 // retained as legacy fallbacks in src/llm-client.ts for v1.23.0 backward
 // compat (will be removed in v1.24.0 once we've validated the new path
 // in production).
-export function createLLMClient(settings: LLMWikiSettings): LLMClient {
+export function createLLMClient(settings: LLMWikiSettings, runtime?: { codexCwd?: string }): LLMClient {
   // v1.23.0 P1-7: use the AI-SDK-backed factory. Sync shim delegates
   // to the preloaded SDK modules (loaded by preloadLLMClientModules
   // at module-load time above). No more legacy hand-rolled classes.
@@ -38,6 +38,14 @@ export function createLLMClient(settings: LLMWikiSettings): LLMClient {
     provider: settings.provider,
     apiKey: settings.apiKey,
     baseUrl: settings.baseUrl,
+    customProtocol: settings.customProtocol,
+    customAuthHeaderMode: settings.customAuthHeaderMode,
+    codexCliPath: settings.codexCliPath,
+    codexCwd: runtime?.codexCwd,
+    codexModel: settings.codexModel || settings.model,
+    codexSandbox: settings.codexSandbox,
+    codexApprovalPolicy: settings.codexApprovalPolicy,
+    codexExecTimeoutMs: settings.codexExecTimeoutMs,
   });
 
   // Wrap createMessage so user-configured advanced settings are applied.
@@ -328,6 +336,7 @@ export default class LLMWikiPlugin extends Plugin {
   }
 
   onunload() {
+    this.disposeLLMClient();
     this.autoMaintainManager?.stop();
     console.debug('LLM Wiki Plugin unloaded');
   }
@@ -423,17 +432,40 @@ export default class LLMWikiPlugin extends Plugin {
   }
 
   initializeLLMClient() {
-    if (!this.settings.apiKey?.trim() && this.settings.provider !== 'ollama') {
+    this.disposeLLMClient();
+    const providersWithoutRequiredKey = ['ollama', 'lmstudio', 'codex-cli'];
+    if (!this.settings.apiKey?.trim() && !providersWithoutRequiredKey.includes(this.settings.provider)) {
       this.llmClient = null;
       return;
     }
 
     try {
-      this.llmClient = createLLMClient(this.settings);
+      this.llmClient = createLLMClient(this.settings, { codexCwd: this.getVaultBasePath() });
+      this.restoreLLMClientSessionState();
       console.debug('LLM Client initialized:', this.settings.provider);
     } catch (error) {
       console.error('LLM Client initialization failed:', error);
       this.llmClient = null;
+    }
+  }
+
+  private disposeLLMClient(): void {
+    (this.llmClient as unknown as { dispose?: () => void })?.dispose?.();
+  }
+
+  private restoreLLMClientSessionState(): void {
+    if (this.settings.provider !== 'codex-cli') return;
+    const state = this.settings.querySessionState;
+    if (state?.provider !== 'codex-cli') return;
+    (this.llmClient as unknown as { setSessionState?: (value: typeof state) => void })?.setSessionState?.(state);
+  }
+
+  private getVaultBasePath(): string | undefined {
+    const adapter = this.app.vault.adapter as unknown as { getBasePath?: () => string; basePath?: string };
+    try {
+      return adapter.getBasePath?.() || adapter.basePath;
+    } catch {
+      return undefined;
     }
   }
 
@@ -965,14 +997,14 @@ export default class LLMWikiPlugin extends Plugin {
   async testLLMConnection(): Promise<{ success: boolean; message: string }> {
     const t = TEXTS[this.settings.language] || TEXTS.en;
 
-    const localNoKeyProviders = ['ollama', 'lmstudio'];
+    const localNoKeyProviders = ['ollama', 'lmstudio', 'codex-cli'];
     const isLocalNoKeyProvider = localNoKeyProviders.includes(this.settings.provider);
     if (!isLocalNoKeyProvider && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
       return { success: false, message: t.errorNoApiKey || 'API Key is not configured' };
     }
 
     try {
-      const testClient = createLLMClient(this.settings);
+      const testClient = createLLMClient(this.settings, { codexCwd: this.getVaultBasePath() });
 
       // v1.23.0 P1-7: response is used as a "did it work" probe. AI-SDK's
       // error mapper enriches failures with the provider body, surfaced

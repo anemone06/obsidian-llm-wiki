@@ -128,14 +128,18 @@ This project evolves rapidly — new features, bug fixes, and improvements are s
 ### 🔑 Configure an LLM Provider
 
 1. Open Settings → Karpathy LLM Wiki
-2. Pick a provider from the dropdown (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, Ollama, OpenRouter, or custom)
-3. Enter your API key (not needed for Ollama)
+2. Pick a provider from the dropdown (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, Ollama, OpenRouter, Codex CLI, or custom)
+3. Enter your API key (not needed for Ollama, LM Studio, or Codex CLI)
 4. Click **Fetch Models** to populate the model dropdown, or type a model name manually
 5. Click **Test Connection**, then **Save Settings**
 
 **🦙 Ollama (local, no API key):** Install [Ollama](https://ollama.com), pull a model (`ollama pull gemma4` or `ollama pull qwen3.5:27b`), select "Ollama (Local)" in the provider dropdown.
 
 **🎛️ LM Studio (local, no API key):** Install [LM Studio](https://lmstudio.ai), start its local server (default `http://localhost:1234/v1`), select "LM Studio (Local)" in the provider dropdown. LM Studio runs a built-in OpenAI-compatible server — API key field is optional.
+
+**💬 Codex CLI (ChatGPT login):** Install Codex CLI, run `codex login` in Terminal, then select "Codex CLI (ChatGPT login)". The plugin talks to `codex app-server` over stdio and reuses the official Codex login cache. It does not read ChatGPT cookies or call `chatgpt.com` directly.
+
+**🏢 Custom Gateway:** Select "Custom Gateway" for company providers such as Muses. Choose OpenAI-compatible or Anthropic-compatible protocol, pick the auth header mode if needed, and enter model IDs manually when they contain `/` or `:`.
 
 > See [Model Selection Guide](#-model-selection-guide) for details.
 
@@ -306,7 +310,7 @@ Resolved three Obsidian review bot findings that blocked v1.23.0's community plu
 
 ### 🌐 LLM & Language
 
-- **🔌 Multi-provider support** — Anthropic, Anthropic-compatible (Coding Plan), Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, OpenRouter, Ollama, custom endpoint.
+- **🔌 Multi-provider support** — Anthropic, Anthropic-compatible (Coding Plan), Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, OpenRouter, Ollama, Codex CLI (ChatGPT login), and custom gateways.
 - **🔄 5xx auto-retry** — exponential backoff on HTTP 5xx / 429 / 529 across all clients (max 2 retries).
 - **📋 Dynamic model list** — fetched live from the provider API.
 - **🌐 Wiki output language** — 9 languages independent of UI (English / 中文 / 日本語 / 한국어 / Deutsch / Français / Español / Português / Italiano), with custom input option.

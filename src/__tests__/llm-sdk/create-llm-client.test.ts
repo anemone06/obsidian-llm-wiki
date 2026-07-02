@@ -10,6 +10,7 @@ import { createLLMClientFromSettings } from '../../llm-sdk/create-llm-client';
 import { OpenAISdkClient } from '../../llm-sdk/openai-sdk-client';
 import { AnthropicSdkClient } from '../../llm-sdk/anthropic-sdk-client';
 import { OpenAICompatSdkClient } from '../../llm-sdk/openai-compat-sdk-client';
+import { CodexAppServerClient } from '../../llm-sdk/codex-app-server-client';
 
 describe('createLLMClientFromSettings (async)', () => {
   describe('official providers', () => {
@@ -21,6 +22,11 @@ describe('createLLMClientFromSettings (async)', () => {
     it('returns OpenAISdkClient for provider="openai"', async () => {
       const c = await createLLMClientFromSettings({ provider: 'openai', apiKey: 'sk-test' });
       expect(c).toBeInstanceOf(OpenAISdkClient);
+    });
+
+    it('returns CodexAppServerClient for provider="codex-cli"', async () => {
+      const c = await createLLMClientFromSettings({ provider: 'codex-cli', apiKey: '' });
+      expect(c).toBeInstanceOf(CodexAppServerClient);
     });
   });
 

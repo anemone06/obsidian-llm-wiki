@@ -82,6 +82,18 @@ describe('testLLMConnection — local provider API key gate', () => {
     expect(result.success).toBe(true);
   });
 
+  it('allows codex-cli provider with empty apiKey to bypass the gate', async () => {
+    (plugin as unknown as Record<string, unknown>).settings = {
+      ...(plugin as unknown as Record<string, unknown>).settings as Record<string, unknown>,
+      provider: 'codex-cli',
+      apiKey: '',
+    };
+
+    const result = await plugin.testLLMConnection();
+
+    expect(result.success).toBe(true);
+  });
+
   it('rejects openai provider with empty apiKey', async () => {
     (plugin as unknown as Record<string, unknown>).settings = {
       ...(plugin as unknown as Record<string, unknown>).settings as Record<string, unknown>,

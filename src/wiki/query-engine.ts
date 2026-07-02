@@ -3,7 +3,7 @@
 import { App, Modal, ItemView, WorkspaceLeaf, Notice, MarkdownRenderer, Component } from 'obsidian';
 import LLMWikiPlugin from '../main';
 import { TEXTS } from '../texts';
-import { WIKI_LANGUAGES } from '../types';
+import { CodexSessionState, WIKI_LANGUAGES } from '../types';
 import { PROMPTS } from '../prompts';
 import { parseJsonResponse } from '../core/json';
 import { parseIndexForPages } from '../core/index-search';
@@ -391,6 +391,7 @@ export class QueryView extends ItemView {
     // 5 seconds (i.e. the user almost certainly intended the cleared state).
     if (Date.now() - this._lastClearTimestamp > 5000) {
       this.plugin.settings.queryHistory = this.history.messages;
+      this.persistProviderSessionState();
       await this.plugin.saveSettings();
     }
 
@@ -411,6 +412,14 @@ export class QueryView extends ItemView {
 
   private computeConversationHash(): string {
     return JSON.stringify(this.history.messages);
+  }
+
+  private persistProviderSessionState(): void {
+    if (this.plugin.settings.provider !== 'codex-cli') return;
+    const state = (this.plugin.llmClient as unknown as {
+      getSessionState?: () => CodexSessionState | null;
+    })?.getSessionState?.();
+    if (state) this.plugin.settings.querySessionState = state;
   }
 
   private async evaluateWithLLM(): Promise<void> {
@@ -639,6 +648,7 @@ export class QueryView extends ItemView {
           // "crash-safe" persistence path that complements the
           // onClose write-back.
           this.plugin.settings.queryHistory = this.history.messages;
+          this.persistProviderSessionState();
           void this.plugin.saveSettings();
           console.debug(
             '[QueryView.sendMessage] persisted queryHistory, length =',
@@ -671,6 +681,7 @@ export class QueryView extends ItemView {
         });
         // v1.23.0 P2: Crash-safe persistence (see streaming branch above).
         this.plugin.settings.queryHistory = this.history.messages;
+        this.persistProviderSessionState();
         void this.plugin.saveSettings();
         console.debug(
           '[QueryView.sendMessage:non-stream] persisted queryHistory, length =',
@@ -947,6 +958,7 @@ export class QueryView extends ItemView {
     this.historyContainer.empty();
 
     this.plugin.settings.queryHistory = [];
+    this.plugin.settings.querySessionState = undefined;
     // v1.23.0 P2: Await the save so the empty state is guaranteed to hit
     // disk before this method returns. The previous `void this.plugin.saveSettings()`
     // was fire-and-forget — if the user closed Obsidian immediately after

@@ -179,6 +179,8 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     const providerConfig = PREDEFINED_PROVIDERS[this.tempSettings.provider];
     const isOllama = this.tempSettings.provider === 'ollama';
     const isLmStudio = this.tempSettings.provider === 'lmstudio';
+    const isCodexCli = this.tempSettings.provider === 'codex-cli';
+    const isCustomGateway = this.tempSettings.provider === 'custom';
 
     // Provider Dropdown
     new Setting(containerEl)
@@ -202,12 +204,21 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           this.tempSettings.model = '';
           const config = PREDEFINED_PROVIDERS[value];
           if (config && value !== 'custom') this.tempSettings.baseUrl = config.baseUrl;
+          if (value === 'custom') {
+            this.tempSettings.customProtocol = this.tempSettings.customProtocol || 'openai-compatible';
+            this.tempSettings.customAuthHeaderMode = this.tempSettings.customAuthHeaderMode || 'auto';
+          }
           this.display();
         });
       });
 
     // API Key
-    if (!isOllama && !isLmStudio) {
+    if (isCodexCli) {
+      containerEl.createEl('p', {
+        text: 'Use your existing Codex CLI login. Run `codex login` in Terminal first. This provider does not read ChatGPT cookies or call chatgpt.com directly.',
+        cls: 'llm-wiki-ollama-hint'
+      });
+    } else if (!isOllama && !isLmStudio) {
       new Setting(containerEl)
         .setName(this.getText('apiKeyName'))
         .setDesc(this.getText('apiKeyDesc'))
@@ -230,7 +241,7 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     }
 
     // Base URL
-    if (this.tempSettings.provider === 'custom' || this.tempSettings.provider === 'anthropic-compatible' || (providerConfig && this.tempSettings.baseUrl !== providerConfig.baseUrl)) {
+    if (!isCodexCli && (this.tempSettings.provider === 'custom' || this.tempSettings.provider === 'anthropic-compatible' || (providerConfig && this.tempSettings.baseUrl !== providerConfig.baseUrl))) {
       new Setting(containerEl)
         .setName(this.getText('baseUrlName'))
         .setDesc(this.tempSettings.provider === 'custom' || this.tempSettings.provider === 'anthropic-compatible'
@@ -239,6 +250,83 @@ export class LLMWikiSettingTab extends PluginSettingTab {
           .setPlaceholder(providerConfig?.baseUrl || 'https://api.example.com/v1')
           .setValue(this.tempSettings.baseUrl)
           .onChange((value) => { this.tempSettings.baseUrl = value; this.tempSettings.llmReady = false; }));
+    }
+
+    if (isCustomGateway) {
+      new Setting(containerEl)
+        .setName('Custom gateway protocol')
+        .setDesc('Choose the wire protocol exposed by your gateway.')
+        .addDropdown(dropdown => dropdown
+          .addOption('openai-compatible', 'OpenAI-compatible')
+          .addOption('anthropic-compatible', 'Anthropic-compatible')
+          .setValue(this.tempSettings.customProtocol || 'openai-compatible')
+          .onChange((value: 'openai-compatible' | 'anthropic-compatible') => {
+            this.tempSettings.customProtocol = value;
+            this.tempSettings.llmReady = false;
+          }));
+
+      new Setting(containerEl)
+        .setName('Custom gateway auth header')
+        .setDesc('Use auto for normal providers. Bearer and X-api-key are useful for company gateways.')
+        .addDropdown(dropdown => dropdown
+          .addOption('auto', 'Auto')
+          .addOption('bearer', 'Authorization: Bearer')
+          .addOption('x-api-key', 'X-api-key')
+          .setValue(this.tempSettings.customAuthHeaderMode || 'auto')
+          .onChange((value: 'auto' | 'bearer' | 'x-api-key') => {
+            this.tempSettings.customAuthHeaderMode = value;
+            this.tempSettings.llmReady = false;
+          }));
+    }
+
+    if (isCodexCli) {
+      new Setting(containerEl)
+        .setName('Codex CLI path')
+        .setDesc('Leave empty to use codex from path.')
+        .addText(text => text
+          .setPlaceholder('Codex')
+          .setValue(this.tempSettings.codexCliPath || '')
+          .onChange((value) => { this.tempSettings.codexCliPath = value; this.tempSettings.llmReady = false; }));
+
+      new Setting(containerEl)
+        .setName('Codex sandbox')
+        .setDesc('Read-only keeps codex as a model backend. Workspace-write is for advanced users.')
+        .addDropdown(dropdown => dropdown
+          .addOption('read-only', 'Read-only')
+          .addOption('workspace-write', 'Workspace write')
+          .setValue(this.tempSettings.codexSandbox || 'read-only')
+          .onChange((value: 'read-only' | 'workspace-write') => {
+            this.tempSettings.codexSandbox = value;
+            this.tempSettings.llmReady = false;
+          }));
+
+      new Setting(containerEl)
+        .setName('Codex approval policy')
+        .setDesc('Use never for this plugin; there is no approval UI inside LLM calls.')
+        .addDropdown(dropdown => dropdown
+          .addOption('never', 'Never')
+          .addOption('on-request', 'On request')
+          .setValue(this.tempSettings.codexApprovalPolicy || 'never')
+          .onChange((value: 'never' | 'on-request') => {
+            this.tempSettings.codexApprovalPolicy = value;
+            this.tempSettings.llmReady = false;
+          }));
+
+      new Setting(containerEl)
+        .setName('Codex timeout (ms)')
+        .setDesc('Maximum time for a single codex turn.')
+        .addText(text => {
+          text
+            .setPlaceholder('600000')
+            .setValue(String(this.tempSettings.codexExecTimeoutMs ?? 600000))
+            .onChange((value) => {
+              const parsed = parseInt(value, 10);
+              if (!Number.isNaN(parsed) && parsed > 0) this.tempSettings.codexExecTimeoutMs = parsed;
+            });
+          text.inputEl.type = 'number';
+          text.inputEl.min = '1000';
+          text.inputEl.step = '1000';
+        });
     }
 
     // LLM execution controls (concurrency + batch delay) — Issue #81 layout refactor
@@ -285,7 +373,7 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName(this.getText('modelSection')).setHeading();
 
     // Fetch Models button
-    new Setting(containerEl)
+    if (!isCodexCli) new Setting(containerEl)
       .setName(this.getText('fetchModelsName'))
       .setDesc(this.getText('fetchModelsDesc'))
       .addButton(button => button
@@ -299,6 +387,9 @@ export class LLMWikiSettingTab extends PluginSettingTab {
 
             // Smart filter based on provider: OpenRouter allows '/', Ollama allows ':'
             const getModelFilter = (provider: string) => {
+              if (provider === 'custom' || provider === 'anthropic-compatible' || provider === 'codex-cli') {
+                return (_id: string) => true;
+              }
               if (provider === 'openrouter') {
                 return (id: string) => !id.includes(':'); // Keep '/', filter ':'
               } else if (provider === 'ollama') {
@@ -318,6 +409,7 @@ export class LLMWikiSettingTab extends PluginSettingTab {
             const providerForFallback =
               this.tempSettings.provider === 'openai' ? 'openai' :
               this.tempSettings.provider === 'anthropic' ? 'anthropic' :
+              this.tempSettings.provider === 'custom' && this.tempSettings.customProtocol === 'anthropic-compatible' ? 'anthropic-compatible' :
               this.tempSettings.provider as 'openai-compatible' | 'anthropic-compatible';
 
             const fetchOneUrl = async (modelsUrl: string): Promise<string[]> => {
@@ -325,9 +417,7 @@ export class LLMWikiSettingTab extends PluginSettingTab {
                 const response = await requestUrl({
                   url: modelsUrl,
                   method: 'GET',
-                  headers: this.tempSettings.provider === 'anthropic' || this.tempSettings.provider === 'anthropic-compatible'
-                    ? { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' }
-                    : { 'Authorization': `Bearer ${apiKey}` },
+                  headers: buildModelFetchHeaders(apiKey, this.tempSettings),
                   throw: false,
                 });
                 if (response.status >= 200 && response.status < 300) {
@@ -421,7 +511,7 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     }
 
     // Issue #75: max tokens per call — shown for local/custom providers only
-    const localLikeProviders = ['ollama', 'lmstudio', 'custom', 'anthropic-compatible'];
+    const localLikeProviders = ['ollama', 'lmstudio', 'custom', 'anthropic-compatible', 'codex-cli'];
     if (localLikeProviders.includes(this.tempSettings.provider)) {
       const tokenOptions = [0, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576];
       const tokenLabels = ['0 (No limit)', '4K', '8K', '16K', '32K', '64K', '128K', '256K', '512K', '1M'];
@@ -1025,4 +1115,30 @@ export class LLMWikiSettingTab extends PluginSettingTab {
         .onChange((value) => { this.tempSettings.createWelcomeNote = value; }));
 
   }
+}
+
+function buildModelFetchHeaders(apiKey: string, settings: LLMWikiSettings): Record<string, string> {
+  const protocol = settings.provider === 'custom'
+    ? settings.customProtocol || 'openai-compatible'
+    : settings.provider === 'anthropic' || settings.provider === 'anthropic-compatible'
+      ? 'anthropic-compatible'
+      : 'openai-compatible';
+
+  const mode = settings.provider === 'custom'
+    ? settings.customAuthHeaderMode || 'auto'
+    : 'auto';
+
+  if (mode === 'bearer') {
+    return { Authorization: `Bearer ${apiKey}` };
+  }
+
+  if (mode === 'x-api-key') {
+    return { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' };
+  }
+
+  if (protocol === 'anthropic-compatible') {
+    return { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' };
+  }
+
+  return { Authorization: `Bearer ${apiKey}` };
 }

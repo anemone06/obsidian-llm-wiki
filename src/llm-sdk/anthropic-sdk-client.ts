@@ -23,6 +23,7 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { LLMClient } from '../types';
 import { obsidianFetchBridge, streamWithFallback } from '../core/obsidian-fetch-bridge';
 import { mapAiSdkError } from './openai-sdk-client';
+import { withAuthHeaderMode } from './openai-compat-sdk-client';
 import {
   getCachedUrl,
   resolveBaseUrlWithFallback,
@@ -45,6 +46,8 @@ export interface AnthropicSdkClientOptions {
    * Omit to use official api.anthropic.com.
    */
   baseURL?: string;
+  /** Optional auth-header override for custom gateways. */
+  authHeaderMode?: 'auto' | 'bearer' | 'x-api-key';
   /** Override non-streaming fetch (used in tests with a mocked bridge). */
   fetch?: typeof obsidianFetchBridge;
   /**
@@ -59,12 +62,14 @@ export class AnthropicSdkClient implements LLMClient {
   private readonly baseURL: string | undefined;
   private readonly fetchImpl: typeof obsidianFetchBridge;
   private readonly streamFetchImpl: typeof streamWithFallback;
+  private readonly authHeaderMode: 'auto' | 'bearer' | 'x-api-key';
 
   constructor(opts: AnthropicSdkClientOptions) {
     this.apiKey = opts.apiKey;
     this.baseURL = opts.baseURL;
-    this.fetchImpl = opts.fetch ?? obsidianFetchBridge;
-    this.streamFetchImpl = opts.streamFetch ?? streamWithFallback;
+    this.authHeaderMode = opts.authHeaderMode ?? 'auto';
+    this.fetchImpl = withAuthHeaderMode(opts.fetch ?? obsidianFetchBridge, this.apiKey, this.authHeaderMode);
+    this.streamFetchImpl = withAuthHeaderMode(opts.streamFetch ?? streamWithFallback, this.apiKey, this.authHeaderMode);
   }
 
   private getProvider(modelId: string, fetchFn: typeof obsidianFetchBridge | typeof streamWithFallback = this.streamFetchImpl, baseURLOverride?: string): LanguageModel {

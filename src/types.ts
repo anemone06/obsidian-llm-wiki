@@ -78,6 +78,13 @@ export interface LLMWikiSettings {
   apiKey: string;
   baseUrl: string;
   model: string;
+  codexCliPath?: string;
+  codexModel?: string;
+  codexSandbox?: 'read-only' | 'workspace-write';
+  codexApprovalPolicy?: 'never' | 'on-request';
+  codexExecTimeoutMs?: number;
+  customProtocol?: 'openai-compatible' | 'anthropic-compatible';
+  customAuthHeaderMode?: 'auto' | 'bearer' | 'x-api-key';
   wikiFolder: string;
   language: 'en' | 'zh' | 'zh-Hant' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt' | 'it';
   wikiLanguage: string;
@@ -86,6 +93,7 @@ export interface LLMWikiSettings {
   useCustomModel?: boolean;
   maxConversationHistory: number;
   queryHistory?: QueryHistoryMessage[];
+  querySessionState?: CodexSessionState;
 
   // Schema
   enableSchema: boolean;
@@ -211,6 +219,12 @@ export interface LLMWikiSettings {
   // where lowercase is grammatically wrong (e.g. German nouns).
   // Note: switching affects new files only — existing lowercase files keep their names.
   slugCase: 'lower' | 'preserve';
+}
+
+export interface CodexSessionState {
+  provider: 'codex-cli';
+  threadId?: string;
+  sessionFilePath?: string;
 }
 
 export interface QueryHistoryMessage {
@@ -413,6 +427,17 @@ export const PREDEFINED_PROVIDERS: Record<string, ProviderConfig> = {
     apiKeyPlaceholderZh: 'sk-...',
     requiresBaseUrl: false
   },
+  'codex-cli': {
+    id: 'codex-cli',
+    name: 'Codex CLI (ChatGPT login)',
+    nameEn: 'Codex CLI (ChatGPT login)',
+    nameZh: 'Codex CLI（ChatGPT 登录）',
+    baseUrl: '',
+    apiKeyPlaceholder: 'Use codex login',
+    apiKeyPlaceholderEn: 'Use codex login',
+    apiKeyPlaceholderZh: '使用 codex login',
+    requiresBaseUrl: false
+  },
   anthropic: {
     id: 'anthropic',
     name: 'Anthropic (Claude)',
@@ -514,9 +539,9 @@ export const PREDEFINED_PROVIDERS: Record<string, ProviderConfig> = {
   },
   custom: {
     id: 'custom',
-    name: 'Custom OpenAI-Compatible',
-    nameEn: 'Custom OpenAI-Compatible',
-    nameZh: '自定义 OpenAI 兼容',
+    name: 'Custom Gateway',
+    nameEn: 'Custom Gateway',
+    nameZh: '自定义网关',
     baseUrl: '',
     apiKeyPlaceholder: 'API Key',
     apiKeyPlaceholderEn: 'API Key',
@@ -543,6 +568,13 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   apiKey: '',
   baseUrl: '',
   model: '',  // No hardcoded default — user must fetch models or enter manually
+  codexCliPath: '',
+  codexModel: '',
+  codexSandbox: 'read-only',
+  codexApprovalPolicy: 'never',
+  codexExecTimeoutMs: 600000,
+  customProtocol: 'openai-compatible',
+  customAuthHeaderMode: 'auto',
   wikiFolder: 'wiki',
   language: 'en',
   wikiLanguage: 'en',
@@ -551,6 +583,7 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   useCustomModel: false,
   maxConversationHistory: 30,
   queryHistory: [],
+  querySessionState: undefined,
 
   // Schema
   enableSchema: true,
