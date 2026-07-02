@@ -8,6 +8,9 @@ import { TEXTS } from '../texts';
 import { fixPollutedSources, scanPollutedSources } from '../core/sources-normalizer';
 import { findIncompletePages, cleanIncompletePages } from '../core/incomplete-page-cleaner';
 import { needsLogHeaderMigration, migrateLogHeader } from '../core/log-header';
+import { ensureWelcomeNote, type EnsureResult, type VaultAdapter } from '../core/ensure-welcome-note';
+import { getWelcomeFileName } from '../core/i18n';
+import type { LLMClient } from '../types';
 
 export class AutoMaintainManager {
   private app: App;
@@ -338,6 +341,34 @@ export class AutoMaintainManager {
     console.debug('[QuickFixes] ===== Startup quick fixes START =====');
     console.debug(`[QuickFixes] Settings: wikiFolder="${this.settings.wikiFolder}", startupCheck=${this.settings.startupCheck}, language=${this.settings.language}`);
 
+    // ---- Phase 0 (v1.23.0): First-run Welcome note ----
+    // Two-stage design so the startup-check summary Notice is NOT
+    // blocked by the Welcome note's LLM translation:
+    //   Stage 0a (sync): decide tier + whether Welcome is needed.
+    //                    Returns the decision without any I/O.
+    //   Stage 0b (fire-and-forget): if a Welcome is needed, kick off
+    //                    the actual creation asynchronously. The
+    //                    startup-check summary Notice (Phase 5) only
+    //                    reports the Stage 0a decision; a separate
+    //                    Notice fires when Stage 0b completes.
+    let welcomeNeeded = false;
+    try {
+      // assessWelcomeNeed is SYNC (no I/O beyond a markdown file listing,
+      // no LLM call). It returns the tier decision; the actual Welcome
+      // creation is fire-and-forget below.
+      const decision = this.assessWelcomeNeed();
+      welcomeNeeded = decision.shouldCreate;
+      console.debug(`[QuickFixes] Phase 0a: Welcome note ${welcomeNeeded ? 'will be created' : 'skipped'} (tier=${decision.tier})`);
+      if (decision.shouldCreate) {
+        // Fire-and-forget. The user gets a separate Notice when
+        // the async creation completes; the startup-check summary
+        // below is not blocked.
+        void this.createWelcomeNoteAsync(decision);
+      }
+    } catch (e) {
+      console.warn('[QuickFixes] Phase 0 failed:', e);
+    }
+
     // ---- Phase 1: Wiki structure check ----
     const wikiFolder = this.settings.wikiFolder;
     const requiredFolders = [
@@ -355,6 +386,10 @@ export class AutoMaintainManager {
         missingFolders.push(folder);
       }
     }
+    // Phase 0 (onboarding) just ran ensureWelcomeNote — if it created
+    // the wikiFolder + entities/ subfolder for a fresh-vault Tier B,
+    // Phase 1 should now see entities/ present. Otherwise the
+    // "missingFolders" report is a true signal to the user.
     console.debug(`[QuickFixes] Phase 1: Wiki structure ${structureOk ? 'OK' : 'INCOMPLETE'}` +
       (missingFolders.length > 0 ? `, missing: ${missingFolders.join(', ')}` : ''));
 
@@ -454,10 +489,18 @@ export class AutoMaintainManager {
           .replace('{count}', String(incompleteFilesArchived))
       : texts.startupCheckIncompleteClean;
 
+    // welcomeNeeded reflects Phase 0a's decision (sync, before any
+    // LLM call). The actual file write happens asynchronously in
+    // createWelcomeNoteAsync(); a separate Notice is shown when it
+    // finishes. We surface the decision here so the user sees that
+    // onboarding is in progress, not the path.
     const summary = `${texts.startupCheckTitle}\n` +
       `${texts.startupCheckStructureLabel}: ${structureLabel}\n` +
       `${texts.startupCheckSourcesLabel}: ${sourcesLabel}\n` +
       `${incompleteLabel}\n` +
+      (welcomeNeeded
+        ? `${texts.startupCheckWelcomePending ?? 'Welcome note: generating in background (you will get a Notice when it finishes).'}\n`
+        : '') +
       `${texts.startupCheckSummary
         .replace('{pages}', String(pages.length))
         .replace('{entities}', String(entities))
@@ -467,7 +510,239 @@ export class AutoMaintainManager {
 
     console.debug('[QuickFixes] Notice payload:\n' + summary.split('\n').map(l => '  ' + l).join('\n'));
     console.debug('[QuickFixes] ===== Startup quick fixes COMPLETE =====');
-    new Notice(summary, 10000);  // 10s — give user time to read
+
+    // v1.23.0 follow-up: QuickFixes always runs (the old `startupCheck`
+    // toggle is now permanently on). The user-facing control is now
+    // `startupCheckNoticeLevel` — 'visible' shows the summary Notice
+    // (existing behavior), 'silent' only logs to console + records an
+    // entry for the Operation History Panel (added below when implemented).
+    if (this.settings.startupCheckNoticeLevel === 'visible') {
+      new Notice(summary, 10000);  // 10s — give user time to read
+    } else {
+      console.debug('[QuickFixes] Notice suppressed by startupCheckNoticeLevel=silent');
+    }
+  }
+
+  // === Phase 0: Onboarding Welcome Note (v1.23.0) ===
+
+  /**
+   * Phase 0a of runStartupCheck. **SYNC — returns a decision without
+   * any I/O or LLM call.** The caller uses this to decide whether
+   * to launch the async creation path; the startup-check summary
+   * Notice is built from this synchronous decision and is therefore
+   * not blocked by Welcome's LLM translation.
+   *
+   * Pure local logic: probes the vault via listMarkdown (fast
+   * filesystem walk) and looks at whether an llmClient is wired up
+   * to decide the tier. The full ensure-welcome-note pipeline runs
+   * in createWelcomeNoteAsync().
+   */
+  private assessWelcomeNeed(): { shouldCreate: boolean; tier: 'A-empty-vault' | 'B-existing-vault' | 'C-existing-wiki' } {
+    const wikiFolder = this.settings.wikiFolder || 'wiki';
+    const llmClient = (this.plugin as unknown as { llmClient: LLMClient | null }).llmClient;
+    // Quick vault probe (no I/O beyond a markdown file listing).
+    const allMd = this.app.vault.getMarkdownFiles().map(f => ({
+      path: f.path, title: f.basename, size: f.stat?.size ?? 0,
+    }));
+    const wikiPages = allMd.filter(c => c.path.startsWith(`${wikiFolder}/`));
+    const hasWikiFolder = wikiPages.length > 0;
+    const wikiPageCount = wikiPages.length;
+    const vaultMdCount = allMd.length;
+
+    // Mirror tier-detection logic (the "lite" version — no LLM call
+    // involved, so we can run it sync).
+    let tier: 'A-empty-vault' | 'B-existing-vault' | 'C-existing-wiki';
+    let shouldCreate: boolean;
+    if (vaultMdCount === 0) {
+      tier = 'A-empty-vault';
+      shouldCreate = !!llmClient;  // Tier A creates Welcome when LLM is on (D8 + v1.23.0 follow-up)
+    } else if (hasWikiFolder && wikiPageCount > 0) {
+      tier = 'C-existing-wiki';
+      shouldCreate = false;
+    } else {
+      tier = 'B-existing-vault';
+      shouldCreate = true;
+    }
+    return { shouldCreate, tier };
+  }
+
+  /**
+   * Phase 0b of runStartupCheck. **Fire-and-forget** — call sites
+   * discard the returned Promise. The LLM translation can take
+   * 5-15 seconds on a thinking-capable model, and the startup-check
+   * summary Notice must not be blocked.
+   *
+   * Posts a separate Notice on completion (success OR failure) so
+   * the user sees the outcome without having to wait for the
+   * summary Notice.
+   */
+  private async createWelcomeNoteAsync(decision: { tier: string }): Promise<void> {
+    console.debug(`[QuickFixes] Phase 0b: starting async Welcome creation (tier=${decision.tier})`);
+    // Fire a "generating" Notice so the user knows the work is in
+    // progress (vs. silently failing). Use NOTICE_NORMAL (5s) so it
+    // doesn't conflict with the startup-check summary Notice.
+    const generatingMsg = TEXTS[this.settings.language].welcomeNoteGenerating
+      ?? 'Welcome note: generating in background...';
+    new Notice(generatingMsg, 5000);
+
+    try {
+      const result = await this.runOnboardingPhase();
+      console.debug(`[QuickFixes] Phase 0b: runOnboardingPhase returned. welcomeNotePath=${result.welcomeNotePath ?? 'NONE'}, tier=${result.tier}, shouldCreateWelcomeNote=${result.action.shouldCreateWelcomeNote}, localizeResult.localized=${result.localizeResult?.localized ?? 'n/a'}, localizeResult.error=${result.localizeResult?.error ?? 'n/a'}`);
+      if (result.welcomeNotePath) {
+        const okMsg = TEXTS[this.settings.language].welcomeNoteRecreated
+          ?.replace('{path}', result.welcomeNotePath)
+          ?? `Welcome note created at ${result.welcomeNotePath}`;
+        new Notice(okMsg, 5000);
+      } else {
+        const noMsg = TEXTS[this.settings.language].welcomeNoteNotRecreated
+          ?? 'Welcome note was not created. Check LLM configuration.';
+        new Notice(noMsg, 5000);
+      }
+    } catch (e) {
+      console.error('[QuickFixes] Phase 0b (async Welcome) failed:', e);
+      const errMsg = TEXTS[this.settings.language].welcomeNoteGenerationFailed
+        ? TEXTS[this.settings.language].welcomeNoteGenerationFailed.replace('{error}', e instanceof Error ? e.message : String(e))
+        : `Welcome note generation failed: ${e instanceof Error ? e.message : String(e)}`;
+      new Notice(errMsg, 5000);
+    }
+  }
+
+  /**
+   * Full ensure-welcome-note pipeline. Used by both createWelcomeNoteAsync
+   * (background) and the recreateWelcomeNote command-palette entry
+   * (user-initiated). Synchronous from the caller's perspective: the
+   * caller awaits this Promise.
+   */
+  private async runOnboardingPhase(): Promise<EnsureResult> {
+    const vault = this.makeVaultAdapter();
+    const llmClient = (this.plugin as unknown as { llmClient: LLMClient | null }).llmClient;
+    return ensureWelcomeNote({
+      vault,
+      settings: {
+        wikiFolder: this.settings.wikiFolder || 'wiki',
+        createWelcomeNote: this.settings.createWelcomeNote,
+      },
+      targetLanguage: this.settings.wikiLanguage || 'en',
+      createdAt: new Date().toISOString().slice(0, 10),
+      // smokeTestProbe wraps the sync probe in a resolved Promise so
+      // the ensure-welcome-note signature is satisfied.
+      smokeTestProbe: async () => this.probeLlm(),
+      llmClient: llmClient ?? undefined,
+      model: this.settings.model,
+    });
+  }
+
+  /**
+   * v1.23.0 Phase 5.1.5 → followup: command-palette entry to delete and
+   * re-create the Welcome note with current vault state + LLM config.
+   * Used when the user changes wikiFolder or wants a freshly-localized
+   * copy.
+   */
+  async recreateWelcomeNote(): Promise<void> {
+    const wikiFolder = this.settings.wikiFolder || 'wiki';
+    const wikiLanguage = this.settings.wikiLanguage || 'en';
+    // Delete BOTH the legacy "Welcome.md" (pre-i18n installs) and the
+    // localized filename, so the Recreate command works regardless of
+    // which one the user already has.
+    const candidates = [
+      `${wikiFolder}/${getWelcomeFileName(wikiLanguage)}.md`,
+      `${wikiFolder}/Welcome.md`,  // legacy pre-i18n fallback
+    ];
+    for (const p of candidates) {
+      const existing = this.app.vault.getAbstractFileByPath(p);
+      if (existing && existing instanceof TFile) {
+        try {
+          await this.app.fileManager.trashFile(existing);
+        } catch (e) {
+          console.error(`Failed to delete existing Welcome note at ${p}:`, e);
+          new Notice(
+            `${TEXTS[this.settings.language].operationFailed ?? 'Operation failed: '}` +
+              (e instanceof Error ? e.message : String(e)),
+            0
+          );
+          return;
+        }
+      }
+    }
+    const result = await this.runOnboardingPhase();
+    if (result.welcomeNotePath) {
+      // Show a 5s auto-dismissing confirmation (NOT 0 — that would be
+      // sticky). Use NOTICE_NORMAL for transient feedback.
+      new Notice(
+        `${TEXTS[this.settings.language].welcomeNoteRecreated?.replace('{path}', result.welcomeNotePath) ?? `Welcome note recreated at ${result.welcomeNotePath}`}`,
+        5000
+      );
+    } else {
+      new Notice(
+        TEXTS[this.settings.language].welcomeNoteNotRecreated ??
+          'Welcome note was not recreated. Check LLM configuration.',
+        5000
+      );
+    }
+  }
+
+  /**
+   * Build a VaultAdapter over the real Obsidian vault. Captures the
+   * vault at call-time so vault changes during plugin lifetime are
+   * reflected.
+   */
+  private makeVaultAdapter(): VaultAdapter {
+    return {
+      exists: async (path: string): Promise<boolean> => {
+        return this.app.vault.getAbstractFileByPath(path) !== null;
+      },
+      getMarkdownFiles: async (): Promise<string[]> => {
+        return this.app.vault.getMarkdownFiles().map(f => f.path);
+      },
+      create: async (path: string, content: string): Promise<void> => {
+        const folder = path.includes('/') ? path.substring(0, path.lastIndexOf('/')) : '';
+        if (folder && !this.app.vault.getAbstractFileByPath(folder)) {
+          await this.app.vault.createFolder(folder);
+        }
+        await this.app.vault.create(path, content);
+      },
+    };
+  }
+
+  /**
+   * Local-only LLM configuration probe for the Welcome note's
+   * "Configuration Test" section. PURE-LOCAL — does NOT send a real
+   * LLM request. We check that the configuration fields are
+   * populated; the actual LLM reachability is verified the first time
+   * the user runs an ingest / query / lint (which uses the same
+   * llmClient that the Welcome translation would use).
+   *
+   * Why no real call:
+   *   1. Avoids burning tokens on every onload just to show a "✅ OK"
+   *      indicator. The user's real business call (ingest) is the
+   *      proof of life.
+   *   2. Thinking-capable models can return empty content for tiny
+   *      `max_tokens: 1` probes, which produces a misleading
+   *      "⚠️ Failed" even when the user's setup is correct.
+   *   3. Keeps the probe independent of LLMClient interface quirks
+   *      (no need to invent a max_tokens / enableThinking value).
+   *
+   * Returns the provider/model name on success, or a structured
+   * error message naming the missing field on failure. Never throws
+   * — ensure-welcome-note wraps this with try/catch anyway, but
+   * defensive-by-default is cheaper.
+   */
+  private probeLlm(): { ok: boolean; provider?: string; model?: string; error?: string } {
+    const llmClient = (this.plugin as unknown as { llmClient: LLMClient | null }).llmClient;
+    if (!llmClient) {
+      return { ok: false, error: 'LLM client not configured. Open Settings → LLM Provider.' };
+    }
+    if (!this.settings.apiKey) {
+      return { ok: false, error: 'API key not configured.' };
+    }
+    if (!this.settings.model) {
+      return { ok: false, error: 'Model not selected.' };
+    }
+    return {
+      ok: true,
+      provider: this.settings.provider,
+      model: this.settings.model,
+    };
   }
 
   // === Full Stop ===

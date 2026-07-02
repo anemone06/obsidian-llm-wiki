@@ -70,6 +70,39 @@ describe('runPreparationPhase', () => {
     expect(result.wikiFiles[0].path).toBe('wiki/entities/Keep.md');
   });
 
+  it('skips Welcome notes (frontmatter type=welcome) — v1.23.0 P0-2 follow-up', async () => {
+    // Welcome filename is localized (e.g. "欢迎使用 Karpathy LLM Wiki.md"
+    // for Chinese), so we cannot filter by filename. The only robust
+    // signal is `type: welcome` in the frontmatter.
+    const files = {
+      'wiki/Welcome.md': '---\ntype: welcome\ncreated: 2026-06-29\n---\n\n# Welcome\n\nSee [[Other Page]] for details.',
+      'wiki/欢迎使用 Karpathy LLM Wiki.md': '---\ntype: welcome\ncreated: 2026-06-29\n---\n\n# 欢迎\n\nSee [[Other Page]].',
+      'wiki/entities/Keep.md': '# Keep\n\nSee [[Other Page]].',
+    };
+    const ctx = makeContext(files);
+    const result = await runPreparationPhase(ctx);
+
+    // Only the entity should be linted; both welcome notes skipped.
+    expect(result.wikiFiles).toHaveLength(1);
+    expect(result.wikiFiles[0].path).toBe('wiki/entities/Keep.md');
+    expect(result.pageMap.has('wiki/Welcome.md')).toBe(false);
+    expect(result.pageMap.has('wiki/欢迎使用 Karpathy LLM Wiki.md')).toBe(false);
+    expect(result.pageMap.has('wiki/entities/Keep.md')).toBe(true);
+  });
+
+  it('does NOT skip pages that merely mention "welcome" in body — only frontmatter type=welcome', async () => {
+    // Defensive: a regular entity page that contains the word
+    // "welcome" in its body should still be linted.
+    const files = {
+      'wiki/entities/About.md': '---\ntype: entity\n---\n\n# About\n\nWelcome to our wiki. See [[Other]].',
+    };
+    const ctx = makeContext(files);
+    const result = await runPreparationPhase(ctx);
+
+    expect(result.wikiFiles).toHaveLength(1);
+    expect(result.pageMap.has('wiki/entities/About.md')).toBe(true);
+  });
+
   it('fixes double-nested wiki links in place', async () => {
     const files = {
       'wiki/entities/Foo.md': 'See [[[[Nested]]]] link.',

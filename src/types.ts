@@ -102,13 +102,32 @@ export interface LLMWikiSettings {
 
   // Auto-maintenance
   autoWatchSources: boolean;
-autoWatchMode: 'notify' | 'auto';
-autoWatchDebounceMs: number;
-watchedFolders: string[];
-periodicLint: 'off' | 'daily' | 'weekly' | 'monthly';
-startupCheck: boolean;
-autoSmartFix: boolean;
-autoIngestNotificationLevel: 'modal' | 'notice';
+  autoWatchMode: 'notify' | 'auto';
+  autoWatchDebounceMs: number;
+  watchedFolders: string[];
+  periodicLint: 'off' | 'daily' | 'weekly' | 'monthly';
+  startupCheck: boolean;
+  /**
+   * v1.23.0: controls whether the QuickFixes startup-check Notice is
+   * shown to the user. 'visible' (default) shows the result summary;
+   * 'silent' only logs to console + Operation History Panel. The
+   * QuickFixes pipeline itself always runs (the `startupCheck: true`
+   * semantic is now permanent).
+   *
+   * Old users with `startupCheck: false` on disk are auto-migrated to
+   * 'silent' by `applySettingsMigrations` (v1.23.0-startup-notice).
+   */
+  startupCheckNoticeLevel: 'visible' | 'silent';
+  autoSmartFix: boolean;
+  autoIngestNotificationLevel: 'modal' | 'notice';
+
+  // v1.23.0: Phase 5.1.5 — first-run Welcome note. When enabled (default),
+  // the plugin detects tier on every onload (no vault state change =
+  // short-circuit) and creates <wikiFolder>/Welcome.md on Tier B transitions.
+  // Tier A users get a Notice only; Tier C users are silent. Setting is
+  // respected at all times — disabling stops both create-on-onload and the
+  // "Recreate Wiki Welcome Note" command.
+  createWelcomeNote: boolean;
 
   // Ingestion acceleration
   pageGenerationConcurrency: number;
@@ -120,6 +139,9 @@ autoIngestNotificationLevel: 'modal' | 'notice';
   // (#199) The v1.18.3 startupCheck nudge was removed entirely; if a
   // future migration re-nudges a value, gate it on one of these.
   _migrated_v1_20_0_thinking?: boolean;
+  // v1.23.0: pins the startupCheck=true invariant and routes
+  // previously-explicit startupCheck=false users to startupCheckNoticeLevel='silent'.
+  _migrated_v1_23_0_startup_notice?: boolean;
 
   // Query dedup
   lastOfferedQueryHash?: string;
@@ -140,6 +162,15 @@ autoIngestNotificationLevel: 'modal' | 'notice';
   //                 (Gemini OpenAI-compat endpoint)
   //   'none'      → backend rejects both; skip thinking control entirely
   thinkingControlCache?: Record<string, 'anthropic' | 'openai' | 'none' | boolean>;
+
+  // v1.23.0: thinkingControlCache is now @deprecated. AI-SDK v6 handles
+  // thinking-control internally per provider/model — no plugin-side
+  // caching needed. The field is retained for forward-compat: existing
+  // data.json files keep the field without error, and the value is
+  // simply ignored. Will be removed in v1.24.0 unless a use case
+  // surfaces (e.g. introspecting the cache for diagnostics).
+  // See src/main.ts:1011 for the surviving comment.
+  //
 
   // v1.20.0: when true, the plugin explicitly sends a thinking-control
   // directive to the provider (with 3-tier dialect fallback). When false
@@ -281,7 +312,7 @@ export interface LLMClient {
     model: string;
     max_tokens: number;
     system?: string;
-    messages: Array<{role: 'user' | 'assistant'; content: string}>;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     response_format?: { type: 'json_object' };
     cacheBreakpoint?: number;
     maxTokensPerCall?: number;  // Issue #75: cap for truncation retry
@@ -295,7 +326,7 @@ export interface LLMClient {
     model: string;
     max_tokens: number;
     system?: string;
-    messages: Array<{role: 'user' | 'assistant'; content: string}>;
+    messages: Array<{ role: 'user' | 'assistant'; content: string }>;
     onChunk: (chunk: string) => void;
     enableThinking?: boolean;
     temperature?: number;
@@ -361,7 +392,7 @@ export interface EngineContext {
   deleteFile: (path: string) => Promise<void>;
   buildSystemPrompt: (task: string) => Promise<string | undefined>;
   getSectionLabels: () => Record<string, string>;
-  getExistingWikiPages: () => Promise<Array<{path: string; title: string; wikiLink: string; aliases?: string[]}>>;
+  getExistingWikiPages: () => Promise<Array<{ path: string; title: string; wikiLink: string; aliases?: string[] }>>;
   getSchemaContext: (task: string) => Promise<string | undefined>;
   onFileWrite?: (path: string) => void;
   onProgress?: (message: string) => void;
@@ -539,8 +570,10 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   watchedFolders: [],
   periodicLint: 'off',
   startupCheck: true,  // Issue #81: default ON for low-level format fixes
+  startupCheckNoticeLevel: 'visible',  // v1.23.0: show QuickFixes results Notice by default
   autoSmartFix: false,
   autoIngestNotificationLevel: 'notice',  // v1.22.2: default to Notice (no blocking Modal) for auto-ingest
+  createWelcomeNote: true,  // v1.23.0: Phase 5.1.5 — Tier-B first-run Welcome note (D8: 1 EN template + LLM dynamic translation)
 
   // Ingestion acceleration (default: 3 parallel for most providers)
   pageGenerationConcurrency: 3,

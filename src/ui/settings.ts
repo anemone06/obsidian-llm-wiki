@@ -9,6 +9,7 @@ import { FolderSuggestModal } from './modals';
 import { HistoryModal } from './history-modal';
 import { classifyFetchError } from './settings-helpers';
 import { TagChipInputComponent } from './tag-chip-input';
+import { fetchModelsWithFallback } from '../core/url-fallback';
 
 export class LLMWikiSettingTab extends PluginSettingTab {
   plugin: LLMWikiPlugin;
@@ -24,10 +25,12 @@ export class LLMWikiSettingTab extends PluginSettingTab {
   }
 
   // Issue #137: merge tempSettings → plugin.settings, preserving any
-  // fields the form does not track but Test Connection mutates
-  // (currently: thinkingControlCache). Called by hide() (auto-save) and
-  // the explicit Save button. Adding a new probe-mutated field only
-  // requires extending this one helper, not every save site.
+  // fields the form does not track but Test Connection mutates.
+  // v1.23.0: thinkingControlCache is @deprecated (AI-SDK v6 handles
+  // internally) but still preserved here for data.json forward-compat.
+  // Called by hide() (auto-save) and the explicit Save button. Adding
+  // a new probe-mutated field only requires extending this one helper,
+  // not every save site.
   private commitTempSettings(): void {
     this.plugin.settings = {
       ...this.tempSettings,
@@ -306,54 +309,58 @@ export class LLMWikiSettingTab extends PluginSettingTab {
             };
             const modelFilter = getModelFilter(this.tempSettings.provider);
 
-            if (this.tempSettings.provider === 'anthropic' || this.tempSettings.provider === 'anthropic-compatible') {
-              if (this.tempSettings.provider === 'anthropic-compatible' && this.tempSettings.baseUrl?.trim()) {
-                const rawBase = this.tempSettings.baseUrl.trim();
-                const cleanBase = rawBase.replace(/\/v1\/?$/, '').replace(/\/+$/, '');
-                const modelsUrl = cleanBase + '/v1/models';
-                try {
-                  const response = await requestUrl({ url: modelsUrl, headers: { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' } });
-                  if (response.status >= 200 && response.status < 300) {
-                    const data = response.json as { data?: Array<{ id: string }> };
-                    if (data.data?.length) {
-                      this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort();
-                    } else throw new Error('empty model list');
-                  } else throw new Error(`HTTP ${response.status}`);
-                } catch {
-                  const altUrl = cleanBase + '/models';
-                  const altResponse = await requestUrl({ url: altUrl, headers: { 'Authorization': `Bearer ${apiKey}` } });
-                  if (altResponse.status >= 200 && altResponse.status < 300) {
-                    const altData = altResponse.json as { data?: Array<{ id: string }> };
-                    if (altData.data?.length) {
-                      this.tempSettings.availableModels = altData.data.map(m => m.id).filter(modelFilter).sort();
-                    } else throw new Error('empty model list');
-                  } else throw new Error(`HTTP ${altResponse.status}`);
-                }
-              } else {
-                // Anthropic official or Anthropic-Compatible without custom baseUrl → fetch from api.anthropic.com
+            // v1.23.0 P1.5: use fetchModelsWithFallback for all providers
+            // (anthropic-compatible, openai-compatible, openai, anthropic).
+            // Unified fallback handles missing /v1 suffix (Kimi Anthropic
+            // case) — Test Connection and Fetch Models share the same
+            // module-level cache, so a resolved URL from one path
+            // applies to the other.
+            const providerForFallback =
+              this.tempSettings.provider === 'openai' ? 'openai' :
+              this.tempSettings.provider === 'anthropic' ? 'anthropic' :
+              this.tempSettings.provider as 'openai-compatible' | 'anthropic-compatible';
+
+            const fetchOneUrl = async (modelsUrl: string): Promise<string[]> => {
+              try {
                 const response = await requestUrl({
-                  url: 'https://api.anthropic.com/v1/models',
-                  headers: { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' }
+                  url: modelsUrl,
+                  method: 'GET',
+                  headers: this.tempSettings.provider === 'anthropic' || this.tempSettings.provider === 'anthropic-compatible'
+                    ? { 'x-api-key': apiKey, 'Anthropic-Version': '2023-06-01' }
+                    : { 'Authorization': `Bearer ${apiKey}` },
+                  throw: false,
                 });
                 if (response.status >= 200 && response.status < 300) {
                   const data = response.json as { data?: Array<{ id: string }> };
                   if (data.data?.length) {
-                    this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort();
-                  } else throw new Error('empty model list');
-                } else throw new Error(`HTTP ${response.status}`);
+                    return data.data.map((m: { id: string }) => m.id);
+                  }
+                }
+                return [];
+              } catch {
+                return [];
               }
-            } else {
-              const modelsUrl = (baseUrl || 'https://api.openai.com/v1') + '/models';
-              const response = await requestUrl({
-                url: modelsUrl,
-                method: 'GET',
-                headers: { 'Authorization': `Bearer ${apiKey}` }
+            };
+
+            const effectiveBaseUrl = baseUrl ?? (
+              this.tempSettings.provider === 'anthropic' ? 'https://api.anthropic.com/v1' :
+              this.tempSettings.provider === 'openai' ? 'https://api.openai.com/v1' :
+              ''
+            );
+
+            let models: string[];
+            try {
+              models = await fetchModelsWithFallback({
+                baseUrl: effectiveBaseUrl,
+                provider: providerForFallback,
+                fetchFn: fetchOneUrl,
               });
-              const data = response.json as { data?: Array<{ id: string }> };
-              if (data.data?.length) {
-                this.tempSettings.availableModels = data.data.map(m => m.id).filter(modelFilter).sort().slice(0, 100);
-              } else throw new Error('empty model list');
+              if (models.length === 0) throw new Error('empty model list');
+            } catch {
+              throw new Error('All URL candidates failed');
             }
+
+            this.tempSettings.availableModels = models.filter(modelFilter).sort();
             if (this.tempSettings.availableModels.length > 0) {
               new Notice(this.getText('fetchSuccess').replace('{}', this.tempSettings.availableModels.length.toString()), NOTICE_NORMAL);
               if (!this.tempSettings.model || !this.tempSettings.availableModels.includes(this.tempSettings.model)) {
@@ -572,11 +579,9 @@ export class LLMWikiSettingTab extends PluginSettingTab {
             // Issue #137: on test success, sync every field testLLMConnection
             // may have written back into tempSettings so that the auto-save
             // on tab close (and any later explicit Save click) preserves them.
-            // Without this, hide()'s { ...tempSettings } would wipe the
-            // freshly-cached thinkingControlCache[baseUrl] on the very next
-            // tab close, forcing a re-probe and producing a 400 on the next
-            // ingestion. The same race applies to any future field mutated
-            // by the test path.
+            // v1.23.0: thinkingControlCache is @deprecated (AI-SDK v6
+            // handles internally) but we still sync it here in case
+            // legacy code paths mutate it.
             this.tempSettings.thinkingControlCache = this.plugin.settings.thinkingControlCache;
           }
           this.tempSettings.llmReady = result.success;
@@ -864,13 +869,19 @@ export class LLMWikiSettingTab extends PluginSettingTab {
     // ==========================================
     new Setting(containerEl).setName(this.getText('autoMaintainSection')).setHeading();
 
-    // 5.0 Startup quick fixes (Issue #81) — first item in this section
+    // 5.0 Startup quick fixes (Issue #81, refined v1.23.0) — first item in this section.
+    // v1.23.0: the `startupCheck` toggle is gone. The pipeline always runs;
+    // the user-facing control is now a "show result Notice" dropdown
+    // (silent / visible). Old users with `startupCheck: false` on disk
+    // were auto-migrated to 'silent' (see applySettingsMigrations).
     new Setting(containerEl)
-      .setName(this.getText('startupCheckName'))
-      .setDesc(this.getText('startupCheckDesc'))
-      .addToggle(toggle => toggle
-        .setValue(this.tempSettings.startupCheck)
-        .onChange((value) => { this.tempSettings.startupCheck = value; }));
+      .setName(this.getText('startupCheckNoticeLevelName'))
+      .setDesc(this.getText('startupCheckNoticeLevelDesc'))
+      .addDropdown(dropdown => dropdown
+        .addOption('visible', this.getText('startupCheckNoticeVisible'))
+        .addOption('silent', this.getText('startupCheckNoticeSilent'))
+        .setValue(this.tempSettings.startupCheckNoticeLevel)
+        .onChange((value: 'visible' | 'silent') => { this.tempSettings.startupCheckNoticeLevel = value; }));
 
     const betaDiv = containerEl.createDiv({
       cls: 'llm-wiki-blue-infobox'
@@ -1003,6 +1014,15 @@ export class LLMWikiSettingTab extends PluginSettingTab {
       .addToggle(toggle => toggle
         .setValue(this.tempSettings.autoSmartFix)
         .onChange((value) => { this.tempSettings.autoSmartFix = value; }));
+
+    // v1.23.0 Phase 5.1.5: first-run Welcome note toggle. Sits next to
+    // autoSmartFix because both are "auto behaviors on plugin load" knobs.
+    new Setting(containerEl)
+      .setName(this.getText('welcomeNoteSettingsToggle'))
+      .setDesc(this.getText('welcomeNoteSettingsToggleDesc'))
+      .addToggle(toggle => toggle
+        .setValue(this.tempSettings.createWelcomeNote)
+        .onChange((value) => { this.tempSettings.createWelcomeNote = value; }));
 
   }
 }

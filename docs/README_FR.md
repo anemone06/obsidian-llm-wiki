@@ -12,6 +12,8 @@
 
 [Site officiel](https://llmwiki.greenerai.top/) | [Blog](https://llmwiki.greenerai.top/blog/) | [Retour d'expérience](https://github.com/green-dalii/obsidian-llm-wiki/discussions) | [🤖 Explorer le code avec DeepWiki](https://deepwiki.com/green-dalii/obsidian-llm-wiki)
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/H7V1228WMD)
+
 ---
 
 > **⚡ Avis de mise à jour rapide：** Ce projet évolue rapidement – corrections de bugs, améliorations de performances, nouvelles fonctionnalités et optimisations UX sont fréquentes. Nous vous recommandons de mettre à jour régulièrement dans Obsidian (**Paramètres → Plugins communautaires → Vérifier les mises à jour**) ou d'activer la mise à jour automatique des plugins.
@@ -28,13 +30,12 @@
     - [🔑 Configurer un fournisseur LLM](#-configurer-un-fournisseur-llm)
     - [🎮 Utilisation](#-utilisation)
     - [⚠️ Mise à niveau depuis une ancienne version ?](#️-mise-à-niveau-depuis-une-ancienne-version-)
-  - [⚡ Nouveautés de la v1.22.0](#-nouveautés-de-la-v1220)
-    - [v1.22.1 — 2026-06-24 (PATCH)](#v1221--2026-06-24-patch)
-    - [v1.22.2 — 2026-06-26 (PATCH)](#v1222--2026-06-26-patch)
-    - [v1.22.3 — 2026-06-26 (PATCH)](#v1223--2026-06-26-patch)
-    - [v1.22.4 — 2026-06-27 (PATCH)](#v1224--2026-06-27-patch)
-    - [v1.22.5 — 2026-06-29 (PATCH)](#v1225--2026-06-29-patch)
-    - [v1.22.6 — 2026-06-29 (PATCH)](#v1226--2026-06-29-patch)
+  - [⚡ Nouveautés de la v1.23.0](#-nouveautés-de-la-v1230)
+    - [⭐ Faits marquants](#-faits-marquants)
+    - [✨ Nouveautés](#-nouveautés)
+    - [🔧 Amélioré](#-amélioré)
+    - [🐛 Corrigé](#-corrigé)
+    - [📊 Tests](#-tests)
   - [✨ Fonctionnalités](#-fonctionnalités)
     - [📊 Qualité des connaissances](#-qualité-des-connaissances)
     - [🛠️ Maintenance](#️-maintenance)
@@ -53,9 +54,12 @@
     - [🧹 Maintenance](#-maintenance)
     - [🔍 Dépannage](#-dépannage)
   - [🔒 Transparence et conformité](#-transparence-et-conformité)
+  - [💖 Soutenir le projet](#-soutenir-le-projet)
+    - [Sponsors](#sponsors)
   - [📜 Licence](#-licence)
   - [🙏 Remerciements](#-remerciements)
   - [Star History](#star-history)
+
 ## 💡 Présentation
 
 Vous écrivez. L'IA organise. Vous interrogez. Rien de plus.
@@ -135,6 +139,7 @@ Ce projet évolue rapidement. Nous vous recommandons de rester à jour :
 |---------|---------|
 | **📥 Ingestion d'une source unique** | `Cmd+P` → « Importer une source unique » |
 | **📂 Ingestion depuis un dossier** | `Cmd+P` → « Importer depuis un dossier » |
+| **📑 Importer plusieurs fichiers** | `Cmd+P` → « Importer plusieurs fichiers » — sélectionnez des notes précises via la modale à deux panneaux (arborescence récursive + cases par fichier), puis ingestion par lot de la sélection |
 | **🔍 Interroger le wiki** | `Cmd+P` → « Interroger le wiki » |
 | **🛠️ Vérifier le wiki** | `Cmd+P` → « Vérifier le wiki » |
 | **📋 Régénérer l'index** | `Cmd+P` → « Régénérer l'index » |
@@ -156,81 +161,62 @@ Ce projet évolue rapidement. Nous vous recommandons de rester à jour :
 5️⃣ Vérifiez les paramètres — Langue, Granularité, Auto-Maintenance
 
 ---
+## ⚡ Nouveautés de la v1.23.0
 
-## ⚡ Nouveautés de la v1.22.0
+La v1.23.0 est une **release MINOR** — le plus grand changement architectural depuis 1.0. Deux thèmes principaux sont livrés ensemble : la **migration vers Vercel AI-SDK v6** qui remplace un client de 1625 lignes écrit à la main par un transport stable et pris en charge par le fournisseur, et le **Graph Engine** — Personalized PageRank sur le graphe `[[wiki-link]]` — qui offre une qualité de retrieval de niveau embedding sans coût d'embedding, fonctionne avec tous les fournisseurs et ne nécessite aucune nouvelle dépendance.
 
-La v1.22.0 est une **release MINOR** qui apporte un flux de mise à jour du schéma en un clic, le chinois traditionnel comme 10e langue et une barre de statut d'ingestion améliorée.
+Cette release intègre également la série de hotfix v1.22.6 (corrections de régression de Test Connection pour les variantes GPT-5.x Pro et la gate API-key LM Studio), une gate d'évaluation knn baseline, et une section Sponsoring.
 
-- **📝 Application du schéma en un clic (Issue #97).** Les suggestions générées par le LLM sont désormais affichées dans un Modal de diff à double volet style IDE, avec les boutons Appliquer/Annuler/Ouvrir le fichier. L'application d'une suggestion sauvegarde automatiquement le schéma précédent (rotation, max 3 backups) avant d'écrire le nouveau. « Mettre à jour le schéma » est maintenant accessible depuis le Modal de Lint — l'entrée de la palette de commandes a été supprimée pour imposer un point d'entrée unique.
-- **🏷️ Synchronisation dynamique des tags du schéma.** Le vocabulaire du schéma est désormais la source de vérité unique — les tags actifs sont automatiquement injectés dans chaque appel LLM, éliminant le bug de « template du schéma écrasé par des sections codées en dur » de v1.21.0 Phase 1.
-- **🇹🇼 Chinois traditionnel (zh-TW).** L'interface du plugin et la sortie Wiki prennent désormais en charge le chinois traditionnel comme 10e langue. La protection de parité bidirectionnelle a été étendue à toutes les 10 langues.
-- **📊 Barre de statut d'ingestion avec nom de document (PR #189).** La barre de statut affiche désormais le nom du document en cours (`Ma Note · Ingestion en cours...`) et la progression du lot pendant l'ingestion de dossiers (`[4/10] Ma Note · Ingestion en cours...`). Contribution de @YounianC.
+### ⭐ Faits marquants
 
-Nous recommandons vivement la mise à niveau — la fonction d'application du schéma en un clic transforme le raffinement du schéma en une opération en une étape, et la langue chinoise traditionnelle améliore considérablement l'expérience pour les utilisateurs zh-TW.
+- **🤖 Migration vers Vercel AI-SDK v6.** Les `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` écrits à la main (1625 LOC, 30+ contournements de versions de fournisseurs accumulés depuis v1.20.0) sont remplacés par `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2`. Nouveau `src/llm-sdk/` (5 fichiers, 1421 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC) fournissent un transport stable et pris en charge par le fournisseur. Élimine toute la classe de régressions de versions de fournisseurs (#137 / #141 / #143 / #147 / #207).
+- **🕸️ Personalized PageRank sur le graphe `[[wiki-link]]` (Issue #198, #117, #157, #175).** Un nouveau moteur Monte-Carlo PPR parcourt la structure wiki-link existante pour récupérer les pages source via la structure de liens sortants — R@k de niveau embedding à coût d'embedding nul, hors ligne, sans nouvelle dépendance, fonctionne avec tous les fournisseurs. Pipeline à trois niveaux (lex fast-path → seeds LLM → marches PPR) plus un garde hybride (fallback lex quand le graphe est trop petit). Scanner de distinction des hub-links livré en tant que passe de lint.
+- **🛡️ Durcissement de l'UX d'erreurs de fournisseur.** Modèles de raisonnement (`gpt-5.1+`, `gpt-5.5`, `o1`/`o3`/`o4-mini`) routés vers l'API OpenAI Responses. Token-key probe-then-retry (`max_tokens` ↔ `max_completion_tokens`) sur **tout** HTTP 400 — pas de regex, pas de codage en dur de noms de modèles, juste `if 400 → retry with alt key`. Gate API-key LM Studio (Issue #223) permet aux fournisseurs locaux de tester la connexion sans clé API. URL fallback corrige automatiquement les `/v1` manquants dans les baseURL personnalisés (Kimi Coding Plan).
 
-Détails dans [CHANGELOG.md](../CHANGELOG.md).
+### ✨ Nouveautés
 
-### v1.22.1 — 2026-06-24 (PATCH)
+- **🔍 Moteur Personalized PageRank (PPR).** `core/monte-carlo-ppr.ts` (Fogaras 2005 MC-PPR) effectue K marches aléatoires courtes par page de requête avec un coût O(K×L) indépendant de |V| — trivialement parallèle. Réglé sur un vrai vault de 2142 pages : `damping=0.05, numWalks=3000, walkLength=20` améliore R@5 de 21.5% → 23.8% (+11% relatif). Voir `REAL_VAULT_EVAL.md` pour le tableau complet.
+- **🎯 Cascade de récupération hybride (PPR + seeds LLM + lex fast-path).** `core/ppr-cascade.ts` (213 LOC) orchestre le pipeline Query Wiki à trois niveaux. `core/section-extractor.ts` (Tier B zéro-LLM) remplace la sélection de seeds basée sur LLM précédente.
+- **🔗 Scanner de distinction des hub-links (#157, #175).** Nouvelle passe de lint qui signale les pages dont les liens sortants pointent majoritairement vers des hubs de faible distinction. 229 LOC + 15 tests. Contribué par @DocTpoint.
+- **🏷️ Signal de cristallisation de retraite de hub (#215, @DocTpoint).** `core/hub-retirement.ts` (175 LOC + 12 unit tests + 136 LOC integration tests). Verdict pur basé sur les percentiles avec doubles gardes absolues. Intégration de lint prévue pour v1.24.0.
+- **🤖 Ensemble de clients AI-SDK v6.** `openai-sdk-client.ts` (455 LOC, routage automatique vers Responses API pour les modèles de raisonnement), `anthropic-sdk-client.ts` (300 LOC, prise en charge baseURL pour Coding Plan / z.ai / GLM-Antropic), `openai-compat-sdk-client.ts` (449 LOC, 8 baseURL au format OpenAI). `create-llm-client.ts` (151 LOC) fournit un pattern async + sync shim + preload.
+- **🌐 URL fallback unifié pour baseURL personnalisés.** `core/url-fallback.ts` (395 LOC) résout automatiquement les `/v1` manquants dans les baseURL saisis par l'utilisateur. Cache statique au niveau du module survit à la recréation de `createLLMClient`.
+- **🔁 Token-key probe-then-retry (KISS, pas de regex).** `src/llm-sdk/token-key-probe.ts` (70 LOC) cache la clé `max_tokens` ↔ `max_completion_tokens` qui fonctionne par baseURL au premier échec.
+- **🎬 Streaming en temps réel pour tous les fournisseurs.** `result.textStream` vrai streaming chunk-par-chunk fonctionne maintenant dans les trois clients `llm-sdk`. L'item "Restore true streaming for 3rd-party providers" est **FAIT**.
+- **🎉 Note de bienvenue (Phase 5.1.5).** Note de bienvenue à trois niveaux au premier démarrage. Frontmatter `type: welcome`, toggle `createWelcomeNote`, commande `Recreate Welcome Note`.
+- **📥 Ingestion multi-fichiers (Issue #130).** Sélecteur à deux panneaux : gauche = arborescence de dossiers récursive avec cases à cocher par fichier, droite = file d'ingestion en direct avec statut. Flux « Ajouter à la file » en deux étapes, annulation par fichier, « Tout annuler » pour les tâches en attente/en cours. Réutilise `runBatchIngest` pour partager la boucle par fichier, le dédoublonnage et la modale de rapport avec l'ingestion depuis un dossier. Nouveau store pub/sub `IngestQueue` est la source unique de vérité pour le cycle de vie d'ingest en session.
 
-### v1.22.2 — 2026-06-26 (PATCH)
+![Modale d'ingestion multi-fichiers — gauche : arborescence de dossiers récursive avec cases à cocher par fichier ; droite : file d'ingestion en direct avec statut](assets/multi-file-ingest.png)
+- **🔑 Gate API-key LM Studio (Issue #223).** `main.ts:962` exclut maintenant à la fois `ollama` et `lmstudio` de la validation de la clé API.
+- **🛡️ Routage des variantes GPT-5.x Pro (Issue #207 follow-up, v1.22.6 hotfix).** `gpt-5.1-pro` / `gpt-5.2-pro` / `gpt-5.5-pro` correctement routés vers `/v1/responses`.
+- **🛡️ Chemin de complétion Auto Ingest (Issue #204 follow-up, v1.22.6 hotfix).** Champ `trigger='auto'|'manual'` sur `IngestReport` / `IngestOptions`.
+- **📊 Analyse knn baseline (P2-3 eval acceptance gate).** DocTpoint a exécuté une baseline knn (bge-m3, sans graphe) sur le même fixture `sample-50page` selon #198 follow-up : cascade R@5 27.1% vs knn 24.1% (écart de 3pp). Renforce le rejet #175 du 2026-06-22 — embeddings définitivement rejetés ; les signaux du graphe suffisent pour tous les cas d'usage PPR.
+- **🌍 Réécriture des paramètres i18n (10 langues).** Langage user-first partout. 14 nouvelles clés par langue pour la note de bienvenue + UI modale d'ingest.
+- **💖 Section Sponsoring.** Bouton Ko-fi et section 💖 Soutenir le projet dans les 10 READMEs.
 
-Ce PATCH améliore l'UX d'ingestion automatique, localise le journal des opérations et supprime du code mort.
+### 🔧 Amélioré
 
-- **📋 L'ingestion automatique ne bloque plus avec une modale (Issue #204).** L'ingestion automatique en mode Watch affiche désormais par défaut un avis transitoire au lieu d'ouvrir la modale complète du rapport d'ingestion. Les utilisateurs préférant le rapport détaillé peuvent basculer sur "Modal" dans Paramètres → Maintenance automatique → Mode Watch.
-- **🔧 La correction intelligente automatique utilise désormais un avis transitoire.**
-- **🌐 Journal des opérations i18n (10 langues).** En-tête automatiquement migré pointant vers le panneau d'historique.
-- **📅 Lint périodique : "Horaire" supprimé, "Mensuel" ajouté.**
-- **🧹 Code mort supprimé.** `console.debug` redondant dans `slug.ts` et réinitialisations `setDoneCallback` inutiles retirées.
-- **♻️ Migration automatique de l'en-tête du journal.**
+- **📜 Le corps d'erreur du fournisseur atteint maintenant l'UI Test Connection.**
+- **♻️ Boutons de performance lint centralisés dans `src/constants.ts`.**
+- **⏱️ Backoff exponentiel 429/5xx sur le chemin Responses API.**
+- **🧹 `thinkingControlCache` obsolète.** Suppression de la sonde 3 dialectes ; AI-SDK gère le thinking en interne.
+- **⚡ Taille du bundle 1.24 MB → 3.17 MB** (accepté par l'utilisateur le 2026-06-29).
 
-### v1.22.3 — 2026-06-26 (PATCH)
+### 🐛 Corrigé
 
-Un Hotfix ciblé qui renforce le mécanisme d'en-tête de log de la v1.22.2 et empêche la pollution de frontmatter sur les fichiers non-contenu.
+- **Les modèles GPT-5.x ne plantent plus Test Connection avec 400** (#207) — couverture complète y compris variantes `-pro`.
+- **LM Studio Test Connection ne nécessite plus de clé API** (#223).
+- **#204 Auto Ingest n'ouvre plus de modale bloquante** — chemin Notice correctement câblé.
+- **Le streaming en temps réel était en lots** — corrigé via macrotask yield + consommation uniquement de `result.textStream`.
+- **`generation_complete` n'est plus tamponné sur `log.md` / `index.md` / `schema/`** (v1.22.3).
+- **Classe de bug de fabrication de stub de dead-link fermée** (#197).
 
-- **🔧 Détection d'en-tête de log désormais agnostique et robuste.** Passage d'une détection textuelle (qui ne fonctionnait pas pour DE/JA/KO/etc. et pouvait être trompée par le contenu naturel d'une entrée de log) à un marqueur de commentaire HTML structurel `<!-- llm-wiki-log-header-start -->` intégré à l'en-tête. Les fichiers log v1.22.2 existants sont mis à niveau automatiquement au prochain démarrage.
-- **🧹 Chaînes d'en-tête de log consolidées dans `src/texts/<lang>.ts`.** Les quatre chaînes localisées précédemment dupliquées dans `core/log-header.ts` vivent désormais avec toutes les autres chaînes UI — traducteurs et tests de parité les couvrent automatiquement.
-- **🚫 `generation_complete` n'est plus estampillé sur `log.md` / `index.md` / `schema/`.** `createOrUpdateFile` appelait auparavant `markPageComplete` pour **chaque** écriture, ce qui préfixait un tout nouveau bloc frontmatter avec `generation_complete: true` aux fichiers sans frontmatter — pollution visible du corps de log.md. Le nouveau garde `isInWikiContentFolder()` limite l'estampillage à `wiki/{entities,concepts,sources}/...` uniquement.
+### 📊 Tests
 
-Nous vous recommandons cette amélioration — log.md n'accumule plus de frontmatter parasite à chaque exécution de correction rapide, et la détection fonctionne dans toutes les langues sans cas particulier par langue.
+- **1376 tests passent** sur 100 fichiers (+272 depuis v1.22.0).
+- Nouveaux fichiers de test listés dans CHANGELOG.md.
 
-Nous vous recommandons cette améliorationUn PATCH ciblé qui ferme trois bugs P0 signalés par les utilisateurs et apporte une amélioration UX.
-
-- **🛡️ Fix Dead Links ne fabrique plus de pages stub expansées par l'IA (#197).** Les stubs sont désormais des espaces réservés honnêtes avec le marqueur `generation_complete: false`.
-- **✅ Le commutateur « Exécuter les corrections rapides au démarrage » persiste désormais (#199).** La migration v1.18.3 supprimée.
-- **🎨 Avertissement de revue CSS `:has()` corrigé.** Nouveau `scripts/css-lint.mjs` pour empêcher la régression.
-- **🪟 Query Wiki est désormais un panneau latéral droit de style Copilot (#196, @YounianC).** `QueryModal extends Modal` est devenu `QueryView extends ItemView`.
-- **🧹 Préfixe de related link ré-affirmé déterministe (#200, @DocTpoint, #187).** Nouvelle fonction pure `correctRelatedLinkPrefixes()`.
-
-Mise à jour recommandée.
-
-### v1.22.4 — 2026-06-27 (PATCH)
-
-Un PATCH ciblé qui restaure la compatibilité GPT-5.x, propage les véritables messages d'erreur du Provider à l'UI de Test Connection, et centralise les réglages de performance de lint.
-
-- **🛡️ Les modèles GPT-5.x ne tombent plus en échec 400 sur Test Connection (Issue #207).** L'heuristique hardcodée `params.model.startsWith('gpt-5-')` de v1.20.0 ne reconnaissait que la famille OpenAI gpt-5 suffixée par un tiret (`gpt-5-mini`, `gpt-5-nano`, etc.) et tombait silencieusement en panne à chaque nouvelle version gpt-5.x (`gpt-5.1`, `gpt-5.4-mini`, `gpt-5.5`). Remplacée par un mécanisme de sondage-cache à l'exécution : la première requête utilise `max_tokens`, si le backend rejette avec 400, nous cachons la clé alternative (`max_completion_tokens` ou l'inverse) et réessayons. Les requêtes suivantes réutilisent le cache — plus de correspondance de préfixe sur les noms de modèle, et le sondage gère proprement tout nouveau schéma de nommage OpenAI.
-- **📜 Les vrais messages d'erreur du Provider atteignent désormais l'UI de Test Connection.** Auparavant, les erreurs `requestUrl` étaient ré-encapsulées en `status 400: ${data.error.message}` (ou simplement "status 400" quand le corps de réponse était perdu) et l'erreur réelle du Provider — ex. « Invalid parameter: max_tokens should be max_completion_tokens » — n'était jamais visible. Le nouveau `extractProviderErrorMessage()` enrichit l'erreur lancée pour que l'utilisateur voie les détails actionnables du Provider au lieu d'un statut HTTP générique.
-- **♻️ Réglages de performance de lint centralisés dans `src/constants.ts`.** Cadences de yield (`LINT_YIELD_EVERY_OUTER` / `_PHASE1` / `_COMPARISON`), tailles de lot de candidats (`LINT_CANDIDATE_TOKEN_ESTIMATE`, `LINT_MAX_INPUT_TOKENS`, `LINT_DEDUP_BATCH_SIZE`), lecture par lot de prep (`LINT_PREP_BATCH_READ`), et tailles de lot source-analyzer (`SHORT_CONTENT_THRESHOLD`, `BATCH_CHARS_PER_ITEM`) vivent désormais à un seul endroit. Auparavant ces valeurs étaient dupliquées ou avaient dérivé entre `controller.ts`, `duplicate-detection.ts`, `preparation.ts` et `batch-limits.ts` — y compris une copie littérale `MAX_TOKENS=16000` de `MAX_TOKENS_BATCH`. Le réglage de performance de lint est maintenant une modification d'un seul fichier.
-
-Mise à jour recommandée — les modèles gpt-5.x fonctionnent à nouveau dès l'installation, et l'UI de Test Connection vous indique exactement ce que le Provider a rejeté, sans avoir à fouiller la console pour baseUrl / nom de modèle / clé API.
-
-### v1.22.5 — 2026-06-29 (PATCH)
-
-Un PATCH ciblé qui empêche la famille de modèles de raisonnement OpenAI (gpt-5.1+ / gpt-5.5 / o1-o4) d'échouer en 400 sur Test Connection (suivi Issue #207) et qui transmet les véritables messages d'erreur du Provider dans la Notice de Test Connection.
-
-- **🛡️ La famille de modèles de raisonnement utilise désormais l'OpenAI Responses API (suivi Issue #207).** Le correctif probe-then-cache `max_tokens` ↔ `max_completion_tokens` de v1.22.4 était nécessaire mais pas suffisant — `gpt-5.1-chat-latest`, `gpt-5.5` et les familles `o1` / `o3` / `o4-mini` continuaient à échouer en 400 sur Test Connection parce que l'endpoint Chat Completions a des problèmes de compatibilité avec la famille de modèles de raisonnement. Selon le guide de migration GPT-5.5 officiel d'OpenAI (« GPT-5.5 works best in the Responses API »), v1.22.5 route la famille de raisonnement vers `/v1/responses` avec `reasoning: { effort: 'low' }`. `gpt-5-chat-latest`, `gpt-4.1`, `gpt-3.5-turbo` et toutes les baseUrls non-OpenAI (Ollama, LM Studio, DeepSeek, etc.) restent inchangées sur `/v1/chat/completions`. La détection est une fonction pure `isResponsesApiModel(model, baseUrl)`, activée uniquement pour `https://api.openai.com/v1` — les endpoints personnalisés restent entièrement compatibles.
-- **📜 Le corps d'erreur du Provider atteint désormais l'UI de la Notice de Test Connection.** Le `requestUrl` d'Obsidian lève une exception sur 4xx (y compris 429) SANS attacher le corps de réponse du Provider à l'objet Error — donc même le `extractProviderErrorMessage()` de v1.22.4 ne pouvait pas voir ce qu'OpenAI disait réellement. v1.22.5 enveloppe la requête échouée dans un re-fetch `window.fetch` (timeout 5s) et fusionne le corps du Provider dans le `Error.message` lancé, de sorte que les utilisateurs voient `"status 429: You exceeded your current quota, please check your plan and billing details"` au lieu d'un simple `"status 429"`. Le corps brut est aussi journalisé au niveau `console.warn` pour l'inspection DevTools. Les baseUrls non-OpenAI obtiennent le même enrichissement via le chemin Chat Completions existant.
-- **⏱️ Les erreurs 429/5xx de rate-limit sont maintenant réessayées avec backoff exponentiel sur le chemin Responses API.** Le `withRetry` de v1.22.4 (3 tentatives, 1s/2s/4s + jitter) ne couvrait à l'origine que le chemin Chat Completions. v1.22.5 enveloppe le nouveau chemin Responses API dans le même `withRetry`, de sorte que les fluctuations transitoires de quota 429 ne font plus échouer Test Connection immédiatement.
-- **♻️ Fixtures de test mises à jour.** Les tests existants pour la régression dot-naming gpt-5.x (v1.22.4) et le chemin `thinking.type='disabled'` Chat Completions (héritage) utilisent maintenant `gpt-5-mini` / `gpt-5-nano` / `gpt-4.1` — ces modèles continuent à exercer le chemin Chat Completions, tandis que la famille de raisonnement est entièrement couverte par le nouveau `src/__tests__/root/llm-client-responses-api.test.ts` (28 tests).
-
-Mise à jour recommandée — `gpt-5.1-chat-latest`, `gpt-5.5` et les familles `o1` / `o3` / `o4-mini` fonctionnent maintenant dès l'installation sur Test Connection, et en cas d'échec de connexion vous obtenez la véritable erreur du Provider (par ex. « insufficient_quota ») au lieu d'un simple code d'état HTTP.
-
-### v1.22.6 — 2026-06-29 (PATCH)
-
-- **🤫 L'Auto Ingest respecte enfin `autoIngestNotificationLevel: notice` (Issue #204).** L'helper `onAutoIngestDone` ajouté en v1.22.2 (chemin Notice) n'a jamais été branché dans le flux d'auto-ingest en Watch Mode — chaque completion passait par `onIngestDone` qui ouvre toujours `IngestReportModal`, rendant le réglage Notice inopérant. v1.22.6 ajoute un champ `trigger?: 'auto' | 'manual'` à `IngestReport` et `IngestOptions`, le propage via `WikiEngine.ingestSource` → `onDone`, et route `trigger='auto'` vers `onAutoIngestDone`. Comportement de l'ingest manuel inchangé.
-- **🔇 La completion d'Auto Smart Fix devient context-aware.** Même pattern de trigger appliqué à `runLintWiki` (nouveau troisième paramètre `trigger`, défaut `'manual'`). Le lint auto périodique passe `trigger='auto'`. Dispatch : manuel → `LintReportModal` ; auto + `autoSmartFix=true` → Notice + fixAll ; auto + `autoSmartFix=false` → Notice seul avec un hint vers le panneau History.
-- **🛡️ Les variantes GPT-5 Pro (`gpt-5.x-pro`) sont maintenant correctement routées vers `/v1/responses` (Issue #207 follow-up).** Vérifié sur la doc officielle OpenAI : « GPT-5 Pro is available in the Responses API only. » Le regex v1.22.5 matchait `gpt-5.x` mais ratait le suffixe `-pro` — `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` allaient silencieusement vers `/v1/chat/completions` → 404. Regex élargi à `^(gpt-5\.[1-9]\d*(?:-pro)?|...)`.
-
-Mise à jour recommandée — le réglage « Auto Ingest Notice » fonctionne enfin, le lint auto périodique n'interrompt plus votre écriture, et les variantes Pro sont atteignables via la Responses API.
+Nous recommandons la mise à jour — la migration AI-SDK élimine une classe de régressions de versions de fournisseur, et le Graph Engine offre une qualité de retrieval de niveau embedding à coût d'embedding nul. Si vous utilisez des passerelles OpenAI-compatibles avec des baseURL personnalisés, les corrections URL fallback + token-key probe-then-retry devraient résoudre les problèmes de connexion sans modification de configuration.
 
 ## ✨ Fonctionnalités
 
@@ -299,6 +285,7 @@ Mise à jour recommandée — le réglage « Auto Ingest Notice » fonctionne en
 |----------|-------------|
 | **📥 Importer une source unique** | Sélectionner une note → générer des pages Wiki avec Entity, Concept et résumé |
 | **📂 Importer depuis un dossier** | Sélectionner un dossier → génération batch du Wiki à partir des notes existantes |
+| **📑 Importer plusieurs fichiers** | Ouvrir le sélecteur à deux panneaux → choisir des notes via les cases par fichier → ingestion par lot de la sélection (avec file en direct + annulation par fichier) |
 | **🔍 Interroger le wiki** | Q&R conversationnel sur votre Wiki, réponses en streaming avec `[[Wiki-links]]` |
 | **🛠️ Vérifier le wiki** | Analyse complète de santé : doublons, liens morts, pages vides, orphelines, alias manquants, contradictions |
 | **📋 Régénérer l'index** | Reconstruire manuellement `wiki/index.md` |
@@ -563,6 +550,21 @@ Ce plugin est répertorié sur le marché des plugins communautaires Obsidian et
 
 Si vous préférez une localité complète des données, utilisez un fournisseur LLM local tel qu'Ollama ou LM Studio. Avec un fournisseur local, vos données ne quittent jamais votre machine.
 
+## 💖 Soutenir le projet
+
+Si LLM-Wiki est devenu une partie importante de votre flux de travail de connaissances, vous pouvez soutenir son développement continu :
+
+- ☕ **[Offrez-moi un café sur Ko-fi](https://ko-fi.com/greenerdalii)** — soutien ponctuel ou mensuel via Ko-fi
+- 💳 **[Pourboire via PayPal](https://paypal.me/greenerdalii)** — pourboire ponctuel via PayPal
+
+Le sponsoring est entièrement facultatif. Le plugin reste sous licence MIT et complet en termes de fonctionnalités.
+
+### Sponsors
+
+Merci aux personnes suivantes pour leur soutien au projet :
+
+- [@jameses-cyber](https://github.com/jameses-cyber)
+
 ## 📜 Licence
 
 MIT License — voir [LICENSE](LICENSE).
@@ -571,7 +573,7 @@ MIT License — voir [LICENSE](LICENSE).
 
 - **💡 Concept :** [LLM Wiki](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f) d'Andrej Karpathy — la vision originale ayant inspiré ce plugin
 - **🛠️ Plateforme :** [Obsidian Plugin API](https://docs.obsidian.md/Plugins/Getting+started/Build+a+plugin)
-- **🔌 Transport LLM :** `requestUrl` d'Obsidian (Anthropic) + client HTTP compatible OpenAI codé à la main (fournisseurs tiers compatibles OpenAI)
+- **🔌 Transport LLM :** [Vercel AI SDK v6](https://ai-sdk.dev/) (`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/openai-compatible`) via Obsidian [`requestUrl`](https://docs.obsidian.md/Reference/TypeScript%20API/requestUrl)
 
 ## Star History
 

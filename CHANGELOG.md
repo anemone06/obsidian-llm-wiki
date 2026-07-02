@@ -7,7 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.22.6] - 2026-06-29
+## [1.23.0] - 2026-07-02
+
+**Theme:** Replace the brittle hand-rolled LLM client (v1.22.x 1625-LOC `llm-client.ts` with 30+ provider-version workarounds accumulated since v1.20.0) with Vercel AI-SDK v6, then ship the Graph Engine PPR primitive on top. Biggest architectural change since 1.0.
+
+**Branch state:** `refactor/v1.23.0-ai-sdk-migration` (38 commits ahead of main, **1376 tests passing**, 3.17 MB bundle). Folds in the v1.22.6 hotfix series and P2-4 PPR tuning.
+
+### Added
+
+- **Vercel AI-SDK v6 migration (P1-7).** Replaced hand-rolled `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient` (1625 LOC) with `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2` / `ai@6`. New `src/llm-sdk/` (5 files, 1421 LOC: `openai-sdk-client.ts` 455 LOC, `anthropic-sdk-client.ts` 300 LOC, `openai-compat-sdk-client.ts` 449 LOC, `token-key-probe.ts` 70 LOC, `create-llm-client.ts` 151 LOC). `src/core/obsidian-fetch-bridge.ts` (326 LOC) provides activeDocument-aware fetch for jsdom. Deleted 8 old test files (2609 LOC). **Eliminates the entire class of provider-version regressions** (#137 / #141 / #143 / #147 / #207).
+- **Graph Engine (Issue #198).** Personalized PageRank over `[[wiki-link]]` graph — closes #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness) with one primitive. `core/monte-carlo-ppr.ts` (Fogaras 2005 MC-PPR, 99 LOC) performs K short random walks per query page at O(K×L) cost independent of |V|. `core/ppr-cascade.ts` (213 LOC) orchestrates three-tier pipeline (lex fast path → LLM seeds → PPR walks). `core/section-extractor.ts` (Tier B zero-LLM, 173 LOC). `core/hub-detection.ts` (134 LOC). `core/build-graph.ts` (wiki-link graph builder, 13 unit tests).
+- **Query Wiki three-tier pipeline (P1-5).** Lex fast path → LLM seed selection (only when fast path is weak) → PPR walks. Reduces 99% of LLM seed-selection cost.
+- **Hub-link distinctiveness scanner (P1-6, Issue #157 / #175).** New lint pass that flags pages whose outgoing links mostly point to low-distinctiveness hubs. 229 LOC + 15 tests. Contributed by @DocTpoint.
+- **Hub-retirement crystallization signal (PR #215, @DocTpoint).** `core/hub-retirement.ts` (175 LOC + 12 unit tests + 136 LOC integration tests). Pure percentile-based verdict with dual absolute guards.
+- **Unified URL fallback for custom baseURLs.** `core/url-fallback.ts` (395 LOC) auto-resolves missing `/v1` in user-entered baseURLs (Kimi Coding Plan, GLM, z.ai). Module-level static cache survives `createLLMClient` re-creation so Ingest / Lint / Query all benefit.
+- **Token-key probe-then-retry (KISS, no regex).** `src/llm-sdk/token-key-probe.ts` (70 LOC) caches working `max_tokens` ↔ `max_completion_tokens` key per baseURL on first failure. Triggered by `if (statusCode === 400 && !cached) → retry`. Addresses root cause of #207 for all OpenAI-compatible gateways.
+- **Real-time streaming for all providers (P2).** `result.textStream` true逐块 streaming now works in all three `llm-sdk` clients. macrotask yield between chunks forces a paint frame per chunk (no more batch-arrival UX). Resolves user Q1 feedback.
+- **Welcome note (Phase 5.1.5).** Three-tier first-run Welcome note (Tier A empty / Tier B existing / Tier C upgrade). `type: welcome` frontmatter, `createWelcomeNote` toggle, `Recreate Welcome Note` command. D8 LLM dynamic translation writes the note in the user's wiki language at write time — no hardcoded i18n.
+- **Multi-File Ingest (Issue #130).** Two-pane picker: left = recursive folder tree with per-file checkboxes, right = live ingest queue with status. "Add to queue" two-step flow, per-file cancel, "Cancel all" for pending/running jobs. Reuses `runBatchIngest` so the per-file loop, dedup, and report modal are shared with folder ingest. New `IngestQueue` pub/sub store is the single source of truth for in-session ingest lifecycle.
+- **LM Studio API-key gate (Issue #223).** `main.ts:962` now excludes both `ollama` and `lmstudio` from API-key validation. Local providers can test connection without an API key.
+- **knn baseline analysis (P2-3 eval acceptance gate).** DocTpoint ran a knn baseline (bge-m3, no graph) on the same `sample-50page` fixture per #198 follow-up: cascade R@5 27.1% vs knn 24.1% (3pp gap). Reinforces 2026-06-22 #175 rejection — embeddings permanently rejected.
+- **i18n settings rewrite (10 locales).** User-first language throughout ("disable thinking") instead of implementation details ("3-tier dialect fallback chain"). 14 new keys per locale for Welcome note + Ingest modal UI.
+- **Sponsor section.** Ko-fi button + 💖 Support the Project section in all 10 READMEs. https://ko-fi.com/greenerdalii.
+- **P2-4 PPR tuning.** Real vault (2142 pages) tuning across 6 iterations. Recommended parameters `damping=0.05, numWalks=3000, walkLength=20` improve R@5 from 21.5% → 23.8% (+11% relative). See `src/__tests__/fixtures/wikis/sample-50page/REAL_VAULT_EVAL.md`.
+
+### Changed
+
+- **Provider error body now reaches Test Connection UI.** `window.fetch` re-fetch with 5s timeout captures the provider's diagnostic into the Notice. Replaces generic `status 400` with e.g. `"status 429: You exceeded your current quota"`.
+- **Lint performance knobs centralised in `src/constants.ts`.** Single-file tuning instead of 4-file drift across `controller.ts` / `duplicate-detection.ts` / `preparation.ts` / `batch-limits.ts`.
+- **429/5xx exponential backoff on Responses API path.** Both Chat Completions and Responses API paths now share the same `withRetry` (3 attempts, 1s/2s/4s + jitter).
+- **`thinkingControlCache` deprecated.** Removed the 3-tier dialect probe; AI-SDK handles thinking internally. Cache retained on disk for backward-compat (will be removed in v1.24.0 if no use case surfaces).
+- **Real-time streaming UX.** Cascade + LLM seed retrieval improvements: reduced tokens per cascade round, tightened seed-selection prompt.
+- **Welcome note refactor.** Moved LLM config status from in-body text to frontmatter (hidden metadata). Local-check in Welcome note orchestrator (no LLM if config already valid).
+
+### Fixed
+
+- **#207 — GPT-5.x models no longer fail Test Connection with 400.** Full coverage including `-pro` variants (v1.22.5 / v1.22.6 hotfixes).
+- **#204 — Auto Ingest no longer opens blocking modal.** `trigger='auto'|'manual'` field on `IngestReport` / `IngestOptions` routes auto-ingest completion to `onAutoIngestDone` (Notice) instead of `IngestReportModal`.
+- **#204 — Auto Smart Fix completion is context-aware.** Same `trigger` pattern routes `AutoMaintainManager.schedulePeriodicLint` completion differently based on `autoSmartFix` setting.
+- **#223 — LM Studio Test Connection no longer requires API key.** Local providers excluded from the API-key gate.
+- **`generation_complete` no longer stamped onto `log.md` / `index.md` / `schema/`** (v1.22.3, carried forward). `isInWikiContentFolder()` guard restricts the stamp to `wiki/{entities,concepts,sources}/...`.
+- **Real-time streaming was batched.** Fixed via macrotask yield + `result.textStream`-only consumption (not `fullStream` then `textStream`, which buffered all events).
+
+### Tests
+
+- **1376 tests passing** across 100 files (+272 since v1.22.0).
+
+### Risk Register
+
+- Bundle size 1.24 MB → 3.17 MB (user accepted 2026-06-29). Obsidian manifest has no size limit; lazy `await import()` for AI-SDK packages didn't reduce bundle (esbuild CJS inline); future ESM bundle / dynamic chunk can revisit.
+- #207 close decision: user will close manually after real-world testing — separate commit `Closes #207`, not part of v1.23.0.
+- #213 (configurable page categories): Discussion-only, NOT confirmed for any minor release per user instruction 2026-06-30. Requires broader community/architectural discussion.
+
+## [1.22.6] - 2026-06-30
 
 ### Fixed
 - **#204 — Auto Ingest no longer opens a blocking modal when `autoIngestNotificationLevel: notice` is set.** v1.22.2 added `onAutoIngestDone` (Notice path) but never wired it into the watch-mode auto-ingest path — every ingest completion went through `onIngestDone` which always opens `IngestReportModal`, making the "Notice (non-blocking)" UI setting a no-op. v1.22.6 adds a `trigger?: 'auto' | 'manual'` field to `IngestReport` (and `IngestOptions`) and propagates it through `WikiEngine.ingestSource` → `onDone` report. The completion callback (`LLMWikiPlugin.onIngestDoneDispatch`) routes `trigger='auto'` to `onAutoIngestDone` (Notice respecting `autoIngestNotificationLevel`) and otherwise keeps the legacy `IngestReportModal` path. Manual ingest behavior unchanged.

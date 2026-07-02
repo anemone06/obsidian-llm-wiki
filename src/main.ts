@@ -7,14 +7,23 @@ import {
   IngestReport
 } from './types';
 import { TOKENS_QUERY_MODEL_DETECT, NOTICE_NORMAL, NOTICE_ERROR, NOTICE_ABORT, COMPATIBLE_SOURCE_EXTENSIONS } from './constants';
-import { AnthropicClient, AnthropicCompatibleClient, OpenAICompatibleClient } from './llm-client';
 import { wrapWithAdvancedSettings } from './llm-client-wrapper';
+import { createLLMClientFromSettingsSync, preloadLLMClientModules } from './llm-sdk/create-llm-client';
 import { runSchemaAnalyze } from './schema/analyze';
 
+// v1.23.0 P1-7: AI-SDK migration. Eagerly preload SDK modules on plugin
+// load so sync `createLLMClient` works without blocking. Failure is
+// non-fatal: falls back to legacy llm-client at createLLMClient time.
+const aiSdkModulesLoaded: Promise<void> = preloadLLMClientModules();
+void aiSdkModulesLoaded.catch((err) => {
+  console.warn('[v1.23.0 LLM migration] Failed to preload AI-SDK modules:', err);
+});
+
 // Issue #243: derive a consistent cache key for the thinking-control cache.
-// Used in both the read (createLLMClient) and write (testLLMConnection) paths
-// so they stay aligned when the user picks a predefined provider without
-// overriding baseUrl.
+// v1.23.0 P1-7: AI-SDK migration removed the thinking-control probe that
+// used this helper. Kept for now in case we need to introspect the cache
+// during v1.24.0 cleanup; will be removed if no use case surfaces.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function getThinkingControlCacheKey(settings: LLMWikiSettings): string {
   return settings.baseUrl?.trim() || PREDEFINED_PROVIDERS[settings.provider]?.baseUrl || '';
 }
@@ -23,46 +32,22 @@ function getThinkingControlCacheKey(settings: LLMWikiSettings): string {
 // Issue #99 / #128 / #128 follow-up: thin wrapper that injects only the
 // advanced settings the user has configured; otherwise the call passes
 // through unchanged to preserve the provider default.
+//
+// v1.23.0 P1-7: AI-SDK migration. The provider dispatch logic was
+// rewritten to use Vercel AI-SDK v6 — see src/llm-sdk/create-llm-client.ts.
+// The old hand-rolled OpenAICompatibleClient / Anthropic* classes are
+// retained as legacy fallbacks in src/llm-client.ts for v1.23.0 backward
+// compat (will be removed in v1.24.0 once we've validated the new path
+// in production).
 export function createLLMClient(settings: LLMWikiSettings): LLMClient {
-  let client: LLMClient;
-
-  if (settings.provider === 'anthropic') {
-    client = new AnthropicClient(settings.apiKey.trim());
-  } else if (settings.provider === 'anthropic-compatible') {
-    const baseUrl = settings.baseUrl?.trim();
-    if (baseUrl) {
-      client = new AnthropicCompatibleClient(settings.apiKey.trim(), baseUrl);
-    } else {
-      client = new AnthropicClient(settings.apiKey.trim());
-    }
-  } else {
-    const providerConfig = PREDEFINED_PROVIDERS[settings.provider];
-    const baseUrl = settings.baseUrl?.trim() || providerConfig?.baseUrl || undefined;
-    const apiKey = (settings.provider === 'ollama' || settings.provider === 'lmstudio')
-      ? (settings.apiKey.trim() || 'lmstudio')
-      : settings.apiKey.trim();
-    client = new OpenAICompatibleClient(apiKey, baseUrl);
-  }
-
-  // Sync thinking control cache from settings to client
-  // #137: lazy-migrate v1.19.0 boolean cache values to dialect strings.
-  //   true  → 'anthropic' (backend accepts thinking.type='disabled')
-  //   false → 'none'      (backend rejected thinking; skip field entirely)
-  if (client instanceof OpenAICompatibleClient) {
-    const cacheKey = getThinkingControlCacheKey(settings);
-    console.debug('[CREATE-LLM] cacheKey:', cacheKey, 'has cache?', cacheKey && settings.thinkingControlCache?.[cacheKey] !== undefined, 'cache value:', settings.thinkingControlCache?.[cacheKey]);
-    if (cacheKey && settings.thinkingControlCache?.[cacheKey] !== undefined) {
-      const cached = settings.thinkingControlCache[cacheKey];
-      client.thinkingControlDialect =
-        typeof cached === 'boolean' ? (cached ? 'anthropic' : 'none') : cached;
-      console.debug('[CREATE-LLM] set dialect to:', client.thinkingControlDialect);
-    }
-    // #137: thread language so queueFallbackNotice can resolve the
-    // per-locale fallback-notice templates (fallbackThinkingDialect /
-    // fallbackThinkingNone / fallbackParamStripped). Previously hard-coded
-    // TEXTS.en, which made 7/8 translations invisible to users.
-    client.language = settings.language;
-  }
+  // v1.23.0 P1-7: use the AI-SDK-backed factory. Sync shim delegates
+  // to the preloaded SDK modules (loaded by preloadLLMClientModules
+  // at module-load time above). No more legacy hand-rolled classes.
+  const client: LLMClient = createLLMClientFromSettingsSync({
+    provider: settings.provider,
+    apiKey: settings.apiKey,
+    baseUrl: settings.baseUrl,
+  });
 
   // Wrap createMessage so user-configured advanced settings are applied.
   // v1.20.0: by default the plugin does NOT inject any thinking-control
@@ -83,10 +68,11 @@ import { parseFrontmatter } from './core/frontmatter';
 import { applySettingsMigrations } from './core/settings-migrations';
 import { normalizeVocabularyCsv } from './core/tag-vocab';
 import { buildIngestStatusBarText, BatchProgress } from './core/status-bar';
+import { IngestQueue } from './core/ingest-queue';
 import { LLMWikiSettingTab } from './ui/settings';
 import { WikiEngine } from './wiki/wiki-engine';
 import { QueryView, VIEW_TYPE_QUERY } from './wiki/query-engine';
-import { FileSuggestModal, FolderSuggestModal, IngestReportModal, ConfirmModal } from './ui/modals';
+import { FileSuggestModal, FolderSuggestModal, MultiFileSuggestModal, IngestReportModal, ConfirmModal } from './ui/modals';
 import { HistoryModal } from './ui/history-modal';
 import { SchemaDiffModal } from './ui/schema-diff-modal';
 import { applySchemaSuggestion } from './schema/apply-suggestion';
@@ -100,6 +86,16 @@ export default class LLMWikiPlugin extends Plugin {
   wikiEngine: WikiEngine;
   schemaManager: SchemaManager;
   autoMaintainManager: AutoMaintainManager;
+  /**
+   * v1.23.0 Phase 5.1.5: single source of truth for the current
+   * ingest session. Replaces the old "selected: TFile[]" inside the
+   * Multi-File Suggest modal. The modal subscribes to this queue to
+   * render a real-time right pane (pending / running / completed /
+   * failed). The ingest pipeline (runBatchIngest) calls start() /
+   * complete() / remove() around each file's wikiEngine.ingestSource
+   * call. Pure data layer; no IO lives here.
+   */
+  private ingestQueue: IngestQueue = new IngestQueue();
   private progressNotice: Notice | null = null;
   private ingestStatusBar: HTMLElement | null = null;
   // Tracks the current document position during a folder batch ingest so the
@@ -161,9 +157,11 @@ export default class LLMWikiPlugin extends Plugin {
       this.autoMaintainManager.startWatching();
     }
     this.autoMaintainManager.schedulePeriodicLint();
-    if (this.settings.startupCheck) {
-      void this.autoMaintainManager.runStartupCheck();
-    }
+    // v1.23.0: QuickFixes (Phase 0-4.5) always run on plugin start.
+    // The user-facing control is `startupCheckNoticeLevel` (visible/silent)
+    // — see settings.ts. The old `startupCheck: boolean` toggle is now
+    // permanently on (migrated from any historical false → true).
+    void this.autoMaintainManager.runStartupCheck();
 
     this.registerView(
       VIEW_TYPE_QUERY,
@@ -181,6 +179,19 @@ export default class LLMWikiPlugin extends Plugin {
       id: 'ingest-folder',
       name: t.cmdIngestFolder,
       callback: () => this.selectFolderToIngest()
+    });
+
+    // v1.23.0 (#130): multi-file picker. User selects N specific
+    // source notes from a two-pane modal (no folder containment),
+    // toggles each, then runs them through the same batch pipeline
+    // as folder ingest. Fixes the "move notes to a staging folder"
+    // workaround: the in-place queue doesn't relocate anything, so
+    // the source-path provenance in generated wiki pages stays
+    // stable across re-ingest cycles.
+    this.addCommand({
+      id: 'ingest-multiple-files',
+      name: t.cmdIngestMultipleFiles,
+      callback: () => this.selectMultipleFilesToIngest()
     });
 
     this.addCommand({
@@ -251,6 +262,18 @@ export default class LLMWikiPlugin extends Plugin {
       }
     });
 
+    // v1.23.0 Phase 5.1.5: Recreate Welcome Note. Useful for users who
+    // want to re-run onboarding after changing their domain focus, or
+    // who just want to see a freshly-localized copy. Existing file is
+    // trashed first so ensure-welcome-note re-creates with current
+    // candidates + LLM config. Implementation lives in auto-maintain.ts
+    // (the Phase 0 owner).
+    this.addCommand({
+      id: 'recreate-welcome-note',
+      name: t.welcomeNoteRecreateCommand,
+      callback: () => void this.autoMaintainManager.recreateWelcomeNote(),
+    });
+
     this.addRibbonIcon('sticker', t.cmdIngestActiveFile, () => {
       this.ingestActiveFile();
     });
@@ -305,6 +328,11 @@ export default class LLMWikiPlugin extends Plugin {
 
     this.addSettingTab(new LLMWikiSettingTab(this.app, this));
 
+    // v1.23.0: First-run Welcome note is now Phase 0 of runStartupCheck
+    // (see auto-maintain.ts). Triggered by the unconditional
+    // runStartupCheck() above. The standalone runOnboarding() method
+    // is gone — single owner = single source of truth.
+
     console.debug('LLM Wiki Plugin loaded - Karpathy implementation');
   }
 
@@ -341,6 +369,14 @@ export default class LLMWikiPlugin extends Plugin {
     if (applied.length > 0) {
       console.debug(`loadSettings: applied migrations: ${applied.join(', ')}`);
     }
+
+    // v1.23.0 P2: Diagnostic — log actual queryHistory state on plugin
+    // load. Helps confirm whether the persisted history is reaching
+    // settings correctly on restart. Will be removed in v1.24.0.
+    console.debug(
+      '[main.loadSettings] settings.queryHistory =',
+      Array.isArray(this.settings.queryHistory) ? `${this.settings.queryHistory.length} messages` : 'NOT an array'
+    );
 
     // Migrate existing users: if they already have a working config, trust it
     if (savedData && !('llmReady' in savedData)) {
@@ -541,7 +577,6 @@ export default class LLMWikiPlugin extends Plugin {
     }
 
     new FolderSuggestModal(this.app, this.settings.wikiFolder, (folder) => {
-      void (async () => {
       // #164: scan the compatible text-file allowlist (not just .md), so .txt
       // sources in the folder are picked up too. The ingest gate is the final
       // arbiter of type/empty/duplicate.
@@ -555,116 +590,237 @@ export default class LLMWikiPlugin extends Plugin {
         return;
       }
 
-      this.showProgress('Checking for already-ingested files...');
-      const alreadyIngestedFiles: TFile[] = [];
-      const newFiles: TFile[] = [];
-
-      for (const file of files) {
-        if (await this.isAlreadyIngested(file)) {
-          alreadyIngestedFiles.push(file);
-        } else {
-          newFiles.push(file);
-        }
-      }
-
-      const totalFiles = files.length;
-      const skippedCount = alreadyIngestedFiles.length;
-      const ingestCount = newFiles.length;
-
-      if (skippedCount > 0) {
-        const texts = TEXTS[this.settings.language];
-        new Notice(
-          texts.batchIngestSkipNotice
-            .replace('{skipped}', String(skippedCount))
-            .replace('{total}', String(totalFiles))
-            .replace('{new}', String(ingestCount)),
-          6000
-        );
-      }
-
-      if (ingestCount === 0) {
-        const texts = TEXTS[this.settings.language];
-        new Notice(texts.batchIngestAllIngested.replace('{total}', String(totalFiles)), NOTICE_NORMAL);
-        return;
-      }
-
-      const reports: IngestReport[] = [];
-
-      this.wikiEngine.setDoneCallback((report: IngestReport) => {
-        reports.push(report);
-      });
-
-      const texts = TEXTS[this.settings.language];
-      this.showProgress(texts.batchIngestStarting
-        .replace('{count}', String(ingestCount))
-        .replace('{folder}', folder.name));
-
-      // #164: shared dedup context for this batch — catches content duplicates
-      // within the run and against pages already in the wiki.
-      const batchCtx = this.wikiEngine.createBatchContext();
-
-      for (let i = 0; i < newFiles.length; i++) {
-        const file = newFiles[i];
-
-        try {
-          this.batchProgress = { current: i + 1, total: ingestCount };
-          this.showProgress(`[${i + 1}/${ingestCount}] ${file.basename}`);
-          console.debug(`(${i + 1}/${ingestCount}) ingesting: ${file.path}`);
-          await this.wikiEngine.ingestSource(file, { batchCtx });
-          if (this.wikiEngine.wasCancelled) {
-            console.debug(`Folder ingestion cancelled at file ${i + 1}/${ingestCount}`);
-            break;
-          }
-          console.debug(`(${i + 1}/${ingestCount}) ingestion success: ${file.path}`);
-        } catch (error) {
-          console.error(`(${i + 1}/${ingestCount}) ingestion failed: ${file.path}`, error);
-          const errMsg = error instanceof Error ? error.message : String(error);
-          new Notice(texts.errorIngestFailed + file.basename + ': ' + errMsg, NOTICE_ERROR);
-        }
-      }
-
-      this.batchProgress = null;
-
-      this.dismissProgress();
-
-      if (reports.length > 0) {
-        const allCreated = [...new Set(reports.flatMap(r => r.createdPages))];
-        const allUpdated = [...new Set(reports.flatMap(r => r.updatedPages))];
-        const totalEntities = reports.reduce((sum, r) => sum + r.entitiesCreated, 0);
-        const totalConcepts = reports.reduce((sum, r) => sum + r.conceptsCreated, 0);
-        const totalContradictions = reports.reduce((sum, r) => sum + r.contradictionsFound, 0);
-        const totalElapsed = reports.reduce((sum, r) => sum + (r.elapsedSeconds || 0), 0);
-        const allFailedItems = reports.flatMap(r => r.failedItems);
-        const allCollisions = reports.flatMap(r => r.collisions || []);
-        const allRejectedFiles = reports.flatMap(r => r.rejectedFiles || []);
-        const allSuccess = reports.every(r => r.success);
-
-        const aggregated: IngestReport = {
-          sourceFile: `${reports.length} files from ${folder.path}`,
-          createdPages: allCreated,
-          updatedPages: allUpdated,
-          entitiesCreated: totalEntities,
-          conceptsCreated: totalConcepts,
-          failedItems: allFailedItems,
-          collisions: allCollisions,
-          contradictionsFound: totalContradictions,
-          success: allSuccess,
-          elapsedSeconds: totalElapsed,
-          skippedFiles: skippedCount,
-          totalFilesInFolder: totalFiles,
-          rejectedFiles: allRejectedFiles,
-        };
-
-        new IngestReportModal(this.app, aggregated, this.settings.language).open();
-      } else {
-        const texts = TEXTS[this.settings.language];
-        new Notice(texts.batchIngestComplete
-          .replace('{success}', '0')
-          .replace('{total}', String(ingestCount))
-          .replace('{fail}', String(ingestCount)), 10000);
-      }
-    })().catch(e => console.error(e));
+      void this.runBatchIngest(files, [], `${files.length} files from ${folder.path}`);
     }).open();
+  }
+
+  /**
+   * v1.23.0 (#130): open the multi-file picker modal. User selects
+   * individual source notes via checkbox, dedup happens automatically
+   * (toggling a checked file un-checks it). The "Start Ingest" button
+   * then runs the same `runBatchIngest` pipeline that folder ingest
+   * uses, so the per-file loop, dedup context, and IngestReportModal
+   * are shared (no code duplication).
+   */
+  selectMultipleFilesToIngest() {
+    if (!this.requireLLMReady()) return;
+    if (!this.llmClient) {
+      new Notice(TEXTS[this.settings.language].errorNoApiKey);
+      return;
+    }
+
+    new MultiFileSuggestModal(
+      this.app,
+      this.settings,
+      this.ingestQueue,
+      // v1.23.0 Phase 5.1.5 stage 5: pass the already-issued job
+      // ids to runBatchIngest. The modal does the enqueue (it
+      // owns the queue UI), and the worker uses those ids to
+      // publish start/complete transitions. Without passing the
+      // ids, runBatchIngest used to call enqueue() itself — but
+      // enqueue is idempotent against in-flight jobs, so the
+      // second call returned no ids and the loop never updated
+      // job statuses, leaving every job stuck in 'pending'.
+      (ids: string[], files: TFile[]) => {
+        if (files.length === 0 || ids.length === 0) return;
+        void this.runBatchIngest(files, ids, `${files.length} manually-selected files`);
+      },
+    ).open();
+  }
+
+  /**
+   * Shared batch-ingest pipeline used by:
+   *   - selectFolderToIngest (folder batch)
+   *   - selectMultipleFilesToIngest (#130 — picker)
+   *   - (any future entry point that has a flat list of TFile)
+   *
+   * Responsibilities:
+   *   1. Filter out already-ingested files (#184 skip check) and
+   *      surface a Notice if any were skipped.
+   *   2. Run each remaining file through wikiEngine.ingestSource with
+   *      a SHARED batch context (#164: catches in-batch content
+   *      duplicates and cross-batch duplicates against existing wiki).
+   *   3. Aggregate per-file IngestReports into a single
+   *      IngestReportModal at the end (or a Notice when no work was
+   *      done). Cancellation between files is respected.
+   *
+   * `sourceLabel` is the human-readable identifier for the
+   * aggregated report (e.g. "12 files from notes/2024" or
+   * "3 manually-selected files"). It is NOT used for any file system
+   * operation — the in-place ingest path leaves source notes
+   * untouched (per #130, fixes the original "move to staging folder"
+   * workaround).
+   */
+  private async runBatchIngest(files: TFile[], jobIds: string[], sourceLabel: string): Promise<void> {
+    this.showProgress('Checking for already-ingested files...');
+    const alreadyIngestedFiles: TFile[] = [];
+    const newFiles: TFile[] = [];
+    // Aligned with `files` by index — only entries whose id is in
+    // jobIds keep their jobId; already-ingested files map to ''.
+    // The modal pre-issued the ids; this method is now the
+    // single consumer of those ids (it used to enqueue itself,
+    // which was a no-op once the modal had already enqueued).
+    const alignedJobIds: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const jobId = jobIds[i] ?? '';
+      if (await this.isAlreadyIngested(file)) {
+        alreadyIngestedFiles.push(file);
+      } else {
+        newFiles.push(file);
+        alignedJobIds.push(jobId);
+      }
+    }
+
+    const totalFiles = files.length;
+    const skippedCount = alreadyIngestedFiles.length;
+    const ingestCount = newFiles.length;
+
+    if (skippedCount > 0) {
+      const texts = TEXTS[this.settings.language];
+      new Notice(
+        texts.batchIngestSkipNotice
+          .replace('{skipped}', String(skippedCount))
+          .replace('{total}', String(totalFiles))
+          .replace('{new}', String(ingestCount)),
+        6000
+      );
+    }
+
+    if (ingestCount === 0) {
+      const texts = TEXTS[this.settings.language];
+      new Notice(texts.batchIngestAllIngested.replace('{total}', String(totalFiles)), NOTICE_NORMAL);
+      return;
+    }
+
+    const reports: IngestReport[] = [];
+
+    this.wikiEngine.setDoneCallback((report: IngestReport) => {
+      reports.push(report);
+    });
+
+    const texts = TEXTS[this.settings.language];
+    this.showProgress(texts.batchIngestStarting
+      .replace('{count}', String(ingestCount))
+      .replace('{folder}', sourceLabel));
+
+    // #164: shared dedup context for this batch — catches content duplicates
+    // within the run and against pages already in the wiki.
+    const batchCtx = this.wikiEngine.createBatchContext();
+
+    // v1.23.0 Phase 5.1.5 stage 5: resolve the job ids for this
+    // batch. Two paths:
+    //
+    //   - Modal path: caller already issued ids via
+    //     ingestQueue.enqueue (so the modal's "Add to queue" click
+    //     immediately reflects in the queue snapshot). Use those
+    //     ids directly. alignedJobIds[] was built above aligned by
+    //     index with newFiles[] (already-ingested files drop out,
+    //     keeping the alignment).
+    //
+    //   - Folder / "everything else" path: caller passed an empty
+    //     jobIds array (the call site doesn't know ids yet). Issue
+    //     them here. enqueue() is idempotent against in-flight
+    //     duplicates, so re-enqueueing during an active batch is
+    //     safe.
+    let resolvedJobIds: string[];
+    if (jobIds.length > 0) {
+      resolvedJobIds = alignedJobIds;
+      console.debug(
+        `[runBatchIngest] using pre-issued ids (${sourceLabel}):`,
+        resolvedJobIds.length, 'jobs'
+      );
+    } else {
+      resolvedJobIds = this.ingestQueue.enqueue(newFiles);
+      console.debug(
+        `[runBatchIngest] enqueued ${resolvedJobIds.length}/${newFiles.length} jobs (${sourceLabel})`
+      );
+    }
+
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+      const jobId = resolvedJobIds[i];
+
+      try {
+        // Mark running BEFORE the await so the modal (if open) sees
+        // a 'running' state for this file rather than a 'pending' that
+        // never resolves. The job is the only way to address the
+        // record across this await boundary.
+        if (jobId) {
+          this.ingestQueue.start(jobId);
+          console.debug(
+            `[runBatchIngest] [${i + 1}/${newFiles.length}] start ${file.path} (jobId=${jobId})`
+          );
+        }
+        this.batchProgress = { current: i + 1, total: ingestCount };
+        this.showProgress(`[${i + 1}/${ingestCount}] ${file.basename}`);
+        console.debug(`(${i + 1}/${ingestCount}) ingesting: ${file.path}`);
+        await this.wikiEngine.ingestSource(file, { batchCtx });
+        if (this.wikiEngine.wasCancelled) {
+          console.debug(`Batch ingestion cancelled at file ${i + 1}/${ingestCount}`);
+          // Mark the cancelled job as failed so the right pane
+          // shows the cancellation rather than leaving it as 'running'.
+          if (jobId) {
+            this.ingestQueue.complete(jobId, false, 'Cancelled by user');
+            console.debug(`[runBatchIngest] cancelled ${file.path} (jobId=${jobId})`);
+          }
+          break;
+        }
+        console.debug(`(${i + 1}/${ingestCount}) ingestion success: ${file.path}`);
+        if (jobId) {
+          this.ingestQueue.complete(jobId, true);
+          console.debug(
+            `[runBatchIngest] [${i + 1}/${newFiles.length}] complete ${file.path} (jobId=${jobId})`
+          );
+        }
+      } catch (error) {
+        console.error(`(${i + 1}/${ingestCount}) ingestion failed: ${file.path}`, error);
+        const errMsg = error instanceof Error ? error.message : String(error);
+        new Notice(texts.errorIngestFailed + file.basename + ': ' + errMsg, NOTICE_ERROR);
+        if (jobId) this.ingestQueue.complete(jobId, false, errMsg);
+      }
+    }
+
+    this.batchProgress = null;
+    this.dismissProgress();
+
+    if (reports.length > 0) {
+      const allCreated = [...new Set(reports.flatMap(r => r.createdPages))];
+      const allUpdated = [...new Set(reports.flatMap(r => r.updatedPages))];
+      const totalEntities = reports.reduce((sum, r) => sum + r.entitiesCreated, 0);
+      const totalConcepts = reports.reduce((sum, r) => sum + r.conceptsCreated, 0);
+      const totalContradictions = reports.reduce((sum, r) => sum + r.contradictionsFound, 0);
+      const totalElapsed = reports.reduce((sum, r) => sum + (r.elapsedSeconds || 0), 0);
+      const allFailedItems = reports.flatMap(r => r.failedItems);
+      const allCollisions = reports.flatMap(r => r.collisions || []);
+      const allRejectedFiles = reports.flatMap(r => r.rejectedFiles || []);
+      const allSuccess = reports.every(r => r.success);
+
+      const aggregated: IngestReport = {
+        sourceFile: sourceLabel,
+        createdPages: allCreated,
+        updatedPages: allUpdated,
+        entitiesCreated: totalEntities,
+        conceptsCreated: totalConcepts,
+        failedItems: allFailedItems,
+        collisions: allCollisions,
+        contradictionsFound: totalContradictions,
+        success: allSuccess,
+        elapsedSeconds: totalElapsed,
+        skippedFiles: skippedCount,
+        totalFilesInFolder: totalFiles,
+        rejectedFiles: allRejectedFiles,
+      };
+
+      new IngestReportModal(this.app, aggregated, this.settings.language).open();
+    } else {
+      const texts = TEXTS[this.settings.language];
+      new Notice(texts.batchIngestComplete
+        .replace('{success}', '0')
+        .replace('{total}', String(ingestCount))
+        .replace('{fail}', String(ingestCount)), 10000);
+    }
   }
 
   // ==================== Query ====================
@@ -818,15 +974,19 @@ export default class LLMWikiPlugin extends Plugin {
   async testLLMConnection(): Promise<{ success: boolean; message: string }> {
     const t = TEXTS[this.settings.language] || TEXTS.en;
 
-    const isOllama = this.settings.provider === 'ollama';
-    if (!isOllama && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
+    const localNoKeyProviders = ['ollama', 'lmstudio'];
+    const isLocalNoKeyProvider = localNoKeyProviders.includes(this.settings.provider);
+    if (!isLocalNoKeyProvider && (!this.settings.apiKey || this.settings.apiKey.trim() === '')) {
       return { success: false, message: t.errorNoApiKey || 'API Key is not configured' };
     }
 
     try {
       const testClient = createLLMClient(this.settings);
 
-      const testResponse = await testClient.createMessage({
+      // v1.23.0 P1-7: response is used as a "did it work" probe. AI-SDK's
+      // error mapper enriches failures with the provider body, surfaced
+      // in the Notice below. The successful response text is discarded.
+      await testClient.createMessage({
         model: this.settings.model,
         max_tokens: TOKENS_QUERY_MODEL_DETECT,
         messages: [{
@@ -835,134 +995,17 @@ export default class LLMWikiPlugin extends Plugin {
         }]
       });
 
-      console.debug('Test response:', testResponse);
+      // v1.23.0 P1-7: AI-SDK migration. The 3-tier thinking-control
+      // probe (v1.20.0) and advanced-parameter probe (v1.20.0) were
+      // hand-rolled to discover per-provider field names. AI-SDK
+      // handles this internally (OpenAISdkClient sends
+      // reasoningEffort: 'low' for enableThinking=false, AI-SDK
+      // abstracts field name selection per model). The probes are
+      // no longer needed and have been removed.
+      // The Test Connection simply verifies the client returns a
+      // 200 (already validated by the createMessage call above).
       this.settings.llmReady = true;
-
-      // Probe: which thinking-control dialect does this provider accept?
-      //
-      // #137: 3-tier probe.
-      //   Tier 1 (anthropic): thinking.type='disabled'  → OpenAI/DeepSeek/xAI
-      //   Tier 2 (openai):    reasoning_effort='none'    → Gemini OpenAI-compat
-      //   Tier 3 (none):      no field accepted           → strict backends
-      //
-      // The result is cached as a dialect string in settings so subsequent
-      // LLM calls skip the 400 probe round-trip. The in-request fallback
-      // chain still handles any mismatch between probe and runtime.
-      // v1.20.0: skip the thinking-control probe when disableThinking is
-      // false (default). No thinking field will ever be sent in this mode,
-      // so probing wastes requests and can trigger rate limits (e.g. MiniMax
-      // 429). The probe is only needed when the user explicitly enables
-      // "Disable thinking" in Custom Advanced Settings.
-      if (
-        this.settings.disableThinking &&
-        (testClient instanceof OpenAICompatibleClient || testClient instanceof AnthropicCompatibleClient || testClient instanceof AnthropicClient)
-      ) {
-        let detectedDialect: 'anthropic' | 'openai' | 'none' = 'anthropic';
-        let probeSucceeded = false;
-
-        // Tier 1: anthropic dialect
-        try {
-          await testClient.createMessage({
-            model: this.settings.model,
-            max_tokens: 1,
-            messages: [{ role: 'user', content: 'think' }],
-            enableThinking: false,
-          });
-          detectedDialect = 'anthropic';
-          probeSucceeded = true;
-        } catch {
-          // Tier 2: openai dialect (force-send reasoning_effort instead of thinking)
-          // Temporarily override the dialect so the probe sends reasoning_effort.
-          if (testClient instanceof OpenAICompatibleClient) {
-            const savedDialect = testClient.thinkingControlDialect;
-            testClient.thinkingControlDialect = 'openai';
-            try {
-              await testClient.createMessage({
-                model: this.settings.model,
-                max_tokens: 1,
-                messages: [{ role: 'user', content: 'think' }],
-                enableThinking: false,
-              });
-              detectedDialect = 'openai';
-              probeSucceeded = true;
-            } catch {
-              // Tier 3: no dialect works.
-              detectedDialect = 'none';
-            } finally {
-              // Don't keep the temporary 'openai' assignment on the client — the
-              // in-request fallback chain will probe and re-cache it on first
-              // real request if our probe was wrong.
-              testClient.thinkingControlDialect = savedDialect;
-            }
-          } else {
-            // AnthropicCompat / AnthropicClient: only 'anthropic' dialect is supported.
-            detectedDialect = 'none';
-          }
-        }
-
-        const cacheKey = getThinkingControlCacheKey(this.settings);
-        if (probeSucceeded) {
-          if (testClient instanceof OpenAICompatibleClient) {
-            testClient.thinkingControlDialect = detectedDialect;
-          }
-          // Issue #243: skip writing when cacheKey is empty to avoid
-          // polluting the cache with an unusable key.
-          if (cacheKey) {
-            this.settings.thinkingControlCache = {
-              ...this.settings.thinkingControlCache,
-              [cacheKey]: detectedDialect,
-            };
-            console.debug(`Thinking control dialect for ${cacheKey}: ${detectedDialect}`);
-          }
-        } else {
-          // Probe failed: cache 'none' so subsequent real calls skip the
-          // thinking-control field entirely (no more 400 round-trips on
-          // a backend that rejected both anthropic and openai dialects).
-          if (testClient instanceof OpenAICompatibleClient) {
-            testClient.thinkingControlDialect = 'none';
-          }
-          if (cacheKey) {
-            this.settings.thinkingControlCache = {
-              ...this.settings.thinkingControlCache,
-              [cacheKey]: 'none',
-            };
-            console.debug(`Thinking control dialect for ${cacheKey}: none (both probed tiers failed)`);
-          }
-        }
-
-        // Issue #137: optional advanced-parameter compatibility probe.
-        // Only runs when advancedSettingsMode === 'custom' AND the user has
-        // actually configured repetitionPenalty or temperature — default
-        // mode never sends these, so probing them is wasted LLM tokens.
-        if (
-          probeSucceeded &&
-          testClient instanceof OpenAICompatibleClient &&
-          this.settings.advancedSettingsMode === 'custom' &&
-          cacheKey &&
-          (this.settings.repetitionPenalty !== undefined && this.settings.repetitionPenalty !== 0 ||
-            this.settings.extractionTemperature !== undefined ||
-            this.settings.chatTemperature !== undefined)
-        ) {
-          try {
-            await testClient.createMessage({
-              model: this.settings.model,
-              max_tokens: 1,
-              messages: [{ role: 'user', content: 'param-probe' }],
-              enableThinking: false,
-              temperature: this.settings.extractionTemperature ?? this.settings.chatTemperature,
-              repetition_penalty: this.settings.repetitionPenalty,
-            });
-            console.debug('Advanced parameters accepted by', cacheKey);
-          } catch (probeErr) {
-            // unsupportedFields was populated by the client; user will see
-            // a one-time Notice when the next real request runs.
-            console.debug(
-              `Advanced parameters probe failed for ${cacheKey}; unsupported fields cached. Error: ${(probeErr as Error).message}`
-            );
-          }
-        }
-      }
-      await this.saveSettings();
+      void this.saveSettings();
 
       // Auto-initialize wiki structure after first successful connection
       if (this.wikiEngine) {
@@ -980,11 +1023,15 @@ export default class LLMWikiPlugin extends Plugin {
 
       const providerName = (PREDEFINED_PROVIDERS[this.settings.provider]?.nameEn || this.settings.provider);
 
-      // Issue #137: re-create the shared client so it picks up the
-      // freshly-cached thinkingControlDialect. The testClient is a temporary
-      // instance that only lives for the probe; the shared client used by
-      // wiki-engine, page-factory, query-engine, etc. must also reflect the
-      // probe result.
+      // v1.23.0: re-create the shared client so any settings change takes
+      // effect immediately. The testClient is a temporary instance that
+      // only lives for the probe; the shared client used by wiki-engine,
+      // page-factory, query-engine, etc. must also reflect the change.
+      // (Previously this comment mentioned "freshly-cached
+      // thinkingControlDialect" — that field is @deprecated in v1.23.0
+      // because AI-SDK v6 handles thinking-control internally per
+      // provider/model. The shared client re-init is still useful for
+      // non-thinking-control settings changes like baseURL/apiKey.)
       this.initializeLLMClient();
 
       return {

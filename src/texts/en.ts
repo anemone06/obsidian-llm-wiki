@@ -57,8 +57,8 @@ export const EN_TEXTS = {
     lmstudioHint: 'LM Studio runs locally, API Key is optional',
 
     // LLM execution cap
-    maxTokensPerCallName: 'Context Window',
-    maxTokensPerCallDesc: 'Limit generation tokens to fit your model\'s context window. 0 = no cap (cloud default).',
+    maxTokensPerCallName: 'Max output tokens per call',
+    maxTokensPerCallDesc: 'Cap how many tokens the model is allowed to generate in a single response. Lower this if you run a local model with a small context window and see errors. Leave at the default (0 = no cap) for cloud models.',
 
     // Issue #111: slug casing
     slugCaseName: 'File Name Casing',
@@ -343,6 +343,10 @@ export const EN_TEXTS = {
     autoIngestLevelModal: 'Modal (full report)',
     startupCheckName: 'Run quick fixes on startup',
     startupCheckDesc: 'Auto-fix low-level format issues (sources, double-nested links) on plugin load. Verifies Wiki folder structure. Default ON.',
+    startupCheckNoticeLevelName: 'Show quick fixes result',
+    startupCheckNoticeLevelDesc: 'QuickFixes always run on plugin start (Welcome note, folder structure, sources normalize, incomplete pages, log header). Choose whether to display the summary Notice after start. Silent mode logs to the developer console and the Operation History Panel only.',
+    startupCheckNoticeVisible: 'Visible (show Notice)',
+    startupCheckNoticeSilent: 'Silent (no Notice)',
     suggestSchemaCommand: 'Suggest Schema Updates',
     autoMaintainCostWarning: '⚠️ Cost Notice: Auto-maintenance features consume API tokens. "Auto Ingest" triggers LLM calls on every source file change. "Periodic Lint" runs LLM health checks on schedule (only when source changes are detected). Configure carefully to avoid unexpected charges.',
 
@@ -418,6 +422,7 @@ export const EN_TEXTS = {
     // Command Names (sentence case per Obsidian Bot rule 1)
     cmdIngestSource: 'Ingest single source',
     cmdIngestFolder: 'Ingest from folder',
+    cmdIngestMultipleFiles: 'Ingest multiple files',
     cmdQueryWiki: 'Query wiki',
     cmdLintWiki: 'Lint wiki',
     cmdRegenerateIndex: 'Regenerate index',
@@ -446,20 +451,20 @@ export const EN_TEXTS = {
 
     // Advanced LLM Settings (v1.20.0: default = no provider-specific overrides)
     advancedSettingsModeName: 'Advanced parameter settings',
-    advancedSettingsModeDesc: 'Default uses your provider\'s own behavior — no thinking-control, temperature, or repetition-penalty fields are sent. This works for most users. Switch to Custom only if you need to explicitly override the provider defaults (e.g. force a specific thinking-control dialect, set a non-default temperature, etc.).',
-    advancedSettingsDefault: 'Default (use provider behavior)',
-    advancedSettingsCustom: 'Custom (override provider defaults)',
+    advancedSettingsModeDesc: 'Default mode follows whatever the model provider recommends. Switch to Custom only when you have a specific reason to override (for example: a particular model needs a fixed temperature, or you want to suppress the model\'s reasoning output).',
+    advancedSettingsDefault: 'Default (follow provider)',
+    advancedSettingsCustom: 'Custom (override provider)',
     disableThinkingName: 'Disable thinking',
-    disableThinkingDesc: 'Opt-in. When enabled, the plugin sends a thinking-control directive to the provider and walks a 3-tier dialect fallback chain (anthropic → openai → none) if the provider rejects it. Use this only if your provider leaks reasoning content into the answer and you need to suppress it. Most providers handle reasoning correctly on their own — leaving this off gives better quality.',
+    disableThinkingDesc: 'Turn off the model\'s chain-of-thought / reasoning output in its response. Default off — the model decides whether to show reasoning, and that usually gives the best answer. Turn this on only if your provider dumps raw reasoning text into the response and you want a clean answer.',
     // Issue #137: compatibility hints for advanced settings (kept short; no
     // provider list to avoid maintenance burden when providers change).
     extractionTemperatureName: 'Extraction temperature',
-    extractionTemperatureDesc: 'Range 0–2. Lower values make LLM output more deterministic and faithful. Higher values make it more creative. Leave blank to use your provider\'s default. If your provider rejects this value, the plugin automatically strips the field and shows a one-time notice.',
+    extractionTemperatureDesc: 'Controls how creative vs faithful the model is when writing entity/concept pages. Lower numbers = more deterministic and factual; higher numbers = more varied. Most users leave this blank.',
     chatTemperatureName: 'Query temperature',
-    chatTemperatureDesc: 'Range 0–2. Same as Extraction temperature, but only affects chat/query responses. Leave blank to use your provider\'s default. If your provider rejects this value, the plugin automatically strips the field and shows a one-time notice.',
+    chatTemperatureDesc: 'Same idea as Extraction temperature, but only affects how Query Wiki answers questions. Lower numbers = more literal answers; higher numbers = more conversational. Most users leave this blank.',
     repetitionPenaltyName: 'Repetition penalty',
-    repetitionPenaltyDesc: 'Range 0–2. Higher values reduce repetitive patterns. Leave blank to use your provider\'s default. Compatibility note: many cloud providers do not accept this field. The plugin auto-strips it on 400 and shows a one-time notice.',
-    temperaturePlaceholder: 'blank = provider default',
+    repetitionPenaltyDesc: 'Discourages the model from repeating the same words or phrases. Higher numbers mean less repetition. Only certain local-model providers (Ollama, LM Studio, llama.cpp) accept this; cloud providers will silently ignore it. Most users leave this blank.',
+    temperaturePlaceholder: 'leave blank = provider default',
     lintDeadLinkSection: 'Dead links (detected) [{count}]',
     lintEmptyPageSection: 'Empty pages (detected) [{count}]',
     lintOrphanSection: 'Orphan pages (detected) [{count}]',
@@ -479,6 +484,13 @@ export const EN_TEXTS = {
     lintDuplicateItem: '- [[{target}]] and [[{source}]] — {reason}',
     lintDeadLinkAffectedByDup: ' (⚠️ involves duplicate page)',
     lintOrphanIsDuplicate: ' (⚠️ duplicate page)',
+    lintHubLinkDensitySection: 'Hub link density issues (Issue #157 / #175) [{count}]',
+    lintHubLinkDensityItem: '- [[{page}]] — {inDegree} in-degree, {relatedCount} related links, distinctiveness {distinctiveness} → {recommendation}{lowTargets}',
+    lintHubLinkDensityStrip: '⚠️ strip',
+    lintHubLinkDensityReview: '🔍 review',
+    lintHubLinkDensityKeep: '✅ keep',
+    lintHubLinkDensitySummary: 'Summary: {strip} page(s) recommended for strip, {review} page(s) recommended for review.',
+    lintHubLinkDensityNoRelated: ' (no ## Related section found)',
     lintContradictionOpen: 'Open contradictions: {count}',
     lintContradictionAutoFixed: '({count} auto-fixed this run)',
     lintContradictionItem: '- [{status}] [[{page}]] — {claim}',
@@ -665,4 +677,44 @@ export const EN_TEXTS = {
     historyCustomRangeTo: 'To',
     historyCustomRangeApply: 'Apply',
     historyCustomRangeClear: 'Clear',
+    // v1.23.0 — first-run welcome note (Phase 5.1.5)
+    welcomeNoteTierANotice: 'Karpathy Wiki: vault is empty. Create your first source note and run Ingest to get started.',
+    welcomeNoteTierBNotice: 'Karpathy Wiki: created a Welcome note. Open it to declare your domains and pick 2-3 source notes to seed the link graph.',
+    welcomeNoteRecreateCommand: 'Recreate Wiki Welcome Note',
+    welcomeNoteRecreateCommandTooltip: 'Re-create the Welcome note at <wikiFolder>/Welcome.md with current domain seeds and LLM configuration test. Existing file is overwritten.',
+    welcomeNoteSettingsToggle: 'Create Wiki Welcome Note on first run',
+    welcomeNoteSettingsToggleDesc: 'On your very first run (when the wiki folder is empty), create a one-page getting-started note at <wikiFolder>/Welcome.md. It explains what LLM-Wiki does, asks you to declare your domain focus, and walks you through ingesting your first 2-3 source notes. The note is written in English by default, or in your wiki language if the LLM is configured. Disable this if you already know how the plugin works and don\'t want the onboarding note cluttering your vault.',
+    welcomeNoteRunConfigTest: 'Welcome note written in English. Open Settings → LLM Provider → Test Connection to localize it on next recreate.',
+    welcomeNoteRecreated: 'Recreated Wiki Welcome note at {path}',
+    welcomeNoteNotRecreated: 'Welcome note was not recreated. Check LLM configuration.',
+    welcomeNoteGenerating: 'Wiki Welcome note: generating in background — you will get a Notice when it finishes.',
+    welcomeNoteGenerationFailed: 'Wiki Welcome note generation failed: {error}',
+    welcomeNoteFileName: 'Welcome to Karpathy LLM Wiki',
+    startupCheckWelcomePending: 'Welcome note: generating in background (you will get a Notice when it finishes).',
+    startupCheckWelcomeCreated: 'Welcome note created at {path}',
+    // v1.23.0 Phase 5.1.5: Multi-File Suggest modal (cmdIngestMultipleFiles).
+    // The modal's title, hint, search placeholder, action buttons,
+    // status labels and queue-empty placeholder all live here. Status
+    // labels double as both the right-pane text and the data-attribute
+    // keys for `updateLeftPaneSelections` to recognise, so they must
+    // remain stable English strings.
+    multiFileModalTitle: 'Ingest multiple files',
+    multiFileModalHint: 'Select source notes to ingest. The right pane shows the live ingest queue and progress.',
+    multiFileSearchPlaceholder: 'Filter files by path…',
+    multiFileAddToQueue: 'Add to queue',
+    multiFileSelectAll: 'Select all',
+    multiFileFileCount: '{count} file(s)',
+    multiFileNoFilesAvailable: 'No files available to ingest.',
+    multiFileNoFilesMatch: 'No files match "{q}".',
+    multiFileQueueEmpty: 'No files in the queue. Check files on the left to add them.',
+    multiFileStatusPending: 'Pending',
+    multiFileStatusRunning: 'Running',
+    multiFileStatusCompleted: 'Completed',
+    multiFileStatusFailed: 'Failed',
+    multiFileCancelAria: 'Cancel this file',
+    // v1.23.0 Phase 5.1.5: Multi-File Suggest modal action button
+    // that removes every pending and running job from the ingest
+    // queue. Completed and failed jobs are preserved so the user
+    // still sees what happened.
+    cancelAllQueueJobs: 'Cancel all',
 } as const;

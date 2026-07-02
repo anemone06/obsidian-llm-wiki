@@ -283,6 +283,18 @@
   background: var(--background-modifier-hover);
 }
 
+/* Retrieval-arm label (persistent after response) */
+.llm-wiki-query-retrieval-label {
+  margin-top: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  opacity: 0.85;
+  border-top: 1px solid var(--background-modifier-border-hover);
+  padding-top: 6px;
+}
+
 .llm-wiki-query-message-user {
   display: flex;
   flex-direction: column;
@@ -367,6 +379,18 @@
   font-size: 12px;
   color: var(--text-muted);
   margin-top: 8px;
+}
+
+/* v1.23.0 P2: Streaming plain-text preview — shown during accumulation,
+   replaced by full MarkdownRenderer output on completion.
+   Matches .llm-wiki-query-message-body typography for seamless transition. */
+.llm-wiki-query-stream-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--font-text-size);
+  line-height: var(--line-height);
+  color: var(--text-normal);
+  padding: 0;
 }
 
 /* Suggest Save Modal (post-query feedback) */
@@ -721,4 +745,247 @@
   margin: 0;
   color: var(--text-muted);
   white-space: pre-wrap;
+}
+
+/* === v1.23.0 Multi-File Suggest Modal (#130) === */
+/* v1.23.0 fix (2026-06-28): sizing the outer `.modal` container
+ * directly, not the inner `contentEl`. The original CSS put `width:
+ * 80vw; min-width: 720px;` on `.llm-wiki-multi-file-modal`, but
+ * contentEl is a child of the Obsidian modal container whose own
+ * width is capped — the inner `80vw` was a no-op. Now we add the
+ * class to BOTH modalEl (outer) and contentEl (inner) in onOpen
+ * (see modals.ts) and target the outer with the `.modal.…` selector
+ * here. Same pattern as SchemaDiffModal (v1.22.0 #97). */
+.modal.llm-wiki-multi-file-modal {
+  /* Outer container width. min(90vw, 1100px) keeps it on smaller
+   * displays while giving the two-pane tree room on standard
+   * desktops. */
+  width: min(90vw, 1100px);
+}
+.llm-wiki-multi-file-modal {
+  min-width: 720px;
+  max-height: 80vh;
+}
+.llm-wiki-multi-file-modal .llm-wiki-modal-hint {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin: 0 0 12px;
+}
+.llm-wiki-multi-file-search {
+  width: 100%;
+  margin-bottom: 8px;
+}
+.llm-wiki-multi-file-panes {
+  display: flex;
+  gap: 12px;
+  min-height: 360px;
+  max-height: 55vh;
+}
+.llm-wiki-multi-file-left,
+.llm-wiki-multi-file-right {
+  flex: 1;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  padding: 4px;
+  overflow-y: auto;
+  background: var(--background-primary);
+}
+
+/* Tree: <details>/<summary> for each folder, with a "select all" inline
+ * button. We restyle the default triangle to use a folder icon glyph
+ * for visual parity with the Obsidian file explorer. */
+.llm-wiki-multi-file-folder {
+  margin: 0 0 4px;
+}
+.llm-wiki-multi-file-folder > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.llm-wiki-multi-file-folder > summary::-webkit-details-marker {
+  display: none;
+}
+.llm-wiki-multi-file-folder > summary::before {
+  content: '▸';
+  display: inline-block;
+  font-size: var(--font-ui-small);
+  width: 12px;
+  transition: transform 0.1s;
+  color: var(--text-muted);
+}
+.llm-wiki-multi-file-folder[open] > summary::before {
+  transform: rotate(90deg);
+}
+.llm-wiki-multi-file-folder > summary:hover {
+  background: var(--background-modifier-hover);
+}
+.llm-wiki-multi-file-folder-name {
+  flex: 1;
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.llm-wiki-multi-file-folder-count {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: normal;
+}
+.llm-wiki-multi-file-folder-bulk {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+  border: none;
+  border-radius: 3px;
+  padding: 1px 8px;
+  font-size: var(--font-ui-smaller);
+  cursor: pointer;
+}
+/* v1.23.0 fix (2026-06-28): nested <details> indent. Each level
+ * adds 14px of left padding so 3+ folder levels don't visually
+ * collapse. The `>` direct-child selector keeps the indent scoped
+ * to the immediate level — subfolders inside a subfolder get the
+ * indent independently. */
+.llm-wiki-multi-file-folder > .llm-wiki-multi-file-folder {
+  margin-left: 14px;
+}
+.llm-wiki-multi-file-folder-bulk:hover {
+  background: var(--interactive-accent-hover);
+}
+.llm-wiki-multi-file-folder-list {
+  padding: 2px 0 4px 18px;
+}
+.llm-wiki-multi-file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+}
+.llm-wiki-multi-file-row:hover {
+  background: var(--background-modifier-hover);
+}
+.llm-wiki-multi-file-row-selected {
+  background: var(--background-modifier-active-hover);
+}
+.llm-wiki-multi-file-row-ingested {
+  opacity: 0.55;
+  cursor: default;
+}
+.llm-wiki-multi-file-row-ingested:hover {
+  background: transparent;
+}
+.llm-wiki-multi-file-basename {
+  flex: 0 1 auto;
+  font-family: var(--font-monospace);
+}
+.llm-wiki-multi-file-parent {
+  flex: 1;
+  color: var(--text-muted);
+  font-family: var(--font-monospace);
+  font-size: var(--font-ui-smaller);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.llm-wiki-multi-file-ingested-tag {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: var(--font-ui-smaller);
+  margin-left: auto;
+}
+/* v1.23.0 Phase 5.1.5 stage 3: status icons + per-row cancel
+ * button on the right pane. The icon is a leading single-glyph
+ * marker; the cancel button lives at the row's right edge. */
+.llm-wiki-multi-file-status-icon {
+  flex: 0 0 auto;
+  font-size: var(--font-ui-small);
+  margin-right: 4px;
+}
+.llm-wiki-multi-file-status {
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+  margin-right: 8px;
+}
+.llm-wiki-multi-file-error {
+  color: var(--text-error);
+  font-size: var(--font-ui-smaller);
+  margin-right: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 30%;
+}
+.llm-wiki-multi-file-cancel {
+  flex: 0 0 auto;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  padding: 0 6px;
+  margin-left: auto;
+  cursor: pointer;
+  font-size: var(--font-ui-small);
+  line-height: 1.4;
+}
+.llm-wiki-multi-file-cancel:hover:not(:disabled) {
+  background: var(--background-modifier-hover);
+  color: var(--text-error);
+  border-color: var(--text-error);
+}
+.llm-wiki-multi-file-cancel:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.llm-wiki-multi-file-cancel-all {
+  background: transparent;
+  color: var(--text-error);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 3px;
+  padding: 2px 10px;
+  cursor: pointer;
+  font-size: var(--font-ui-smaller);
+}
+.llm-wiki-multi-file-cancel-all:hover {
+  background: var(--background-modifier-hover);
+}
+.llm-wiki-multi-file-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+.llm-wiki-multi-file-remove:hover {
+  color: var(--text-error);
+}
+.llm-wiki-multi-file-empty {
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  padding: 20px;
+  margin: 0;
+}
+.llm-wiki-multi-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+.llm-wiki-multi-file-count {
+  flex: 1;
+  color: var(--text-muted);
+  font-size: var(--font-ui-smaller);
+}
+.llm-wiki-multi-file-actions button {
+  padding: 6px 14px;
 }

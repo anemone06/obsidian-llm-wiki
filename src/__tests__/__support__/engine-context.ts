@@ -104,6 +104,8 @@ export const DEFAULT_SETTINGS: LLMWikiSettings = {
   customEntityTags: '',
   customConceptTags: '',
   slugCase: 'lower' as const,
+  createWelcomeNote: true,
+  startupCheckNoticeLevel: 'visible' as const,
 };
 
 // ── Mock EngineContext ───────────────────────────────────────────

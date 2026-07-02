@@ -501,6 +501,8 @@ describe('enforceFrontmatterConstraints (Issue #85 v6 — preserve LLM intent)',
     autoSmartFix: false,
     autoIngestNotificationLevel: 'notice',
     slugCase: 'lower' as const,
+    createWelcomeNote: true,
+    startupCheckNoticeLevel: 'visible' as const,
   };
 
   it('retains out-of-vocab tags (does NOT silently drop them)', () => {

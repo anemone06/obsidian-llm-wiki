@@ -44,7 +44,9 @@ pnpm css-lint      # styles.css contains no !important declarations
 - **Commit messages**: English, conventional commits format (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`)
 - **Obsidian Bot compliance**: 15 `eslint-plugin-obsidianmd` rules enforced by `pnpm lint`
 - **llmReady guard**: New core features must call `requireLLMReady()` at entry points. The plugin requires a successful connection test before core features are available.
-- **i18n**: UI strings use the TEXTS system. English strings in `src/texts/en.ts` are the canonical source; all 7 other languages must be updated in lockstep.
+- **i18n**: UI strings use the TEXTS system. English strings in `src/texts/en.ts` are the canonical source; all 9 other languages must be updated in lockstep.
+
+> **v1.23.0 note (2026-07-02):** `src/llm-client.ts` (1625 LOC, hand-rolled AnthropicClient / OpenAICompatibleClient / AnthropicCompatibleClient) and `src/core/sse-parser.ts` (85 LOC) have been **removed**. They are replaced by `src/llm-sdk/` (5 files, 1421 LOC) backed by Vercel AI-SDK v6 (`@ai-sdk/openai@3`, `@ai-sdk/anthropic@3`, `@ai-sdk/openai-compatible@2`, `ai@6`) and `src/core/obsidian-fetch-bridge.ts` (326 LOC). The `llm-client-wrapper.ts` is still kept for advanced-settings injection. New Graph Engine modules added under `src/core/`: `monte-carlo-ppr.ts`, `ppr-cascade.ts`, `section-extractor.ts`, `hub-detection.ts`, `hub-retirement.ts`, `url-fallback.ts`. The project tree below is **partially stale** — refer to `git ls-tree -r src/` for the canonical view.
 
 ## Project Structure
 
@@ -117,9 +119,9 @@ src/
 
 ## Internationalization
 
-- **UI**: 9 languages (EN/ZH/JA/KO/DE/FR/ES/PT/IT), text keys in `src/texts/`
-- **New text**: add the key to `en.ts` first, then translate to all 8 other languages (in lockstep). The i18n-parity test (`src/__tests__/root/i18n-parity.test.ts`) prevents silent EN fallback if a locale is missing keys.
-- **Wiki output**: 9 languages independent of UI, with custom input option
+- **UI**: 10 languages (EN/ZH/ZH-Hant/JA/KO/DE/FR/ES/PT/IT), text keys in `src/texts/`
+- **New text**: add the key to `en.ts` first, then translate to all 9 other languages (in lockstep). The i18n-parity test (`src/__tests__/root/i18n-parity.test.ts`) prevents silent EN fallback if a locale is missing keys.
+- **Wiki output**: 10 languages independent of UI, with custom input option
 
 ## Testing
 
