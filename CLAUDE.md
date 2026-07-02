@@ -1,79 +1,65 @@
 # LLM Wiki Plugin Project Development Standards
 
-**Last Updated:** 2026-07-01
+**Last Updated:** 2026-07-02
 
 ---
 
-## Current Phase: v1.22.6 (released 2026-06-30) → v1.23.0 (AI-SDK Migration + Graph Engine in flight)
+## Current Phase: v1.23.0 RELEASED (2026-07-02) → v1.23.1 PATCH in flight
 
-### Completed (v1.22.6) — Hotfix: #204 + #207 follow-up (2026-06-30, **both CLOSED**)
+### Completed (v1.23.0) — Graph Engine PPR + Vercel AI-SDK v6 (2026-07-02)
 
-Closed two user-reported bugs on the v1.22.5 baseline before pushing v1.23.0 (which has the AI-SDK migration in flight). Both PATCH scope (backward-compatible bug fixes). **Both issues auto-closed by `Closes #N` in the v1.22.6 release commit (2026-06-30).**
+**MINOR** scope release. Biggest architectural change since 1.0. Single-branch release on `refactor/v1.23.0-ai-sdk-migration`.
 
-- ✅ **#204 — Auto Ingest no longer opens a blocking modal when `autoIngestNotificationLevel: notice`.** v1.22.2 added `onAutoIngestDone` (Notice path) but never wired it into the watch-mode auto-ingest path — every ingest completion went through `onIngestDone` which always opens `IngestReportModal`, making the "Notice (non-blocking)" UI setting a no-op. Added `trigger?: 'auto' | 'manual'` field to `IngestReport` and `IngestOptions`, propagated through `WikiEngine.ingestSource` → `onDone` report. Completion callback `LLMWikiPlugin.onIngestDoneDispatch` routes `trigger='auto'` to `onAutoIngestDone` (Notice respecting `autoIngestNotificationLevel`) and otherwise keeps the legacy `IngestReportModal` path. Manual ingest behavior unchanged.
-- ✅ **#204 follow-up — Auto Smart Fix completion is now context-aware.** Same trigger pattern applied to `runLintWiki`: third `trigger` parameter (default `'manual'`). Periodic auto lint (`AutoMaintainManager.schedulePeriodicLint`) passes `trigger='auto'`; manual lint commands keep the default. Completion dispatch: manual → `LintReportModal` (unchanged UX); auto + `autoSmartFix=true` → Notice + run fixAll; auto + `autoSmartFix=false` → Notice only with History panel hint.
-- ✅ **#207 follow-up — GPT-5 Pro variants (`gpt-5.x-pro`) now route correctly to `/v1/responses`.** Verified against `developers.openai.com/api/docs/models/gpt-5-pro`: "GPT-5 Pro is available in the Responses API only." v1.22.5's `RESPONSES_API_MODEL_RE` matched `gpt-5.x` but missed the trailing `-pro` suffix, so `gpt-5.2-pro` / `5.4-pro` / `5.5-pro` silently went to `/v1/chat/completions` where Pro models don't exist → 404. Broadened the regex to `^(gpt-5\.[1-9]\d*(?:-pro)?|o1(?:-mini|-preview)?|o3(?:-mini|-pro)?|o4-mini)$`. `gpt-5-chat-latest` exclusion kept (Chat Completions by design).
-- ✅ **Tests: 1118 passing.** +14 since v1.22.5 (new `auto-maintain-trigger.test.ts` with 6 tests, new `lint-trigger-dispatch.test.ts` with 4 tests, `llm-client-responses-api.test.ts` adds 4 `-pro` model IDs, `auto-maintain.test.ts` updated for trigger field round-trip).
-- ✅ **Release flow lessons captured:** v1.22.6 hotfix exposed an H2 boundary misidentification bug in 5/8 locale READMEs (line-number offset from EN applied blindly to i18n files whose WN H2 lands at different lines). 4 leftover doubled recommendation lines cleaned. New doc-review Phase 3d check + obsidian-plugin-release Step 3c per-file H2 boundary pre-check prevent regression. Recorded in `feedback_doc_h2_boundary_bulk_insert.md`.
+- ✅ **P1-7 — Vercel AI-SDK v6 migration.** `src/llm-sdk/` (5 files, 1421 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC) — deleted 1625-LOC `llm-client.ts` and 8 old test files. Eliminates provider-version regression class (#137 / #141 / #143 / #147 / #207).
+- ✅ **Graph Engine (Issue #198, #117, #157, #175, #215).** Personalized PageRank over `[[wiki-link]]` graph. New core modules: `section-extractor.ts` (173 LOC), `monte-carlo-ppr.ts` (99 LOC, Fogaras 2005), `hub-detection.ts` (134 LOC), `ppr-cascade.ts` (213 LOC, hybrid guard), `hub-retirement.ts` (175 LOC, PR #215 by @DocTpoint, merged 2026-06-30), `build-graph.ts`.
+- ✅ **URL fallback** for custom baseURLs (Kimi Coding Plan `/v1` missing) — `core/url-fallback.ts` (395 LOC). b775d63.
+- ✅ **LM Studio API-key gate** — `main.ts:962` bypass for lmstudio alongside ollama. 4b96025, Closes #223.
+- ✅ **Token-key probe-then-retry** — runtime fallback for `max_tokens` ↔ `max_completion_tokens`. KISS: if 400 → retry with alt key once. cc3f2c2, Refs #207.
+- ✅ **Real-time streaming for all providers.** `result.textStream` true逐块 streaming in all 3 llm-sdk clients. macrotask yield between chunks. (commits `2e51e23` + `6be9258`)
+- ✅ **P2-2 partial** — cascade + seeds token + LLM seed retrieval improvements.
+- ✅ **Sponsor section** — Ko-fi badge + 💖 Support Project section synced to all 10 READMEs (3f4c373).
+- ✅ **P2-3 knn baseline analysis** — `REAL_VAULT_EVAL.md` documents cascade R@5 27.1% vs knn 24.1% (3pp gap, no opt-in embedding path per #175).
+- ✅ **P2-4 PPR tuning** — real vault (2142 pages) tuning. `damping=0.05, numWalks=3000, walkLength=20` improves R@5 from 21.5% → 23.8%.
+- ✅ **Welcome note + Multi-File Ingest (Phase 5.1.5)** + **IngestQueue pub/sub** (Issue #130).
+- ✅ **v1.22.6 hotfix folded in** — GPT-5 Pro variants `/v1/responses` routing + Auto Ingest completion path (#204) + Auto Smart Fix context-aware (#204).
+- ✅ **Tests: 1376 passing** across 100 files (+272 since v1.22.0).
+- ✅ **Bundle:** 1.24 MB → 3.17 MB (user accepted 2026-06-29).
 
-Closed the second half of #207 — reasoning model family (gpt-5.1+ / gpt-5.5 / o1-o4) now uses OpenAI's Responses API, and the Test Connection Notice surfaces the provider's full error body (e.g. "insufficient_quota") instead of bare "status 429". #207 stays open for real-world user testing before final close.
+### In Flight (v1.23.1 PATCH, target 2026-07-09)
 
-- ✅ **#207 follow-up — Reasoning model family uses OpenAI Responses API.** v1.22.4's `max_tokens` ↔ `max_completion_tokens` probe was necessary but not sufficient — `gpt-5.1-chat-latest` / `gpt-5.5` / `o1` / `o3` / `o4-mini` still failed Test Connection with 400 because Chat Completions has compatibility issues for the reasoning family. Per OpenAI's official GPT-5.5 migration guide ("GPT-5.5 works best in the Responses API"), v1.22.5 routes the reasoning family to `/v1/responses` with `reasoning: { effort: 'low' }`. `gpt-5-chat-latest`, `gpt-4.1`, `gpt-3.5-turbo`, and all non-OpenAI baseUrls (Ollama, LM Studio, DeepSeek, etc.) continue on `/v1/chat/completions` unchanged. Detection is a pure-function `isResponsesApiModel(model, baseUrl)` export, gated to `https://api.openai.com/v1` only.
-- ✅ **Test Connection Notice now surfaces the provider's full error body.** Obsidian's `requestUrl` throws on 4xx WITHOUT populating the Error with the provider body, so v1.22.4's `extractProviderErrorMessage()` couldn't see the actual diagnostic. v1.22.5 wraps the failing request in a `window.fetch` re-fetch (5s timeout) and merges the provider body into `Error.message` — users now see e.g. `"status 429: You exceeded your current quota, please check your plan and billing details"`. Raw body also logged at `console.warn` for DevTools investigation. Non-OpenAI baseUrls get the same enrichment via the existing Chat Completions path.
-- ✅ **429/5xx now retry with exponential backoff on the Responses API path.** v1.22.4's `withRetry` (3 attempts, 1s/2s/4s + jitter) covered only the Chat Completions path. v1.22.5 wraps the new Responses API path in the same `withRetry` so transient 429 quota bumps no longer immediately fail Test Connection.
-- ✅ **Tests: 1104 passing.** +28 since v1.22.4 (new `llm-client-responses-api.test.ts` with 28 tests covering endpoint routing, body shape, error enrichment, withRetry integration, custom baseUrl compatibility, and reasoning-family model coverage). Existing dot-naming gpt-5.x regression test (v1.22.4) and `thinking.type='disabled'` Chat Completions tests refactored to use `gpt-5-mini`/`gpt-5-nano`/`gpt-4.1` (the Chat Completions path models).
+Two user-reported UX gaps deferred from v1.23.0 to keep the release scoped:
 
-### In Flight (v1.23.0) — Graph Engine PPR + AI-SDK v6 Migration (2026-06-30)
+- 🔄 **#219 — Progress Notice suppression setting.** `showProgress()` in `main.ts:414` unconditionally creates a persistent `Notice(msg, 0)`. Add `progressNotificationLevel: 'both' | 'status' | 'notice' | 'silent'` setting (~30 LOC + 6 locale keys). Filed by @jameses-cyber.
+- 🔄 **#221 — Query scroll-to-start setting.** `scrollToBottom()` in `query-engine.ts:802` unconditionally scrolls to bottom on every chunk; final call leaves user at end of long response. Add post-completion scroll-mode setting (~50 LOC + 6 locale keys). Filed by @jameses-cyber.
 
-**Single-branch release (corrected 2026-06-30):** `refactor/v1.23.0-ai-sdk-migration` is the sole release branch. `feat/v1.23.0-graph-engine-kickoff` (frozen at `4dec289`, P1-6 done) was originally thought to need merging, but `git ls-tree` verified that 5/6 Graph Engine modules are byte-identical between branches and `ppr-cascade.ts` is a strict superset on AI-SDK branch (has P2 improvements). Since graph-engine has **0 commits after the fork**, AI-SDK branch is its strict superset — no merge needed.
+Both same author (#204), batch together.
 
-**Branch relationship**: parallel fork from merge-base `4dec289`. v1.23.0 release path = merge both, with care around AI-SDK branch LLM call sites (PPR in graph-engine branch needs to switch to AI-SDK).
+- 🔄 **#207 close** — user will close manually after real-world testing (separate commit `Closes #207`, NOT part of v1.23.1). Token-key probe-then-retry fallback (cc3f2c2) addresses the root cause for OpenAI-compatible gateway users.
 
-**Completed in v1.23.0 so far (across both branches):**
-- ✅ **Phase 5.1.5 — UX Onboarding + Multi-File Ingest** (Welcome note + D8 LLM dynamic translation, #130 IngestQueue modal, i18n in 10 locales)
-- ✅ **P0-1 / P0-2 / P0-3** — CC0 50-page eval fixture, baseline report, CLAUDE.md cleanup
-- ✅ **P1-1 / P1-2 / P1-3 / P1-4** — `core/section-extractor.ts` (Tier B), `core/monte-carlo-ppr.ts` (MC-PPR), `core/hub-detection.ts`, `core/ppr-cascade.ts` (hybrid guard)
-- ✅ **P1-5** — Query Wiki integration with LLM seed selection (three-tier pipeline: lex fast path → LLM seeds → PPR walks)
-- ✅ **P1-6** — Lint hub-link distinctiveness scanner (229 LOC + 15 tests, closes #157/#175)
-- ✅ **P1-7 (AI-SDK Day 1-3)** — Migrate to Vercel AI-SDK v6 (`@ai-sdk/openai@3`, `@ai-sdk/anthropic@3`, `@ai-sdk/openai-compatible@2`, `ai@6`). Deleted 1625-LOC `llm-client.ts` + 8 old test files. New `src/llm-sdk/` (5 files, ~1019 LOC) + `src/core/obsidian-fetch-bridge.ts` (326 LOC).
-- ✅ **P1-7 (Day 3.5-5) — URL fallback** (`core/url-fallback.ts`, Kimi Coding Plan `/v1` auto-fix, cross-consumer cache, 1195 insertions). b775d63.
-- ✅ **P2-2 partial** — cascade + seeds token + LLM seed retrieval improvements
-- ✅ **PR #215 (merged, closed)** — `core/hub-retirement.ts` (hub-retirement crystallization signal, 175 LOC + 136 LOC tests). Merged directly into `refactor/v1.23.0-ai-sdk-migration` (5bb09f2), PR manually closed (2026-07-01).
-- ✅ **Real-time streaming (resolves user Q1 feedback)** — v1.23.0 P2 + AI-SDK v6 migration: `result.textStream` true逐块 streaming in all 3 llm-sdk clients. **DONE** (commits `2e51e23` + `6be9258`).
-- ✅ **LM Studio API key gate** — `main.ts:962` bypass for lmstudio alongside ollama. 4b96025, Closes #223.
-- ✅ **Token-key probe-then-retry** — runtime fallback for `max_tokens` ↔ `max_completion_tokens`. No error-body parsing, no regex, no model-name hardcoding. KISS: if 400 → retry with alt key once. cc3f2c2, Refs #207.
-- ✅ **Sponsor section** — Ko-fi badge + 💖 Support Project section synced to all 10 READMEs (committed in `3f4c373`). Ko-fi: https://ko-fi.com/greenerdalii.
-- ✅ **P2-3 Eval acceptance gate** — knn baseline analysis complete. `REAL_VAULT_EVAL.md` documents cascade R@5 27.1% vs knn 24.1% (3pp gap, no opt-in embedding path per #175). ROADMAP eval baseline table updated with all 5 measurements (lex / cascade / cascade+seeds / knn / real-vault-tuned).
+### Earlier Releases
 
-**Remaining for v1.23.0 (priority order):**
-- 🔄 **P1 — pre-release-gate + doc-review + v1.23.0 release** (Day 5, ~0.5 day): version bump → doc sync → pre-release-gate → commit/push → tag → Release Notes → Discussion.
-- 🔄 **#207 close** — user will close manually after real-world testing (separate commit `Closes #207`, NOT part of v1.23.0). Token-key probe-then-retry fallback (cc3f2c2) addresses the root cause for OpenAI-compatible gateway users.
+- v1.22.6 (2026-06-30, hotfix) — #204 Auto Ingest modal + Auto Smart Fix context-aware + #207 GPT-5 Pro variants routing. 1118 tests.
+- v1.22.5 (2026-06-29) — Responses API path for reasoning model family + provider body in Notice. 1104 tests.
+- v1.22.4 (2026-06-27, PATCH) — GPT-5.x probe-then-cache (Closes #207) + provider error UX. 1076 tests.
+- v1.22.0 (2026-06-23, MINOR) — Schema one-click apply (#97) + dynamic tag sync + zh-Hant + ingest status bar. 1006 tests.
 
 **v1.23.0 risk register:**
-- Bundle size 1.24MB → 3.17MB (user accepted 2026-06-29, monitor CDN experience)
-- Lazy import `await import()` for AI-SDK packages didn't reduce bundle (esbuild CJS inline); future ESM bundle / dynamic chunk can revisit
-- #207 close decision: user will close manually after real-world testing — separate commit `Closes #207`, not part of v1.23.0
-- #213 (configurable page categories): **Discussion-only, NOT confirmed for any minor release** per user instruction 2026-06-30. Requires broader community/architectural discussion before any commit.
+- Bundle size 1.24 MB → 3.17 MB (user accepted 2026-06-29, monitor CDN experience)
+- #213 (configurable page categories): **Discussion-only, NOT confirmed for any minor release** per user instruction 2026-06-30.
+- #207 close: separate commit `Closes #207` (user-confirmed 2026-07-02, not part of v1.23.0/1.23.1)
 
 **Deferred to v1.24.0+:**
-- #213 configurable page categories (Discussion-only, not committed — see "Deferred to v1.25.0+" below)
+- #219/#221 → v1.23.1 PATCH (in flight)
+- #218 PDF source ingest → Discussion #222 topology
+- #220 Source-revision awareness → needs Discussion on fingerprint function design
 - Hub-retirement lint wire-up (`core/hub-retirement.ts` 0 callers → wire `assessHubs` into lint path) — owned by @DocTpoint
-- #36 source-title-in-extraction feature (closed 2026-05 with no follow-up; proposes `alwaysIncludeSourceTitle` setting; low ROI vs current PPR cascade which already recovers source pages via outgoing-link structure)
+- #36 source-title-in-extraction (low ROI vs PPR cascade)
 - LintFixer class → module-level functions (707-LOC god class split, 1 day)
-- knn + cascade by-query-type complement (DocTpoint #198 follow-up, 2026-06-30) — see "v1.25.0+ research" below
+- knn + cascade by-query-type complement (DocTpoint #198 follow-up, 2026-06-30)
 
 **Deferred to v1.25.0+ (research / experimental):**
-- Cold-start vocabulary seeding (DocTpoint proposal in #198, 2026-06-23 — **NOT committed, design TBD**). If pursued: would need a per-query classifier to decide knn vs cascade arm, plus opt-in embedding provider matrix. Currently rejected on ROI grounds (cascade R@5 27.1% vs knn 24.1% = only 3pp gap, per DocTpoint's #198 eval 2026-06-30; reinforcing #175 rejection).
-- #213 configurable page categories — **Discussion-only**, NOT in roadmap; requires community/architectural discussion before any planning
-
-**Branch relationship (corrected 2026-06-30):** `refactor/v1.23.0-ai-sdk-migration` is the **sole release branch**. `feat/v1.23.0-graph-engine-kickoff` was originally thought to need merging, but `git ls-tree` verified 5/6 Graph Engine modules are byte-identical between branches and `ppr-cascade.ts` is a strict superset on AI-SDK branch. Since `feat/v1.23.0-graph-engine-kickoff` has 0 commits after the fork (merge-base `4dec289`), **AI-SDK branch is graph-engine's strict superset — no merge needed**.
-
-**v1.23.0 release path:**
-1. ✅ PR #215 (hub-retirement) — already merged into AI-SDK branch directly on 2026-06-30
-2. ✅ Branch topology verified — no merge required
-3. ✅ PPR/seed selection LLM call sites already on AI-SDK adapters
-4. Pre-release-gate + doc-review on `refactor/v1.23.0-ai-sdk-migration` (Day 5)
-5. Tag `1.23.0` on AI-SDK branch
+- Cold-start vocabulary seeding — rejected on ROI grounds (cascade R@5 27.1% vs knn 24.1% = 3pp gap).
+- #213 configurable page categories — **Discussion-only**.
 
 ---
 

@@ -2,11 +2,21 @@
 
 > Feature planning and improvement proposals
 
-**Version:** 1.22.5 → 1.22.6 (shipped 2026-06-30 — #204 + #207 -pro) → 1.23.0 (Graph Engine PPR + AI-SDK v6 migration: Phase 5.1.5 + P1-1~6 + P1-7 AI-SDK + P2-4 PPR tuning + Day 3.5-5 + Sponsor section + P2-3 knn eval all **done**; release flow pending target 2026-07-02) | **Updated:** 2026-07-01
+**Version:** 1.23.0 (shipped 2026-07-02 — Graph Engine PPR + AI-SDK v6 + Sponsor section + knn baseline eval) | **Updated:** 2026-07-02
 
 ## Current Status
 
+**v1.23.0 SHIPPED (2026-07-02).** Graph Engine PPR + Vercel AI-SDK v6 migration + Sponsor section + v1.22.6 hotfix series folded in. 1376 tests passing across 100 files. Bundle 3.17 MB. Next: v1.23.1 PATCH (#219, #221) → v1.24.0 MINOR (PDF source ingest, source-revision awareness, etc.).
+
 Historical releases are summarized in [CHANGELOG](./CHANGELOG.md). The current sprint is described in **Next Milestone** below.
+
+### v1.23.0: Graph Engine + Vercel AI-SDK v6 (2026-07-02)
+
+See [CHANGELOG](./CHANGELOG.md#v1.23.0) for full details. **MINOR** scope. Biggest architectural change since 1.0 — replaces 1625-LOC hand-rolled LLM client with AI-SDK v6 transport + ships Graph Engine PPR primitive over `[[wiki-link]]` graph. 1376 tests passing (+272 since v1.22.0). Bundle 1.24 → 3.17 MB (user accepted 2026-06-29). Closes #137/#141/#143/#147/#207 (provider-version regression class), #117 (Query Wiki relevance), #157 (hub detection), #175 (link distinctiveness), #198 (PPR), #204 (auto-ingest modal), #223 (LM Studio API key gate).
+
+### v1.22.6: GPT-5 Pro variants + Auto Ingest trigger dispatch (2026-06-30)
+
+See [CHANGELOG](./CHANGELOG.md#v1.22.6) for full details. **PATCH** scope. Folded into v1.23.0 release flow. Hotfix on v1.22.5 baseline: GPT-5 Pro variants (`gpt-5.x-pro`) route to `/v1/responses`, Auto Ingest completion path correctly wires `onAutoIngestDone` Notice (Issue #204), Auto Smart Fix completion is context-aware.
 
 ### v1.22.5: Responses API for #207 follow-up (2026-06-29)
 
@@ -90,79 +100,92 @@ See [CHANGELOG](./CHANGELOG.md#1180-2026-06-11) for full details.
 
 See [CHANGELOG](./CHANGELOG.md#1170-2026-06-08) for full details.
 
-## Next Milestone: v1.23.0 — Graph Engine (current sprint)
+## Next Milestone: v1.23.1 PATCH (target 2026-07-09)
 
-**Phase 5.1.5 + Core PPR modules + P1-5 (Query Wiki integration) COMPLETE.** Eval baseline: cascade R@5 25.4%, cascade+seeds R@5 31.0% (target 55% — gap is fixture-size related, tracked as P2-4). 1284 tests, 96 files.
+### Goals
 
-### v1.23.0 Priority Order
+Two user-reported UX gaps deferred from v1.23.0 to keep the v1.23.0 release scoped:
 
-#### ✅ Phase 5.1.5 — UX Onboarding + Multi-File Ingest (COMPLETE)
-- ✅ **Three-tier first-run Welcome note** (Tier A empty / Tier B existing / Tier C upgrade). D8 dynamically translated (1 EN template → user's wiki language at write time via LLM). `type: welcome` frontmatter, `createWelcomeNote` toggle, `Recreate Welcome Note` command.
-- ✅ **#130 Multi-File Suggest modal** — recursive folder tree, live right-pane progress, per-file cancel, "Add to queue" two-step flow. No auto-enqueue.
+- **#219 — Progress Notice suppression setting.** `showProgress()` in `main.ts:414` unconditionally creates a persistent `Notice(msg, 0)`. Add `progressNotificationLevel: 'both' | 'status' | 'notice' | 'silent'` setting (~30 LOC + 6 locale keys). Filed by @jameses-cyber.
+- **#221 — Query scroll-to-start setting.** `scrollToBottom()` in `query-engine.ts:802` unconditionally scrolls to bottom on every chunk; final call leaves user at end of long response. Add post-completion scroll-mode setting (~50 LOC + 6 locale keys). Filed by @jameses-cyber.
+
+Both same author (#204), batch together.
+
+### Not in v1.23.1
+
+- #220 (Source-revision awareness) → **v1.24.0** (architectural; needs Discussion thread on fingerprint function design).
+- #218 (PDF source ingest) → **v1.24.0** (architectural; see Discussion #222 topology).
+- #213 (configurable page categories) → **Discussion-only**, NOT in v1.24.0+ (user instruction 2026-06-30).
+- Hub-retirement lint wire-up (`core/hub-retirement.ts` → call `assessHubs` in lint path) — owned by @DocTpoint, post-#215 merge.
+
+## v1.23.0 — Implemented (shipped 2026-07-02)
+
+**Phase 5.1.5 + Core PPR modules + P1-5 (Query Wiki integration) + P1-6 (Lint) + P1-7 (AI-SDK Day 1-3 + Day 3.5-5) + P2-3 + P2-4 ALL COMPLETE.** All P1/P2 tasks finished. Eval gate: cascade R@5 27.1% (real vault) vs knn 24.1% (3pp gap) — embeddings permanently rejected per #175 + #198 follow-up. 1376 tests, 100 files.
+
+### v1.23.0 Shipped Items
+
+#### ✅ Phase 5.1.5 — UX Onboarding + Multi-File Ingest
+- ✅ **Three-tier first-run Welcome note** (Tier A empty / Tier B existing / Tier C upgrade). D8 dynamically translated (1 EN template → user's wiki language at write time via LLM).
+- ✅ **#130 Multi-File Ingest** — two-pane picker (recursive folder tree with per-file checkboxes + live ingest queue), per-file cancel, "Cancel all" for pending/running jobs.
 - ✅ **IngestQueue** (pub/sub store) — single source of truth for in-session ingest lifecycle. 25 tests.
-- ✅ **i18n across 10 locales** — welcome note + modal UI + status strings (14 new keys per locale).
+- ✅ **i18n across 10 locales** — 14 new keys per locale.
 
-#### ✅ P0 — Blockers (COMPLETE)
-| # | Task | Status |
-|---|------|--------|
-| P0-1 | CC0 synthetic 50-page eval fixture at `src/__tests__/fixtures/wikis/sample-50page/` | ✅ |
-| P0-2 | Eval script: lex-only vs lex-seeded-PPR vs graph-first-PPR recall@k | ✅ |
-| P0-3 | CLAUDE.md P0 table cleanup | ✅ |
+#### ✅ P0 — Blockers
+- ✅ P0-1: CC0 synthetic 50-page eval fixture.
+- ✅ P0-2: Eval script with lex-only vs lex-seeded-PPR vs graph-first-PPR comparison.
+- ✅ P0-3: CLAUDE.md P0 table cleanup.
 
-#### ✅ P1 — Core Graph Engine modules (COMPLETE)
-| # | Module | LOC | Status |
-|---|--------|-----|--------|
-| P1-1 | `core/section-extractor.ts` (Tier B — zero-LLM) | 173 | ✅ |
-| P1-2 | `core/monte-carlo-ppr.ts` (Fogaras 2005 MC-PPR engine) | 99 | ✅ |
-| P1-3 | `core/hub-detection.ts` (#117) — clustering retirement separate (P3-1) | 134 | ✅ |
-| P1-4 | `core/ppr-cascade.ts` (hybrid guard, replaces Web Worker) | 213 | ✅ |
-| P1-7 | Hybrid guard (lex fallback cascade) | — | ✅ (folded into P1-4) |
+#### ✅ P1 — Core Graph Engine modules
+- ✅ P1-1: `core/section-extractor.ts` (173 LOC).
+- ✅ P1-2: `core/monte-carlo-ppr.ts` (99 LOC).
+- ✅ P1-3: `core/hub-detection.ts` (134 LOC).
+- ✅ P1-4: `core/ppr-cascade.ts` (213 LOC).
+- ✅ P1-5: Query Wiki integration with LLM seed selection (three-tier pipeline).
+- ✅ P1-6: Lint hub-link distinctiveness scanner (229 LOC + 15 tests).
+- ✅ P1-7: AI-SDK v6 migration (Day 1-3 + Day 3.5-5: URL fallback, LM Studio hotfix, token-key probe).
 
-#### ✅ P1-7 — AI-SDK Migration (D1-3 done, D3.5 done)
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `core/obsidian-fetch-bridge.ts` | ✅ done | requestUrl → fetch API (4xx body preservation) |
-| `llm-sdk/openai-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai v3 — auto Responses API routing for gpt-5.x |
-| `llm-sdk/anthropic-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/anthropic v3 — baseURL for Coding Plan / z.ai / GLM-Antropic |
-| `llm-sdk/openai-compat-sdk-client.ts` | ✅ done | AI-SDK @ai-sdk/openai-compatible v1 — 8 OpenAI-format baseURLs |
-| `core/url-fallback.ts` | ✅ done | Kimi Coding Plan `/v1` auto-fix + cross-consumer cache |
-| `llm-sdk/token-key-probe.ts` | ✅ done | Max_tokens / max_completion_tokens probe-then-retry (KISS) |
-| LM Studio API key gate (`main.ts:962`) | ✅ done | 4b96025, Closes #223 |
-| Lint disable warnings cleanup | ✅ done | 13d8cd8 |
-| Coding Plan / z.ai baseURL verification | ✅ done | Covered by URL fallback integration tests |
-| `llm-sdk/create-llm-client.ts` | ✅ done | Async + sync shim + preload pattern |
-| 8 old `llm-client*.test.ts` | ✅ deleted | Replaced by `llm-sdk/*.test.ts` + retained regression cases |
-| `llm-client.ts` (1625 LOC) | ✅ deleted | All hand-rolled workaround code removed |
-| `core/sse-parser.ts` (85 LOC) | ✅ deleted | Replaced by AI-SDK textStream |
-| 3-tier thinking-control probe | ✅ removed | AI-SDK handles internally |
+#### ✅ P2 — UX + features + eval
+- ✅ P2-1: Welcome note.
+- ✅ P2-2 partial: cascade + seeds token + LLM seed retrieval improvements.
+- ✅ **Real-time streaming + Ctrl+Enter + persistence** (Query Wiki).
+- ✅ P2-3: Eval acceptance gate (knn baseline analysis — cascade R@5 27.1% vs knn 24.1% = 3pp gap; reinforces #175 rejection).
+- ✅ P2-4: PPR parameter tuning on 2142-page real vault (damping=0.05, numWalks=3000, walkLength=20).
+- ✅ **Sponsor section** in all 10 READMEs (3f4c373).
+- ✅ **Hub-retirement crystallization signal** (`core/hub-retirement.ts`) by @DocTpoint.
 
-**Bundle size**: 1.24MB → 3.17MB (user accepted 2026-06-29). Obsidian manifest no size limit.
+#### ✅ AI-SDK Migration components
+| Component | LOC | Notes |
+|-----------|-----|-------|
+| `core/obsidian-fetch-bridge.ts` | 326 | requestUrl → fetch API (4xx body preservation) |
+| `llm-sdk/openai-sdk-client.ts` | 455 | AI-SDK @ai-sdk/openai v3 — auto Responses API routing for gpt-5.x |
+| `llm-sdk/anthropic-sdk-client.ts` | 300 | AI-SDK @ai-sdk/anthropic v3 — baseURL for Coding Plan / z.ai / GLM-Antropic |
+| `llm-sdk/openai-compat-sdk-client.ts` | 449 | 8 OpenAI-format baseURLs |
+| `core/url-fallback.ts` | 395 | Kimi Coding Plan `/v1` auto-fix + cross-consumer cache |
+| `llm-sdk/token-key-probe.ts` | 70 | Max_tokens / max_completion_tokens probe-then-retry (KISS) |
+| `llm-sdk/create-llm-client.ts` | 151 | Async + sync shim + preload pattern |
 
-#### ✅ All P1 — Complete
-| # | Module | Status |
-|---|--------|--------|
-| P1-5 | Query Wiki integration (PPR top-k + LLM seed selection) | ✅ done |
-| P1-6 | Lint integration: #157 hub-link distinctiveness scanner | ✅ done (b43e431, 229 LOC + 15 tests) |
-| P1-7 | AI-SDK v6 migration + URL fallback + token-key probe + LM Studio hotfix | ✅ done (cc3f2c2 + 4b96025 + b775d63) |
+**Old code removed**: 1625-LOC `llm-client.ts` + 8 old tests + 85-LOC `core/sse-parser.ts` + 3-tier thinking-control probe.
 
-#### ✅ P2 — Complete
-| # | Task | Effort | Status |
-|---|------|--------|--------|
-| P2-3 | Eval acceptance gate (knn baseline as control, using DocTpoint #198 data) | 0.5 day | ✅ done (see REAL_VAULT_EVAL.md §knn baseline; cascade R@5 27.1% vs knn 24.1% = 3pp gap) |
-| P2-4 | PPR parameter tuning (real vault — damping=0.05, numWalks=3000, walkLength=20) | 1 day | ✅ done |
+**Bundle size**: 1.24 MB → 3.17 MB (user accepted 2026-06-29). Obsidian manifest no size limit.
 
-#### ✅ P1-7 Day 5 follow-ups — Complete
-| Component | Status |
-|-----------|--------|
-| **Sponsor section** | ✅ done — Ko-fi badge + 💖 Support section in all 10 READMEs (committed in `3f4c373`) |
-| **Coding Plan / z.ai baseURL verification** | ✅ done — covered by URL fallback integration tests + cross-consumer cache test |
-| **Lint disable warnings cleanup** | ✅ done — 13d8cd8 |
+#### Eval baseline (sample-50page, reference only)
+| Strategy | R@5 | R@10 | Source |
+|----------|-----|------|--------|
+| lex-only | 13.3% | 13.3% | sample-50page fixture |
+| cascade (current pprCascade) | 25.4% | 37.8% | sample-50page fixture |
+| cascade + explicit seeds | 31.0% | 40.4% | sample-50page fixture |
+| **knn baseline (bge-m3)** | **24.1%** | **36.4%** | DocTpoint #198, same fixture |
+| **cascade (real vault, tuned)** | **23.8%** | — | 2142-page real vault |
 
 #### ⏸️ Deferred past v1.23.0
 | # | Task | New target | Reason |
 |---|------|------------|--------|
 | P2-4 sample-50page tuning | — | Superseded by real vault tuning (2142-page) |
 | P2-2 cold-start threshold settings | v1.24.0+ | Defaults validated by P2-4; advanced users only |
+| #219 Progress Notice suppression | v1.23.1 | User-facing UX gap — same author as #204 |
+| #221 Query scroll-to-start | v1.23.1 | User-facing UX gap — same author as #204 |
+| #218 PDF source ingest | v1.24.0 | Discussion #222 topology + path convergence |
+| #220 Source-revision awareness | v1.24.0 | Tier 0-1 tractable; architectural decision needed |
 
 #### Eval baseline (sample-50page, for reference — not a release gate)
 | Strategy | R@5 | R@10 | Source |
@@ -248,10 +271,11 @@ Fallback arm selection:
 
 ## Version Timeline
 
-**Current focus: v1.23.0** (Graph Engine + AI-SDK v6). Full per-version history lives in [CHANGELOG.md](./CHANGELOG.md).
+**Current focus: v1.23.1 PATCH** (#219 Progress Notice suppression, #221 Query scroll-to-start) targeting the next PATCH cycle. Full per-version history lives in [CHANGELOG.md](./CHANGELOG.md).
 
 | Version | Date | Headline |
 |---------|------|----------|
+| 1.23.0 | 2026-07-02 | Graph Engine PPR (Issue #198) + Vercel AI-SDK v6 migration + Sponsor section + v1.22.6 hotfix folded in |
 | 1.22.6 | 2026-06-30 | #204 Auto Ingest modal fix + #207 -pro routing fix |
 | 1.22.5 | 2026-06-29 | Responses API path for reasoning model family (#207) + provider body in Notice |
 | 1.22.4 | 2026-06-27 | GPT-5.x probe-then-cache (Closes #207) + provider error UX |

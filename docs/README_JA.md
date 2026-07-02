@@ -17,7 +17,6 @@
 ---
 
 > **⚡ 素早い更新のお知らせ：** 本プロジェクトは急速に進化しており、バグ修正、パフォーマンス改善、新機能、UX の最適化を頻繁に行っています。Obsidian で常に最新バージョンに更新することをお勧めします（**設定 → コミュニティプラグイン → 更新を確認**）。プラグインの自動更新を有効にすることもできます。
-
 ## 📑 Contents
 
 - [🧠 Karpathy LLM Wiki Plugin for Obsidian](#-karpathy-llm-wiki-plugin-for-obsidian)
@@ -30,12 +29,12 @@
     - [🔑 LLMプロバイダーの設定](#-llmプロバイダーの設定)
     - [🎮 使い方](#-使い方)
     - [⚠️ 旧バージョンからのアップグレード](#️-旧バージョンからのアップグレード)
-  - [⚡ v1.22.0 更新のポイント](#-v1220-更新のポイント)
-    - [v1.22.1 — 2026-06-24 (PATCH)](#v1221--2026-06-24-patch)
-    - [v1.22.2 — 2026-06-26 (PATCH)](#v1222--2026-06-26-patch)
-    - [v1.22.3 — 2026-06-26 (PATCH)](#v1223--2026-06-26-patch)
-    - [v1.22.4 — 2026-06-27 (PATCH)](#v1224--2026-06-27-patch)
-    - [v1.22.5 — 2026-06-29 (PATCH)](#v1225--2026-06-29-patch)
+  - [⚡ v1.23.0 更新のポイント](#-v1230-更新のポイント)
+    - [⭐ ハイライト](#-ハイライト)
+    - [✨ 新機能](#-新機能)
+    - [🔧 改善](#-改善)
+    - [🐛 修正](#-修正)
+    - [📊 テスト](#-テスト)
   - [✨ 特徴](#-特徴)
     - [📊 ナレッジ品質](#-ナレッジ品質)
     - [🛠️ メンテナンス](#️-メンテナンス)
@@ -55,9 +54,11 @@
     - [🔍 トラブルシューティング](#-トラブルシューティング)
   - [🔒 透明性とコンプライアンス](#-透明性とコンプライアンス)
   - [💖 プロジェクトを支援する](#-プロジェクトを支援する)
+    - [スポンサー](#スポンサー)
   - [📜 ライセンス](#-ライセンス)
   - [🙏 謝辞](#-謝辞)
   - [Star History](#star-history)
+
 ## 💡 LLM-Wikiとは？
 
 書くのはあなた。整理するのはAI。質問するだけ。それがすべて。
@@ -140,6 +141,7 @@ LLM-Wikiはその構造を反転させます。あなたが手作業でグラフ
 |------|--------|
 | **📥 単一ソースの取り込み** | `Cmd+P` → "Ingest single source" — ノートを選択し、エンティティと概念を抽出 |
 | **📂 フォルダーからの取り込み** | `Cmd+P` → "Ingest from folder" — フォルダを選択し、Wikiを一括生成 |
+| **📑 複数ファイルを取り込み** | `Cmd+P` → "複数ファイルを取り込み" — 2 ペイン選択モーダル（再帰フォルダツリー + ファイル別チェックボックス）で特定のノートを選び、選択分を一括取り込み |
 | **🔍 Wikiに問い合わせ** | `Cmd+P` → "Query wiki" — 質問し、ストリーミング回答を取得 |
 | **🛠️ WikiのLint** | `Cmd+P` → "Lint wiki" — ヘルススキャン：重複、リンク切れ、空ページ、孤立ページ |
 | **📋 インデックスの再生成** | `Cmd+P` → "Regenerate index" — `wiki/index.md` を再構築 |
@@ -168,74 +170,62 @@ LLM-Wikiはその構造を反転させます。あなたが手作業でグラフ
 **5️⃣ 現在の設定を確認** — Wiki Output Language、Extraction Granularity、Auto-Maintenance
 
 ---
+## ⚡ v1.23.0 更新のポイント
 
-## ⚡ v1.22.0 更新のポイント
+v1.23.0 は **MINOR リリース** —— 1.0 以降最大のアーキテクチャ変更です。二つの主要テーマが同時にリリースされます：**Vercel AI-SDK v6 への移行**（手書きの 1625 行クライアントを安定しベンダーサポートされたトランスポートに置き換え）と **Graph Engine**（`[[wiki-link]]` グラフ上の Personalized PageRank）。これにより embedding コストゼロで embedding 相当の検索品質を実現、全プロバイダで動作し、新たな依存関係も追加されません。
 
-v1.22.0は、長らく期待されていたスキーマワンクリック更新ワークフロー、繁体字中国語として10番目の言語の追加、および改善されたインジェストステータスバーを提供する**マイナーリリース**です。
+本リリースには v1.22.6 hotfix シリーズ（GPT-5.x Pro バリアントの Test Connection リグレッション修正 + LM Studio API-key ゲート）、knn ベースライン評価ゲート、Sponsor セクションも統合されています。
 
-- **📝 スキーマワンクリック適用（Issue #97）。** LLMが生成したスキーマ提案が、IDEスタイルのデュアルペインDiffモーダルで表示されるようになりました。適用/キャンセル/ファイルを開くボタン付き。提案を適用すると、新しい内容を書き込む前に以前のスキーマが自動的にバックアップされます（ローテーション、最大3件）。「スキーマの更新」はLintモーダルからアクセス可能になりました——コマンドパレットのエントリは単一のエントリポイントを強制するために削除されました。
-- **🏷️ スキーマダイナミックタグ同期。** スキーマ語彙が単一の信頼できる情報源になりました——アクティブなタグがすべてのLLM呼び出しに自動的に注入され、v1.21.0 Phase 1の「スキーマテンプレートがハードコードされたセクションによって上書きされる」バグが解消されます。
-- **🇹🇼 繁体字中国語（zh-TW）。** プラグインUIとWiki出力が繁体字中国語を10番目の言語としてサポート。双方向パリティ保護がすべての10言語に拡張されました。
-- **📊 ドキュメント名付きインジェストステータスバー（PR #189）。** ステータスバーに現在のドキュメント名（`My Note · 取り込み中... クリックでキャンセル`）と、フォルダインジェスト時のバッチ進行状況（`[4/10] My Note · 取り込み中... クリックでキャンセル`）が表示されます。@YounianC による貢献。
+### ⭐ ハイライト
 
-アップグレードを強く推奨します——スキーマワンクリック適用機能により、スキーマの改良がワンステップ操作になります。繁体字中国語はzh-TWユーザーの体験を大幅に向上させます。
+- **🤖 Vercel AI-SDK v6 移行。** 手書きの `OpenAICompatibleClient` / `AnthropicClient` / `AnthropicCompatibleClient`（1625 LOC、v1.20.0 以降蓄積された 30+ のプロバイダバージョンワークアラウンド）を `@ai-sdk/openai@3` / `@ai-sdk/anthropic@3` / `@ai-sdk/openai-compatible@2` に置き換え。新規 `src/llm-sdk/`（5 ファイル、1421 LOC）+ `src/core/obsidian-fetch-bridge.ts`（326 LOC）が安定しベンダーサポートされたトランスポートを提供。プロバイダバージョンリグレッションのクラス全体（#137 / #141 / #143 / #147 / #207）を排除。
+- **🕸️ `[[wiki-link]]` グラフ上の Personalized PageRank（Issue #198, #117, #157, #175）。** 新規 Monte-Carlo PPR エンジンが既存の wiki-link 構造を辿り、外向きリンク構造でソースページを回復 —— embedding コストゼロで embedding 相当の R@k、オフライン動作、新たな依存なし、全プロバイダ対応。三層パイプライン（lex 高速パス → LLM シード → PPR ウォーク）+ ハイブリッドガード（グラフが小さすぎる場合は lex フォールバック）。Hub-link 識別度スキャナを lint パスとして同梱。
+- **🛡️ プロバイダエラー UX 強化。** 推論モデル（`gpt-5.1+`、`gpt-5.5`、`o1`/`o3`/`o4-mini`）を OpenAI Responses API にルーティング。Token-key probe-then-retry（`max_tokens` ↔ `max_completion_tokens`）を **あらゆる** HTTP 400 で実行 —— 正規表現なし、モデル名ハードコードなし、`if 400 → retry with alt key` のみ。LM Studio API-key ゲート（Issue #223）でローカルプロバイダが API キーなしで接続テスト可能。URL フォールバックでカスタム baseURL の `/v1` 欠落を自動修正（Kimi Coding Plan）。
 
-詳細は [CHANGELOG.md](../CHANGELOG.md) を参照。
+### ✨ 新機能
 
-### v1.22.1 — 2026-06-24 (PATCH)
+- **🔍 Personalized PageRank（PPR）エンジン。** `core/monte-carlo-ppr.ts`（Fogaras 2005 MC-PPR）がクエリページごとに K 回の短いランダムウォークを実行、O(K×L) コストで |V| に依存しない。2142 ページのリアル vault で調整：`damping=0.05, numWalks=3000, walkLength=20` で R@5 を 21.5% → 23.8% に改善（+11% 相対）。詳細は `REAL_VAULT_EVAL.md`。
+- **🎯 ハイブリッド検索カスケード（PPR + LLM シード + lex 高速パス）。** `core/ppr-cascade.ts`（213 LOC）が三層 Query Wiki パイプラインを編成。`core/section-extractor.ts`（Tier B zero-LLM）が従来の LLM ベースシード選択を置換。
+- **🔗 Hub-link 識別度スキャナ（#157, #175）。** 外向きリンクが主に低識別度ハブを指すページをマークする新規 lint パス。229 LOC + 15 テスト。@DocTpoint 寄稿。
+- **🏷️ Hub 退役結晶化シグナル（#215, @DocTpoint）。** `core/hub-retirement.ts`（175 LOC + 12 ユニットテスト + 136 LOC 統合テスト）。純粋な百分位ベースの判定 + 二重絶対ガード。lint 統合は v1.24.0 で予定。
+- **🤖 AI-SDK v6 クライアントセット。** `openai-sdk-client.ts`（455 LOC、推論モデルの自動 Responses API ルーティング）、`anthropic-sdk-client.ts`（300 LOC、Coding Plan / z.ai / GLM-Antropic baseURL サポート）、`openai-compat-sdk-client.ts`（449 LOC、8 つの OpenAI 形式 baseURL）。`create-llm-client.ts`（151 LOC）が async + sync shim + preload パターンを提供。
+- **🌐 カスタム baseURL の統一 URL フォールバック。** `core/url-fallback.ts`（395 LOC）がユーザー入力 baseURL の `/v1` 欠落を自動解決。モジュールレベル静的キャッシュが `createLLMClient` 再作成を生き延び、Ingest / Lint / Query 全てが恩恵を受ける。
+- **🔁 Token-key probe-then-retry（KISS、正規表現なし）。** `src/llm-sdk/token-key-probe.ts`（70 LOC）が初回失敗時に動作する `max_tokens` ↔ `max_completion_tokens` キーを baseURL ごとにキャッシュ。
+- **🎬 全プロバイダ向けリアルタイムストリーミング。** `result.textStream` の真のチャンク毎ストリーミングが 3 つの `llm-sdk` クライアントで動作。「Restore true streaming for 3rd-party providers」バックログ項目は **完了**。
+- **🎉 ウェルカムノート（Phase 5.1.5）。** 初回起動時の三層ウェルカムノート（Tier A 空 / Tier B 既存 / Tier C アップグレード）。`type: welcome` フロントマター、`createWelcomeNote` トグル、`Recreate Welcome Note` コマンド。
+- **📥 マルチファイル提案モーダル（Issue #130）。** 再帰的フォルダツリー、右ペインライブ進捗、ファイル毎キャンセル、「キューに追加」二段階フロー。
 
-ユーザー報告の3つの P0 バグを閉じ、1つの UX 改善をもたらす集中 PATCH。
+![マルチファイル取り込みモーダル — 左：ファイル毎チェックボックス付き再帰フォルダツリー、右：ライブ取り込みキューとステータス](assets/multi-file-ingest.png)
+- **🔑 LM Studio API-key ゲート（Issue #223）。** `main.ts:962` が `ollama` と `lmstudio` を API キー検証から除外。
+- **🛡️ GPT-5.x Pro バリアントルーティング（Issue #207 follow-up、v1.22.6 hotfix）。** `gpt-5.1-pro` / `gpt-5.2-pro` / `gpt-5.5-pro` を `/v1/responses` に正しくルーティング。
+- **🛡️ Auto Ingest 完了パス（Issue #204 follow-up、v1.22.6 hotfix）。** `IngestReport` / `IngestOptions` の `trigger='auto'|'manual'` フィールド。
+- **📊 knn ベースライン分析（P2-3 eval acceptance gate）。** DocTpoint が同じ `sample-50page` フィクスチャで knn ベースライン（bge-m3、グラフなし）を実行：cascade R@5 27.1% vs knn 24.1%（3pp 差）。2026-06-22 の #175 拒否を強化 —— embedding は恒久的に拒否、グラフ信号で全 PPR ユースケースに十分。
+- **🌍 i18n 設定書き直し（10 言語）。** 全箇所でユーザーファースト言語（「思考を無効化」）。
+- **💖 Sponsor セクション。** Ko-fi ボタン + 💖 プロジェクトサポートセクションを 10 READMEs 全てに。
 
-- **🛡️ Fix Dead Links は AI 拡張スタブページを作成しません (#197)。** スタブは `generation_complete: false` マーカー付きの正直なプレースホルダーに。
-- **✅「起動時にクイック修正を実行」トグルが保持されます (#199)。** v1.18.3 マイグレーションを削除。
-- **🎨 CSS `:has()` レビュー警告を修正。** 新しい `scripts/css-lint.mjs` でリグレッション防止。
-- **🪟 Query Wiki は Copilot スタイルの右ドッキングサイドパネル (#196, @YounianC)。** `QueryModal extends Modal` を `QueryView extends ItemView` に変更。
-- **🧹 関連リンクプレフィックスを決定論的に再アサート (#200, @DocTpoint, #187)。** 新しい純関数 `correctRelatedLinkPrefixes()`。
+### 🔧 改善
 
-### v1.22.2 — 2026-06-26 (PATCH)
+- **📜 プロバイダエラーボディが Test Connection UI に到達。**
+- **♻️ Lint パフォーマンス調整値を一元化（`src/constants.ts`）。**
+- **⏱️ Responses API パスで 429/5xx 指数バックオフ。**
+- **🧹 `thinkingControlCache` 廃止。** 3 方言プローブ削除；AI-SDK が thinking を内部処理。
+- **⚡ バンドルサイズ 1.24 MB → 3.17 MB**（2026-06-29 ユーザー承認）。
 
-このPATCHは、自動取り込みのUX改善、操作ログのi18n対応、デッドコード削除を含みます。
+### 🐛 修正
 
-- **📋 自動取り込みでモーダルをブロックしなくなりました (Issue #204)。** ウォッチモードの自動取り込みは、デフォルトで一時的な通知(Notice)を表示し、完全な取り込みレポートモーダルは開かなくなりました。詳細レポートを希望するユーザーは、設定→自動メンテナンス→ウォッチモードで「モーダル」に切り替えられます。操作履歴パネルと `log.md` はいつでも確認可能です。
-- **🔧 Auto Smart Fix モーダル→一時的な通知。** Auto Smart Fix 完了時に、操作履歴パネルへのヒント付きの簡潔な通知が表示されます。
-- **🌐 操作ログがi18n対応 (10言語)。** `log.md` の新規作成時（または既存Wikiの次回起動時）に、ログを説明し操作履歴パネルへ誘導するヘッダーが自動生成されます。各言語に対応したテキストを表示。
-- **📅 定期Lint：「毎時」を削除、「毎月」を追加。** 既存の「毎時」設定は自動的に「毎日」にフォールバック。残りのオプション：オフ、毎日、毎週、毎月。
-- **🧹 デッドコード削除。** `slug.ts` の冗長な `console.debug` と `main.ts` の不要な `setDoneCallback` リセットを削除。
-- **⚙️ 自動取り込み通知設定（条件付き表示）。** ウォッチモードが「自動取り込み」の場合に新しいドロップダウン（通知/モーダル）を表示。「通知のみ」の場合は非表示。
-- **♻️ ログヘッダーの自動移行。** 古い1行ヘッダーの `log.md` を次回プラグイン読み込み時に自動検出・非破壊移行。既存の `## [date time]` エントリはすべて保持。
+- **GPT-5.x モデルが 400 で Test Connection を失敗しなくなった**（#207）—— `-pro` バリアントを含む完全カバレッジ。
+- **LM Studio Test Connection が API キーを要求しなくなった**（#223）。
+- **#204 Auto Ingest がブロッキングモーダルを開かなくなった** —— Notice パスを正しく配線。
+- **リアルタイムストリーミングがバッチ処理だった** —— macrotask yield + `result.textStream` のみ消費で修正。
+- **`generation_complete` が `log.md` / `index.md` / `schema/` にスタンプされなくなった**（v1.22.3）。
+- **デッドリンクスタブ捏造クラスバグ閉鎖**（#197）。
 
-### v1.22.3 — 2026-06-26 (PATCH)
+### 📊 テスト
 
-v1.22.2 の log header 機構を堅牢化し、コンテンツ以外のファイルへの frontmatter 混入を防止する Hotfix。
+- **1376 テスト合格**、100 ファイル（v1.22.0 以降 +272）。
+- 新規テストファイルは CHANGELOG.md に記載。
 
-- **🔧 log header 検出が言語非依存かつ堅牢に。** テキストベースの検出（ドイツ語/日本語/韓国語などを認識できず、log entry 本文の自然なフレーズで誤判定する可能性）から、ヘッダーに埋め込んだ構造的な `<!-- llm-wiki-log-header-start -->` HTML コメントマーカーへ移行。既存の v1.22.2 log ファイルは次回起動時に自動アップグレードされます。
-- **🧹 log header 文字列を `src/texts/<lang>.ts` に集約。** `core/log-header.ts` に重複して保持していた 4 つのローカライズ文字列を他のすべての UI 文字列と統合し、翻訳作業と一貫性テストが自動的にカバーします。
-- **🚫 `log.md` / `index.md` / `schema/` への `generation_complete` 書き込みを停止。** `createOrUpdateFile` はこれまで**すべての**書き込みファイルに対して `markPageComplete` を呼び出しており、frontmatter を持たないファイルに `generation_complete: true` を含む新しい frontmatter ブロックを先頭に追加し、log.md 本文を汚染していました。新しい `isInWikiContentFolder()` guard により stamp は `wiki/{entities,concepts,sources}/...` のみに制限されます。
-
-アップグレード推奨 —— log.md がクイック修正のたびに余計な frontmatter を蓄積しなくなり、検出がすべての言語で統一ルールで動作します。
-
-### v1.22.4 — 2026-06-27 (PATCH)
-
-GPT-5.x モデルの互換性を復元し、Provider の実際のエラーメッセージを Test Connection UI に伝播し、lint パフォーマンス調整値を一元管理する PATCH。
-
-- **🛡️ GPT-5.x モデルが Test Connection で 400 を返さなくなる (Issue #207)。** v1.20.0 の `params.model.startsWith('gpt-5-')` ハードコードプレフィックスマッチは、ダッシュ付きの OpenAI gpt-5 ファミリー（`gpt-5-mini`、`gpt-5-nano` など）にしかマッチせず、新しい gpt-5.x（`gpt-5.1`、`gpt-5.4-mini`、`gpt-5.5`）がリリースされるたびに静かに壊れていました。実行時プローブ＆キャッシュ機構に置き換え：最初のリクエストは `max_tokens` を使用し、バックエンドが 400 で拒否した場合は代替キー（`max_completion_tokens` またはその逆）をキャッシュして再試行します。以降のリクエストはキャッシュを再利用——モデル名のプレフィックスマッチに頼らず、OpenAI の新しい命名規則にも自動的に対応します。
-- **📜 Provider の実際のエラーメッセージが Test Connection UI に届くように。** これまで `requestUrl` のエラーは `status 400: ${data.error.message}`（レスポンス本体が失われた場合は単なる "status 400"）に再ラップされ、Provider の実際のエラー（例："Invalid parameter: max_tokens should be max_completion_tokens"）はユーザーに見えませんでした。新しい `extractProviderErrorMessage()` がスローされたエラーを強化し、ユーザーは汎用的な HTTP ステータスではなく、Provider の詳細を見られるようになりました。
-- **♻️ lint パフォーマンス調整値を `src/constants.ts` に集約。** yield 間隔（`LINT_YIELD_EVERY_OUTER` / `_PHASE1` / `_COMPARISON`）、候補バッチサイズ（`LINT_CANDIDATE_TOKEN_ESTIMATE`、`LINT_MAX_INPUT_TOKENS`、`LINT_DEDUP_BATCH_SIZE`）、準備段階のバッチ読み取り（`LINT_PREP_BATCH_READ`）、source-analyzer のバッチサイズ（`SHORT_CONTENT_THRESHOLD`、`BATCH_CHARS_PER_ITEM`）を一か所に集約。これらは `controller.ts`、`duplicate-detection.ts`、`preparation.ts`、`batch-limits.ts` に重複またはドリフトしており、`MAX_TOKENS=16000` が `MAX_TOKENS_BATCH` のリテラルコピーになっている状態でした。lint パフォーマンス調整が単一ファイルの変更で行えます。
-
-アップグレード推奨 —— gpt-5.x モデルがそのまま動作し、Test Connection UI が Provider が何を拒否したかを正確に伝えるため、baseUrl / モデル名 / API キーをコンソールで掘り下げる必要がなくなります。
-
-### v1.22.5 — 2026-06-29 (PATCH)
-
-OpenAI の gpt-5.1+ / gpt-5.5 / o1-o4 推論モデルファミリーを Test Connection で 400 エラーにしない（Issue #207 フォローアップ）修正と、Provider の実際のエラーメッセージを Test Connection Notice に届ける修正を中心とした PATCH。
-
-- **🛡️ 推論モデルファミリーが OpenAI Responses API を使うように（Issue #207 フォローアップ）。** v1.22.4 の `max_tokens` ↔ `max_completion_tokens` プローブ＆キャッシュ修正は必要でしたが不十分で、`gpt-5.1-chat-latest`、`gpt-5.5`、`o1` / `o3` / `o4-mini` 推論ファミリーは Chat Completions エンドポイントで引き続き 400 エラーになっていました（推論モデルファミリーに互換性問題があるため）。OpenAI 公式の GPT-5.5 移行ガイドの「GPT-5.5 works best in the Responses API」に従い、v1.22.5 は推論ファミリーを `/v1/responses` にルートし、`reasoning: { effort: 'low' }` を付与します。`gpt-5-chat-latest`、`gpt-4.1`、`gpt-3.5-turbo`、および OpenAI 以外の全 baseUrl（Ollama、LM Studio、DeepSeek 等）は `/v1/chat/completions` のまま変わりません。検出ロジックは純関数 `isResponsesApiModel(model, baseUrl)` で、`https://api.openai.com/v1` のみゲート——カスタムエンドポイントは完全に互換です。
-- **📜 Provider エラーボディが Test Connection Notice UI に届くように。** Obsidian の `requestUrl` は 4xx（429 含む）でスローしますが、その Error オブジェクトに Provider レスポンスボディを**付与しない**ため、v1.22.4 の `extractProviderErrorMessage()` でも OpenAI が実際に何を言ったか取得できませんでした。v1.22.5 は失敗リクエストを `window.fetch` 再フェッチ（5 秒タイムアウト）でラップし、Provider ボディをスローされた `Error.message` にマージします。ユーザーは `"status 429: You exceeded your current quota, please check your plan and billing details"` を見ることができ、裸の `"status 429"` ではありません。生ボディは `console.warn` レベルでも出力し DevTools での調査に使えます。OpenAI 以外の baseUrl は既存の Chat Completions パスで同じエンリッチメントを取得します。
-- **⏱️ 429/5xx レート制限エラーが Responses API パスで指数バックオフリトライするように。** v1.22.4 の `withRetry`（3 回試行、1s/2s/4s + ジッター）は元々 Chat Completions パスしかカバーしていませんでした。v1.22.5 は新しい Responses API パスも同じ `withRetry` でラップし、一過性の 429 クォータの揺れで Test Connection が即失敗しなくなります。
-- **♻️ テストフィクスチャ更新。** v1.22.4 時点の dot-naming gpt-5.x モデル用回帰テストと、`thinking.type='disabled'` レガシー Chat Completions パステストを、それぞれ `gpt-5-mini` / `gpt-5-nano` / `gpt-4.1` に変更しました——これらのモデルは引き続き Chat Completions パスをカバーし、推論モデルファミリーは新しい `src/__tests__/root/llm-client-responses-api.test.ts`（28 テスト）で完全にカバーされています。
-
-アップグレード推奨 —— `gpt-5.1-chat-latest`、`gpt-5.5`、`o1` / `o3` / `o4-mini` ファミリーが Test Connection でそのまま動作し、接続失敗時は Provider の実際のエラー（例：「insufficient_quota」）が表示され、裸の HTTP ステータスコードではありません。
-
-アップグレード推奨アップグレード推奨。
+アップグレードを推奨 —— AI-SDK 移行はプロバイダバージョンリグレッションのクラス（#137 / #141 / #143 / #147 / #207）を排除し、Graph Engine は embedding コストゼロで embedding 相当の検索品質を提供します。カスタム baseURL を持つ OpenAI 互換ゲートウェイを使用している場合、URL フォールバック + token-key probe-then-retry の修正により設定変更なしで接続問題を解決できるはずです。
 
 ## ✨ 特徴
 
@@ -300,6 +290,7 @@ OpenAI の gpt-5.1+ / gpt-5.5 / o1-o4 推論モデルファミリーを Test Con
 |---------|------|
 | **📥 単一ソースの取り込み** | 単一ノートを選択 → エンティティ、概念、サマリーを含むWikiページを生成 |
 | **📂 フォルダーからの取り込み** | 任意のフォルダを選択 → 既存ノートからWikiを一括生成 |
+| **📑 複数ファイルを取り込み** | 2 ペイン選択モーダルを開く → ファイル別チェックボックスで特定のノートを選択 → 選択分を一括取り込み（ライブキュー + ファイル別キャンセル付き） |
 | **🔍 Wikiに問い合わせ** | ストリーミング出力と`[[wiki-links]]`を伴う対話式Q&A |
 | **🛠️ WikiのLint** | 包括的健康スキャン：重複、リンク切れ、空ページ、孤立ページ、欠落エイリアス、矛盾 |
 | **📋 インデックスの再生成** | `wiki/index.md`を手動で再構築 |

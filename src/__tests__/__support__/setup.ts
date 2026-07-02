@@ -114,7 +114,7 @@ vi.mock('obsidian', () => ({
     containerEl: HTMLElement;
     constructor(app: unknown) {
       this.app = app;
-      this.containerEl = document.createElement('div');
+      this.containerEl = activeDocument.createElement('div');
     }
     display() {}
   },
