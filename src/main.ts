@@ -19,15 +19,6 @@ void aiSdkModulesLoaded.catch((err) => {
   console.warn('[v1.23.0 LLM migration] Failed to preload AI-SDK modules:', err);
 });
 
-// Issue #243: derive a consistent cache key for the thinking-control cache.
-// v1.23.0 P1-7: AI-SDK migration removed the thinking-control probe that
-// used this helper. Kept for now in case we need to introspect the cache
-// during v1.24.0 cleanup; will be removed if no use case surfaces.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function getThinkingControlCacheKey(settings: LLMWikiSettings): string {
-  return settings.baseUrl?.trim() || PREDEFINED_PROVIDERS[settings.provider]?.baseUrl || '';
-}
-
 // Exported for unit tests (see src/__tests__/root/main.test.ts).
 // Issue #99 / #128 / #128 follow-up: thin wrapper that injects only the
 // advanced settings the user has configured; otherwise the call passes

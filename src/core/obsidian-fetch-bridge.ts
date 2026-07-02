@@ -226,7 +226,7 @@ export async function streamingObsidianFetch(
       : typeof window !== 'undefined' ? window : undefined;
   let fetchFn: FetchLike | undefined;
   if (globalWin && typeof globalWin.fetch === 'function') {
-    fetchFn = globalWin.fetch.bind(globalWin) as FetchLike;
+    fetchFn = globalWin.fetch.bind(globalWin);
   }
 
   if (!fetchFn) {

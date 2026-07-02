@@ -33,7 +33,7 @@ export function wrapWithAdvancedSettings(
   settings: WrapperSettings
 ): LLMClient {
   const capTokens = settings.maxTokensPerCall > 0;
-  const originalCreate = client.createMessage.bind(client) as (params: Parameters<typeof client.createMessage>[0]) => ReturnType<typeof client.createMessage>;
+  const originalCreate = client.createMessage.bind(client);
 
   // Replace createMessage in-place; calling code keeps the same client reference.
   (client as unknown as { createMessage: LLMClient['createMessage'] }).createMessage = async (params) => {
