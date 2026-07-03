@@ -11,7 +11,7 @@ describe('parseSchemaContext', () => {
       expect(ctx.sections.length).toBeGreaterThan(0);
       // Default entity template has these sections (Issue #85 / default schema)
       const headings = ctx.sections.map(s => s.heading);
-      expect(headings).toContain('Entity Page Template');
+      expect(headings).toContain('实体页面模板');
     });
 
     it('returns empty sections array for unknown page type but still parses body', () => {
@@ -30,14 +30,14 @@ describe('parseSchemaContext', () => {
   describe('custom schema body (user-edited config.md)', () => {
     const customBody = `# Wiki Schema
 
-## Entity Page Template
+## 实体页面模板
 
 **Sections:**
 1. **Overview**: Single paragraph summary
 2. **Timeline**: Chronological events
 3. **Connections**: Related entities
 
-## Concept Page Template
+## 概念页面模板
 
 **Sections:**
 1. **Definition**: Brief definition
@@ -51,8 +51,8 @@ This is a custom user-defined section.
     it('parses user-defined sections', () => {
       const ctx = parseSchemaContext(customBody, 'entity');
       const headings = ctx.sections.map(s => s.heading);
-      expect(headings).toContain('Entity Page Template');
-      expect(headings).toContain('Concept Page Template');
+      expect(headings).toContain('实体页面模板');
+      expect(headings).toContain('概念页面模板');
       expect(headings).toContain('Custom Section Title');
     });
 

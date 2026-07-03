@@ -1,9 +1,9 @@
 {
-  "id": "karpathywiki",
-  "name": "Karpathy LLM Wiki",
+  "id": "yjy-llm-wiki",
+  "name": "YJY LLM Wiki",
   "version": "1.23.1",
   "minAppVersion": "1.11.0",
-  "description": "Karpathy's LLM Wiki implementation - multi-page knowledge generation with entity/concept pages and conversational query.",
+  "description": "Personal LLM Wiki for Obsidian with Codex CLI and custom gateway support.",
   "author": "Greener-Dalii",
   "authorUrl": "https://github.com/green-dalii",
   "isDesktopOnly": false

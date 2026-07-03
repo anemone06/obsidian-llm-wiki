@@ -1,6 +1,6 @@
 export const JA_TEXTS = {
     // Plugin Info
-    pluginTitle: 'Karpathy LLM Wiki 設定',
+    pluginTitle: 'YJY LLM Wiki 設定',
     pluginIntro: '本プラグインはObsidian用に{{link}}の概念を実装しています。ノートを読み込み、AIでエンティティと概念を抽出し、Vault内に構造化された相互リンクWikiを構築します。',
     karpathyLinkText: 'Andrej KarpathyのLLM Wiki',
 
@@ -118,7 +118,7 @@ export const JA_TEXTS = {
 
     // Errors
     errorNoApiKey: 'まずAPI Keyを設定してください',
-    llmNotReady: 'LLMが設定されていません。設定 → Karpathy LLM Wiki でプロバイダーを設定し、モデルを取得して接続テストに合格してください。',
+    llmNotReady: 'LLMが設定されていません。設定 → YJY LLM Wiki でプロバイダーを設定し、モデルを取得して接続テストに合格してください。',
     errorFetchFailed: '失敗：{}',
 
     // Query Settings
@@ -659,8 +659,8 @@ export const JA_TEXTS = {
     historyCustomRangeApply: '適用',
     historyCustomRangeClear: 'クリア',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki：vault が空です。最初のソースノートを作成して Ingest を実行してください。',
-    welcomeNoteTierBNotice: 'Karpathy Wiki：Welcome note を作成しました。開いてドメインを宣言し、2-3 個のソースノートを選んでリンクグラフのシードとしてください。',
+    welcomeNoteTierANotice: 'YJY Wiki：vault が空です。最初のソースノートを作成して Ingest を実行してください。',
+    welcomeNoteTierBNotice: 'YJY Wiki：Welcome note を作成しました。開いてドメインを宣言し、2-3 個のソースノートを選んでリンクグラフのシードとしてください。',
     welcomeNoteRecreateCommand: 'Wiki Welcome note を再作成',
     welcomeNoteRecreateCommandTooltip: '現在のドメインシードと LLM 設定テストで <wikiFolder>/Welcome.md に Welcome note を再作成します。既存ファイルは上書きされます。',
     welcomeNoteSettingsToggle: '初回実行時に Wiki Welcome note を作成',
@@ -671,7 +671,7 @@ export const JA_TEXTS = {
     welcomeNoteGenerating: 'Wiki Welcome note をバックグラウンドで生成中 — 完了時に通知が表示されます。',
     welcomeNoteGenerationFailed: 'Wiki Welcome note の生成に失敗しました：{error}',
     startupCheckWelcomePending: 'Welcome note：バックグラウンドで生成中（完了時に通知が表示されます）。',
-    welcomeNoteFileName: 'Karpathy LLM Wiki へようこそ',
+    welcomeNoteFileName: 'YJY LLM Wiki へようこそ',
     startupCheckWelcomeCreated: '{path} に Welcome note を作成しました',
     // v1.23.0 Phase 5.1.5: 複数ファイル取り込みモーダルの「すべてキャンセル」ボタン。
     // キュー内のすべての pending + running ジョブを一度にキャンセルします。

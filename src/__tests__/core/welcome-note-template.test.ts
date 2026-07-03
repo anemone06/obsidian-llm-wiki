@@ -1,6 +1,6 @@
 // Pure-function tests for welcome-note-template.ts
 //
-// buildWelcomeNote is a pure function that produces the English-template
+// buildWelcomeNote is a pure function that produces the Chinese-template
 // markdown body of the Welcome note. The LLM then translates to the
 // user's wiki language at write time (D8, see core/localize-welcome-note.ts).
 //
@@ -32,7 +32,7 @@ describe('buildWelcomeNote — frontmatter', () => {
 
   it('starts with a single H1 title', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/^---[\s\S]*?---\n\n#\s+Welcome/);
+    expect(body).toMatch(/^---[\s\S]*?---\n\n#\s+欢迎使用你的 LLM-Wiki/);
   });
 });
 
@@ -63,14 +63,14 @@ describe('buildWelcomeNote — line-break correctness (regression: 2026-06-28)',
       if (trimmed === 'wiki/') continue;
       // Skip markdown table separator lines (e.g. "| --- | --- |").
       if (/^\|[-\s|]+\|$/.test(trimmed)) continue;
-      expect(trimmed.length).toBeGreaterThan(10);
+      expect(trimmed.length).toBeGreaterThan(4);
     }
   });
 
   it('each table row is a single line (markdown tables break on \\n)', () => {
     const body = buildWelcomeNote(STD_ARGS);
     // Pull a table row, ensure the | separators stay on one line.
-    const tableRow = body.match(/^\| `Karpathy LLM Wiki: Ingest multiple files`[\s\S]*?$/m);
+    const tableRow = body.match(/^\| `YJY LLM Wiki: 多选文件摄入`[\s\S]*?$/m);
     expect(tableRow).toBeTruthy();
     expect(tableRow![0].includes('\n')).toBe(false);
   });
@@ -89,53 +89,53 @@ describe('buildWelcomeNote — line-break correctness (regression: 2026-06-28)',
 describe('buildWelcomeNote — "How to verify the install" section', () => {
   it('includes the verify section with a green-light protocol when LLM is OK', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/##\s+How to verify the install/);
-    expect(body).toMatch(/in your wiki language/);
+    expect(body).toMatch(/##\s+如何验证安装/);
+    expect(body).toMatch(/中文欢迎页/);
     // The verify section now points the user to Settings → Test Connection
     // (no visible ✅/⚠ status row in the body — moved to frontmatter).
-    expect(body).toMatch(/Test Connection/);
+    expect(body).toMatch(/测试连接/);
   });
 
-  it('includes recovery steps (open Settings → LLM Provider) when LLM is NOT configured', () => {
+  it('includes recovery steps (open Settings → LLM provider config) when LLM is NOT configured', () => {
     const body = buildWelcomeNote({
       ...STD_ARGS,
       llmConfig: { ok: false, error: 'API key not configured' },
     });
-    expect(body).toMatch(/Settings\s*→\s*Karpathy LLM Wiki/);
-    expect(body).toMatch(/Test Connection/);
-    expect(body).toMatch(/Recreate Wiki Welcome Note/);
+    expect(body).toMatch(/设置\s*→\s*YJY LLM Wiki/);
+    expect(body).toMatch(/测试连接/);
+    expect(body).toMatch(/重建 Wiki 欢迎页/);
   });
 });
 
 describe('buildWelcomeNote — "How to use this plugin" section', () => {
   it('renders a markdown table of the 7 commands', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/##\s+How to use this plugin/);
+    expect(body).toMatch(/##\s+如何使用这个插件/);
     // Each command in a table row
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Ingest multiple files`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Ingest single source`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Ingest from folder`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Query Wiki`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Lint wiki`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: View Ingestion History`/);
-    expect(body).toMatch(/\| `Karpathy LLM Wiki: Recreate Wiki Welcome Note`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 多选文件摄入`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 摄入单个源文件`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 从文件夹摄入`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 查询 Wiki`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 维护 Wiki`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 查看摄入历史`/);
+    expect(body).toMatch(/\| `YJY LLM Wiki: 重建 Wiki 欢迎页`/);
   });
 
   it('mentions the Ingest Multiple Files command (#130) as the day-one entry point', () => {
     const body = buildWelcomeNote(STD_ARGS);
     // v1.23.0 stage 4 shortened the table — the entry point now
-    // reads "Day one — start here." (was "Day one. This is the
+    // reads "第一天 — start here." (was "第一天. This is the
     // entry point."). The key facts to keep are: the command name
     // is present AND day-one is called out.
-    expect(body).toMatch(/Karpathy LLM Wiki: Ingest multiple files/);
-    expect(body).toMatch(/Day one/);
+    expect(body).toMatch(/YJY LLM Wiki: 多选文件摄入/);
+    expect(body).toMatch(/第一天/);
   });
 });
 
 describe('buildWelcomeNote — "What the wiki structure means" section', () => {
   it('explains entities / concepts / sources as the three core types', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/##\s+What the wiki structure means/);
+    expect(body).toMatch(/##\s+Wiki 结构说明/);
     expect(body).toMatch(/\*\*`entities\/`\*\*/);
     expect(body).toMatch(/\*\*`concepts\/`\*\*/);
     expect(body).toMatch(/\*\*`sources\/`\*\*/);
@@ -143,13 +143,13 @@ describe('buildWelcomeNote — "What the wiki structure means" section', () => {
 
   it('explains the optional Schema layer', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/###\s+The Schema layer/);
+    expect(body).toMatch(/###\s+Schema 层/);
     expect(body).toMatch(/wiki\/schema\//);
   });
 
   it('explains the wikilink graph as the query index', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/###\s+The wikilink graph/);
+    expect(body).toMatch(/###\s+Wiki 链接图/);
     expect(body).toMatch(/\[\[X\]\]/);
   });
 
@@ -168,7 +168,7 @@ describe('buildWelcomeNote — "What the wiki structure means" section', () => {
 describe('buildWelcomeNote — "Quick start" section', () => {
   it('lists 4 numbered steps', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/##\s+Quick start/);
+    expect(body).toMatch(/##\s+快速开始/);
     expect(body).toMatch(/1\.\s+\*\*/);
     expect(body).toMatch(/2\.\s+\*\*/);
     expect(body).toMatch(/3\.\s+\*\*/);
@@ -177,13 +177,13 @@ describe('buildWelcomeNote — "Quick start" section', () => {
 
   it('mentions the Ingest Multiple Files command (#130) and View Ingestion History', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/Ingest multiple files/);
-    expect(body).toMatch(/View Ingestion History/);
+    expect(body).toMatch(/多选文件摄入/);
+    expect(body).toMatch(/查看摄入历史/);
   });
 
   it('mentions the Query Wiki panel', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    expect(body).toMatch(/Query Wiki/);
+    expect(body).toMatch(/查询 Wiki/);
   });
 });
 
@@ -248,10 +248,10 @@ describe('buildWelcomeNote — structural invariants', () => {
 
   it('contains the expected H2 sections in order (verify, how-to, structure, quick-start)', () => {
     const body = buildWelcomeNote(STD_ARGS);
-    const verifyIdx = body.indexOf('## How to verify the install');
-    const howToUseIdx = body.indexOf('## How to use this plugin');
-    const structureIdx = body.indexOf('## What the wiki structure means');
-    const quickIdx = body.indexOf('## Quick start');
+    const verifyIdx = body.indexOf('## 如何验证安装');
+    const howToUseIdx = body.indexOf('## 如何使用这个插件');
+    const structureIdx = body.indexOf('## Wiki 结构说明');
+    const quickIdx = body.indexOf('## 快速开始');
     expect(verifyIdx).toBeGreaterThan(-1);
     expect(howToUseIdx).toBeGreaterThan(verifyIdx);
     expect(structureIdx).toBeGreaterThan(howToUseIdx);

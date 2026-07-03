@@ -1,16 +1,16 @@
 export const ZH_TEXTS = {
     // 插件信息
-    pluginTitle: 'Karpathy LLM Wiki 设置',
+    pluginTitle: 'YJY LLM Wiki 设置',
     pluginIntro: '本插件为 Obsidian 实现了 {{link}} 概念。它读取你的笔记，用 AI 提取实体和概念，在 Vault 中构建结构化、互联的知识库。',
     karpathyLinkText: 'Andrej Karpathy 的 LLM Wiki',
 
     // 功能部分
     featuresTitle: '使用方式',
-    workflow1Title: '1. 摄入 (Ingest)',
+    workflow1Title: '1. 摄入',
     workflow1Desc: '选择笔记 → AI 提取实体、概念、关系 → 生成 Wiki 页面。',
-    workflow2Title: '2. 查询 (Query)',
+    workflow2Title: '2. 查询',
     workflow2Desc: '与 Wiki 对话，答案基于你已摄入的知识，而非通用知识。',
-    workflow3Title: '3. 维护 (Maintain)',
+    workflow3Title: '3. 维护',
     workflow3Desc: '自动生成索引、交叉链接、健康检查，保持 Wiki 整洁。',
 
     // 语言切换
@@ -28,7 +28,7 @@ export const ZH_TEXTS = {
     languageIt: 'Italiano',
 
     // 状态
-    statusTitle: 'LLM Client 状态',
+    statusTitle: 'LLM 客户端状态',
     llmWikiStatusSection: 'LLM-Wiki 状态',
     statusInitialized: '已初始化',
     statusReady: 'LLM 已就绪',
@@ -38,7 +38,7 @@ export const ZH_TEXTS = {
 
     // Provider 设置
     providerSection: 'LLM 配置',
-    providerName: 'LLM Provider',
+    providerName: 'LLM 提供商',
     providerDesc: '选择预定义提供商或自定义 OpenAI 兼容服务。对于 Coding Plan 等套餐，建议选择自定义 OpenAI/Anthropic 并手工填写对应 URL 和 API Key',
 
     // API Key
@@ -65,15 +65,15 @@ export const ZH_TEXTS = {
     // 模型选择
     modelSection: '模型选择',
     fetchModelsName: '获取可用模型',
-    fetchModelsDesc: '从 Provider API 获取最新的模型列表',
+    fetchModelsDesc: '从提供商 API 获取最新的模型列表',
     fetchModelsButton: '获取模型列表',
     fetchingModels: '获取中...',
     fetchSuccess: '获取成功！共 {} 个可用模型',
     fetchFailed: '获取失败或列表为空，请手动输入模型名称',
-    fetchNotSupported: '该 Provider 不支持模型列表查询',
+    fetchNotSupported: '该提供商不支持模型列表查询',
     fetchErrorAuth: '认证失败（HTTP 401/403）。请检查 API Key 是否正确，或直接输入模型 ID 后点击测试连接进行验证。',
     fetchErrorEndpoint: '接入点未找到（HTTP 404）。请检查 BaseURL 是否正确，或直接输入模型 ID 后点击测试连接。',
-    fetchErrorServer: 'Provider 服务端错误（HTTP 5xx）。稍后重试，或直接输入模型 ID 后点击测试连接。',
+    fetchErrorServer: '提供商服务端错误（HTTP 5xx）。稍后重试，或直接输入模型 ID 后点击测试连接。',
     fetchErrorEmpty: '该接入点不支持列出模型列表。请直接输入模型 ID 后点击测试连接进行验证。',
     fetchErrorNetwork: '网络请求失败。请检查网络连接、BaseURL 或代理设置。您也可以直接输入模型 ID 后点击测试连接进行验证。',
 
@@ -118,7 +118,7 @@ export const ZH_TEXTS = {
 
     // 错误
     errorNoApiKey: '请先配置 API Key',
-    llmNotReady: 'LLM 尚未配置。请前往 设置 → Karpathy LLM Wiki 完成 Provider 配置、获取模型列表并通过连接测试。',
+    llmNotReady: 'LLM 尚未配置。请前往 设置 → YJY LLM Wiki 完成提供商配置、获取模型列表并通过连接测试。',
     errorFetchFailed: '获取失败：{}',
 
     // Query 设置
@@ -130,7 +130,7 @@ export const ZH_TEXTS = {
     numberRangeClamped: '数值超出范围（1-500），已自动设定为 {}',
 
     // Query Modal UI
-    queryModalTitle: 'Query Wiki - 对话式查询',
+    queryModalTitle: '查询 Wiki — 对话式查询',
     queryModalPlaceholder: '输入问题...',
     queryModalSendButton: '发送',
     queryModalStopButton: '停止',
@@ -153,7 +153,7 @@ export const ZH_TEXTS = {
     queryThinkingSteps: '步',
 
     // 错误消息
-    errorLLMClientNotInit: 'LLM Client 未初始化。请保存设置。',
+    errorLLMClientNotInit: 'LLM 客户端未初始化。请保存设置。',
     errorIngestFailed: '摄入失败：',
     errorQueryFailed: '查询失败：',
     fileWriteFailed: '无法创建或更新文件：{path}',
@@ -179,13 +179,13 @@ export const ZH_TEXTS = {
     lintAliasesCompleteBtn: '补全别名（{count}）',
     lintAliasesFilling: '生成别名 {current}/{total}：{page}',
     lintAliasesFilled: '别名补全完成。已填充 {filled}/{total} 页。',
-    lintTagViolationFiring: 'Retagging {current}/{total}: {path}',
-    lintTagViolationFailed: 'Retag failed for {path}: {error}',
-    lintTagViolationFixed: 'Retag complete. Fixed {fixed}/{total} page(s).',
-    lintTagViolationFixedNone: 'Retag complete. No pages needed fixing (LLM kept current tags).',
+    lintTagViolationFiring: '正在重打标签 {current}/{total}：{path}',
+    lintTagViolationFailed: '重打标签失败：{path} — {error}',
+    lintTagViolationFixed: '重打标签完成。已修复 {fixed}/{total} 个页面。',
+    lintTagViolationFixedNone: '重打标签完成。没有页面需要修复（LLM 保留了当前标签）。',
     lintTagViolationSection: '标签越界（程序检测）[共 {count} 个]',
-    lintTagViolationItem: '- [[{path}]] — invalid: {tags}',
-    lintTagViolationRetagBtn: '🏷️ Retag {count} page(s) with LLM',
+    lintTagViolationItem: '- [[{path}]] — 无效标签：{tags}',
+    lintTagViolationRetagBtn: '🏷️ 用 LLM 重打 {count} 个页面标签',
     lintAliasesFillFailed: '别名生成失败：{page} — {error}',
     lintFixItemFailed: '修复失败：[[{target}]] — {error}',
     lintLinkItemFailed: '链接失败：{page} — {error}',
@@ -661,20 +661,20 @@ export const ZH_TEXTS = {
     historyCustomRangeApply: '应用',
     historyCustomRangeClear: '清除',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki：vault 为空。请创建你的第一个 source note 并运行 Ingest 以开始使用。',
-    welcomeNoteTierBNotice: 'Karpathy Wiki：已创建 Welcome note。打开它以声明你的领域并选择 2-3 个 source note 来为链接图提供种子。',
-    welcomeNoteRecreateCommand: '重建 Wiki Welcome note',
-    welcomeNoteRecreateCommandTooltip: '使用当前的 domain seed 和 LLM 配置测试在 <wikiFolder>/Welcome.md 重新创建 Welcome note。已存在的文件将被覆盖。',
-    welcomeNoteSettingsToggle: '首次运行时创建 Wiki Welcome note',
-    welcomeNoteSettingsToggleDesc: '首次运行（wiki 文件夹为空时），自动在 <wikiFolder>/Welcome.md 创建一页入门笔记。它会说明 LLM-Wiki 是什么、引导你声明领域聚焦，并教你摄取前 2-3 条源笔记。笔记默认用英文写入，若 LLM 已配置则用你的 wiki 语言。如果已经熟悉插件用法不想多这一页，可以关掉。',
-    welcomeNoteRunConfigTest: 'Welcome note 已用英文写入。打开 设置 → LLM Provider → Test Connection 以便下次重建时本地化。',
-    welcomeNoteRecreated: '已重新创建 Wiki Welcome note 于 {path}',
-    welcomeNoteNotRecreated: 'Welcome note 未重新创建。请检查 LLM 配置。',
-    welcomeNoteGenerating: 'Wiki Welcome note 正在后台生成 — 完成后会显示通知。',
-    welcomeNoteGenerationFailed: 'Wiki Welcome note 生成失败：{error}',
-    startupCheckWelcomePending: 'Welcome note：正在后台生成（完成后会显示通知）。',
-    welcomeNoteFileName: '欢迎使用 Karpathy LLM Wiki',
-    startupCheckWelcomeCreated: 'Welcome note 已创建于 {path}',
+    welcomeNoteTierANotice: 'YJY Wiki：vault 为空。请创建你的第一篇源笔记并运行摄入以开始使用。',
+    welcomeNoteTierBNotice: 'YJY Wiki：已创建欢迎页。打开它声明你的领域，并选择 2-3 篇源笔记作为链接图种子。',
+    welcomeNoteRecreateCommand: '重建 Wiki 欢迎页',
+    welcomeNoteRecreateCommandTooltip: '使用当前领域种子和 LLM 配置，在 <wikiFolder>/欢迎使用 YJY LLM Wiki.md 重新创建欢迎页。已存在的文件将被覆盖。',
+    welcomeNoteSettingsToggle: '首次运行时创建 Wiki 欢迎页',
+    welcomeNoteSettingsToggleDesc: '首次运行（wiki 文件夹为空时），自动在 <wikiFolder>/欢迎使用 YJY LLM Wiki.md 创建一页入门笔记。它会说明 LLM-Wiki 是什么、引导你声明领域聚焦，并教你摄入前 2-3 条源笔记。如果已经熟悉插件用法不想多这一页，可以关掉。',
+    welcomeNoteRunConfigTest: '欢迎页已写入。打开 设置 → LLM 配置 → 测试连接，确保下次重建时使用当前配置。',
+    welcomeNoteRecreated: '已重新创建 Wiki 欢迎页于 {path}',
+    welcomeNoteNotRecreated: '欢迎页未重新创建。请检查 LLM 配置。',
+    welcomeNoteGenerating: 'Wiki 欢迎页正在后台生成 — 完成后会显示通知。',
+    welcomeNoteGenerationFailed: 'Wiki 欢迎页生成失败：{error}',
+    startupCheckWelcomePending: '欢迎页：正在后台生成（完成后会显示通知）。',
+    welcomeNoteFileName: '欢迎使用 YJY LLM Wiki',
+    startupCheckWelcomeCreated: '欢迎页已创建于 {path}',
     // v1.23.0 Phase 5.1.5: 多文件摄入 Modal 的"取消全部"按钮。一次取消
     // 队列中所有 pending + running 任务。Completed / failed 保留可见。
     cancelAllQueueJobs: '全部取消',
@@ -695,7 +695,7 @@ export const ZH_TEXTS = {
     multiFileStatusFailed: '已失败',
     multiFileCancelAria: '取消该文件',
     startupCheckNoticeLevelName: '显示快速修复结果',
-    startupCheckNoticeLevelDesc: '快速修复在插件启动时始终运行（Welcome note、文件夹结构、源归一化、不完整页面、日志头）。选择启动后是否显示摘要通知。静默模式仅记录到开发者控制台和操作历史面板。',
+    startupCheckNoticeLevelDesc: '快速修复在插件启动时始终运行（欢迎页、文件夹结构、源归一化、不完整页面、日志头）。选择启动后是否显示摘要通知。静默模式仅记录到开发者控制台和操作历史面板。',
     startupCheckNoticeVisible: '显示（弹出通知）',
     startupCheckNoticeSilent: '静默（无通知）',
 } as const;

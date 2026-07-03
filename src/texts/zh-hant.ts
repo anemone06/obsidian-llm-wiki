@@ -1,6 +1,6 @@
 export const ZH_HANT_TEXTS = {
     // 插件信息
-    pluginTitle: 'Karpathy LLM Wiki 設定',
+    pluginTitle: 'YJY LLM Wiki 設定',
     pluginIntro: '本外掛為 Obsidian 實現了 {{link}} 概念。它讀取你的筆記，用 AI 提取實體和概念，在 Vault 中構建結構化、互聯的知識庫。',
     karpathyLinkText: 'Andrej Karpathy 的 LLM Wiki',
 
@@ -118,7 +118,7 @@ export const ZH_HANT_TEXTS = {
 
     // 错误
     errorNoApiKey: '請先配置 API Key',
-    llmNotReady: 'LLM 尚未配置。請前往 設定 → Karpathy LLM Wiki 完成 Provider 配置、獲取模型列表並透過連線測試。',
+    llmNotReady: 'LLM 尚未配置。請前往 設定 → YJY LLM Wiki 完成 Provider 配置、獲取模型列表並透過連線測試。',
     errorFetchFailed: '獲取失敗：{}',
 
     // Query 设置
@@ -661,8 +661,8 @@ export const ZH_HANT_TEXTS = {
     historyCustomRangeApply: '應用',
     historyCustomRangeClear: '清除',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki：vault 為空。請建立你的第一個 source note 並執行 Ingest 以開始使用。',
-    welcomeNoteTierBNotice: 'Karpathy Wiki：已建立 Welcome note。開啟它以宣告你的領域並選擇 2-3 個 source note 來為連結圖提供種子。',
+    welcomeNoteTierANotice: 'YJY Wiki：vault 為空。請建立你的第一個 source note 並執行 Ingest 以開始使用。',
+    welcomeNoteTierBNotice: 'YJY Wiki：已建立 Welcome note。開啟它以宣告你的領域並選擇 2-3 個 source note 來為連結圖提供種子。',
     welcomeNoteRecreateCommand: '重建 Wiki Welcome note',
     welcomeNoteRecreateCommandTooltip: '使用目前的 domain seed 和 LLM 配置測試在 <wikiFolder>/Welcome.md 重新建立 Welcome note。已存在的檔案將被覆蓋。',
     welcomeNoteSettingsToggle: '首次執行時建立 Wiki Welcome note',
@@ -673,7 +673,7 @@ export const ZH_HANT_TEXTS = {
     welcomeNoteGenerating: 'Wiki Welcome note 正在背景產生中 — 完成後會顯示通知。',
     welcomeNoteGenerationFailed: 'Wiki Welcome note 產生失敗：{error}',
     startupCheckWelcomePending: 'Welcome note：正在背景產生中（完成後會顯示通知）。',
-    welcomeNoteFileName: '歡迎使用 Karpathy LLM Wiki',
+    welcomeNoteFileName: '歡迎使用 YJY LLM Wiki',
     startupCheckWelcomeCreated: 'Welcome note 已建立於 {path}',
     // v1.23.0 Phase 5.1.5: 多檔案攝入 Modal 的「全部取消」按鈕。一次取消
     // 佇列中所有 pending + running 任務。Completed / failed 保留可見。

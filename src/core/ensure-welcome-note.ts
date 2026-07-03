@@ -14,7 +14,7 @@
 // D8 (user-locked 2026-06-23): the Welcome note body is built in
 // English by buildWelcomeNote, then translated into the user's
 // wikiLanguage by localizeWelcomeNote (which uses the LLM). If the
-// LLM call fails, the English body is written and the caller can
+// LLM call fails, the Chinese body is written and the caller can
 // surface a "Run Configuration Test" Notice.
 //
 // v1.23.0 refactor (2026-06-28): the VaultAdapter no longer needs
@@ -57,8 +57,8 @@ export interface EnsureWelcomeNoteArgs {
   smokeTestProbe: () => Promise<LlmConfigStatus>;
   /**
    * Optional LLM client for D8 dynamic translation. When omitted, the
-   * English body is written directly (Tier A users with no LLM get
-   * an English Welcome note regardless).
+   * Chinese body is written directly (Tier A users with no LLM get
+   * an Chinese Welcome note regardless).
    */
   llmClient?: LLMClient;
   /** Model name to use for the translation. Required if llmClient is provided. */
@@ -107,7 +107,7 @@ export async function ensureWelcomeNote(args: EnsureWelcomeNoteArgs): Promise<En
   }
   // Step 5: idempotent — skip if Welcome note already exists.
   // The filename is localized to the user's wikiLanguage (D8 + v1.23.0
-  // follow-up) so "欢迎使用 Karpathy LLM Wiki.md" / "Welcome.md" etc.
+  // follow-up) so "欢迎使用 YJY LLM Wiki.md" / "Welcome.md" etc.
   // For the legacy fallback to old single-file Welcome.md (pre-i18n),
   // we also probe that path explicitly so recreate-on-existing still
   // works for users upgrading from v1.22.x.
@@ -125,7 +125,7 @@ export async function ensureWelcomeNote(args: EnsureWelcomeNoteArgs): Promise<En
   // Test section (rendered into the body) and the LLM-translation
   // gate below.
   const llmConfig = await smokeTest(smokeTestProbe);
-  // Step 7: build the English Welcome note body.
+  // Step 7: build the Chinese Welcome note body.
   const englishBody = buildWelcomeNote({
     llmConfig,
     createdAt,

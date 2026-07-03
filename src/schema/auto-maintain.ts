@@ -622,7 +622,7 @@ export class AutoMaintainManager {
         wikiFolder: this.settings.wikiFolder || 'wiki',
         createWelcomeNote: this.settings.createWelcomeNote,
       },
-      targetLanguage: this.settings.wikiLanguage || 'en',
+      targetLanguage: this.settings.wikiLanguage || 'zh',
       createdAt: new Date().toISOString().slice(0, 10),
       // smokeTestProbe wraps the sync probe in a resolved Promise so
       // the ensure-welcome-note signature is satisfied.
@@ -640,7 +640,7 @@ export class AutoMaintainManager {
    */
   async recreateWelcomeNote(): Promise<void> {
     const wikiFolder = this.settings.wikiFolder || 'wiki';
-    const wikiLanguage = this.settings.wikiLanguage || 'en';
+    const wikiLanguage = this.settings.wikiLanguage || 'zh';
     // Delete BOTH the legacy "Welcome.md" (pre-i18n installs) and the
     // localized filename, so the Recreate command works regardless of
     // which one the user already has.

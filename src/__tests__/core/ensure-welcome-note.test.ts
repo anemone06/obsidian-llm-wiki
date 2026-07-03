@@ -43,10 +43,11 @@ function makeFakeVault(initialFiles: Record<string, string> = {}): VaultAdapter 
 }
 
 // v1.23.0 i18n: the Welcome filename is localized per language. For
-// the default test fixture (en) it's "Welcome to Karpathy LLM Wiki".
+// the default test fixture is Chinese, so it is "欢迎使用 YJY LLM Wiki".
 // Tests that need to assert the exact path should use this helper.
-const TEST_WELCOME_PATH = 'wiki/Welcome to Karpathy LLM Wiki.md';
-const TEST_WELCOME_PATH_ZH = 'wiki/欢迎使用 Karpathy LLM Wiki.md';
+const TEST_WELCOME_PATH = 'wiki/欢迎使用 YJY LLM Wiki.md';
+const TEST_WELCOME_PATH_ZH = 'wiki/欢迎使用 YJY LLM Wiki.md';
+const TEST_WELCOME_PATH_EN = 'wiki/Welcome to YJY LLM Wiki.md';
 
 // Helper: returns a fake LLM client that always "translates" by
 // prepending a marker. Tests can inspect the marker to confirm
@@ -69,7 +70,7 @@ describe('ensureWelcomeNote — Tier A (empty vault)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'no API key' }),
     });
@@ -86,7 +87,7 @@ describe('ensureWelcomeNote — Tier A (empty vault)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
       llmClient: { createMessage: vi.fn().mockResolvedValue(JSON.stringify({ translated: 'TRANSLATED' })) },
@@ -105,7 +106,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });
@@ -121,7 +122,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });
@@ -135,7 +136,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: false },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });
@@ -153,7 +154,7 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: false, error: 'API key not configured' }),
     });
@@ -164,28 +165,10 @@ describe('ensureWelcomeNote — Tier B (existing vault, no wiki)', () => {
 });
 
 describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
-  it('translates the body to targetLanguage when LLM client is provided', async () => {
+  it('translates the body when targetLanguage is not Chinese', async () => {
     const vault = makeFakeVault();
     vault.written.set('notes/a.md', '# A');
     const llmClient = makeTranslatingClient('[TRANSLATED]');
-    await ensureWelcomeNote({
-      vault,
-      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'zh',
-      createdAt: '2026-06-27',
-      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
-      llmClient: llmClient,
-      model: 'gpt-4o-mini',
-    });
-    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
-    expect(content).toMatch(/\[TRANSLATED\]/);
-    expect(llmClient.createMessage).toHaveBeenCalled();
-  });
-
-  it('skips LLM translation when targetLanguage is en (writes English directly)', async () => {
-    const vault = makeFakeVault();
-    vault.written.set('notes/a.md', '# A');
-    const llmClient = makeTranslatingClient('[SHOULD_NOT_APPEAR]');
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
@@ -195,18 +178,16 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
-    expect(llmClient.createMessage).not.toHaveBeenCalled();
-    const content = vault.written.get(TEST_WELCOME_PATH)!;
-    expect(content).not.toMatch(/SHOULD_NOT_APPEAR/);
+    const content = vault.written.get(TEST_WELCOME_PATH_EN)!;
+    expect(content).toMatch(/\[TRANSLATED\]/);
+    expect(llmClient.createMessage).toHaveBeenCalled();
   });
 
-  it('falls back to English when LLM client throws during translation', async () => {
+  it('skips LLM translation when targetLanguage is zh (writes Chinese directly)', async () => {
     const vault = makeFakeVault();
     vault.written.set('notes/a.md', '# A');
-    const llmClient = {
-      createMessage: vi.fn().mockRejectedValue(new Error('rate limit')),
-    };
-    const result = await ensureWelcomeNote({
+    const llmClient = makeTranslatingClient('[SHOULD_NOT_APPEAR]');
+    await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
       targetLanguage: 'zh',
@@ -215,8 +196,29 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
       llmClient: llmClient,
       model: 'gpt-4o-mini',
     });
-    const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
-    expect(content).toMatch(/Welcome to your LLM-Wiki/);  // English fallback (H1)
+    expect(llmClient.createMessage).not.toHaveBeenCalled();
+    const content = vault.written.get(TEST_WELCOME_PATH)!;
+    expect(content).not.toMatch(/SHOULD_NOT_APPEAR/);
+    expect(content).toMatch(/欢迎使用你的 LLM-Wiki/);
+  });
+
+  it('falls back to Chinese when LLM client throws during translation', async () => {
+    const vault = makeFakeVault();
+    vault.written.set('notes/a.md', '# A');
+    const llmClient = {
+      createMessage: vi.fn().mockRejectedValue(new Error('rate limit')),
+    };
+    const result = await ensureWelcomeNote({
+      vault,
+      settings: { wikiFolder: 'wiki', createWelcomeNote: true },
+      targetLanguage: 'en',
+      createdAt: '2026-06-27',
+      smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
+      llmClient: llmClient,
+      model: 'gpt-4o-mini',
+    });
+    const content = vault.written.get(TEST_WELCOME_PATH_EN)!;
+    expect(content).toMatch(/欢迎使用你的 LLM-Wiki/);
     expect(result.localizeResult?.localized).toBe(false);
     expect(result.localizeResult?.error).toMatch(/rate limit/);
   });
@@ -236,10 +238,10 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
     });
     expect(llmClient.createMessage).not.toHaveBeenCalled();
     const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
-    expect(content).toMatch(/Welcome to your LLM-Wiki/);  // English, not Chinese
+    expect(content).toMatch(/欢迎使用你的 LLM-Wiki/);  // English, not Chinese
   });
 
-  it('writes English without LLM client when none is provided', async () => {
+  it('writes Chinese without LLM client when none is provided', async () => {
     const vault = makeFakeVault();
     vault.written.set('notes/a.md', '# A');
     const result = await ensureWelcomeNote({
@@ -252,7 +254,7 @@ describe('ensureWelcomeNote — D8 LLM dynamic translation', () => {
     });
     expect(result.localizeResult?.localized).toBe(false);
     const content = vault.written.get(TEST_WELCOME_PATH_ZH)!;
-    expect(content).toMatch(/Welcome to your LLM-Wiki/);
+    expect(content).toMatch(/欢迎使用你的 LLM-Wiki/);
   });
 });
 
@@ -263,7 +265,7 @@ describe('ensureWelcomeNote — Tier C (existing wiki)', () => {
     await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });
@@ -277,7 +279,7 @@ describe('ensureWelcomeNote — return value', () => {
     const result = await ensureWelcomeNote({
       vault,
       settings: { wikiFolder: 'wiki', createWelcomeNote: true },
-      targetLanguage: 'en',
+      targetLanguage: 'zh',
       createdAt: '2026-06-27',
       smokeTestProbe: async () => ({ ok: true, provider: 'OpenAI', model: 'gpt-4o-mini' }),
     });

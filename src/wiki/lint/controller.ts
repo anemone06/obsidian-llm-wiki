@@ -756,7 +756,7 @@ export async function runLintWiki(
 
           // Smart fix strategy: follow causality chain with aliases as foundation
           // Phase -1: Fix polluted pages (structural root cause before everything else)
-          fixAllNotice.setMessage('Smart fix: Phase -1 — Fixing polluted pages...');
+          fixAllNotice.setMessage('智能修复：阶段 -1 — 正在修复污染页面...');
           if (pollutedPages.length > 0) {
             for (const pp of pollutedPages) {
               try {
@@ -768,19 +768,19 @@ export async function runLintWiki(
               }
             }
             if (pollutedFixed > 0) {
-              allResults.push(`## Fix Polluted Pages\nFixed ${pollutedFixed}/${pollutedPages.length} polluted pages`);
+              allResults.push(`## 修复污染页面\n已修复 ${pollutedFixed}/${pollutedPages.length} 个污染页面`);
             }
           }
 
           // Phase 0: Complete aliases (pre-flight, ensures duplicate detection accuracy)
           // → Aliases are required for Tier 1 duplicate signals (crossLang)
           // → Missing aliases → duplicate detection misses true duplicates → downstream fixes incomplete
-          fixAllNotice.setMessage('Smart fix: Phase 0 — Completing aliases...');
+          fixAllNotice.setMessage('智能修复：阶段 0 — 正在补全别名...');
           if (aliasDeficientPages.length > 0) {
             const { filled, results } = await runAliasCompletion(ctx, signal, aliasDeficientPages);
             aliasesFilled = filled;
             if (filled > 0) {
-              allResults.push(`## Complete Aliases\n${results.join('\n')}`);
+              allResults.push(`## 补全别名\n${results.join('\n')}`);
               console.debug(`Smart fix: Completed ${filled} aliases, improving duplicate detection accuracy`);
             }
           }
@@ -788,12 +788,12 @@ export async function runLintWiki(
           // Phase 1: Merge duplicates (root cause)
           // → Eliminates redundant pages, resolves many dead links and orphans automatically via link rewriting
           // → Duplicate detection now uses complete aliases (Tier 1 crossLang signals active)
-          fixAllNotice.setMessage('Smart fix: Phase 1 — Merging duplicates...');
+          fixAllNotice.setMessage('智能修复：阶段 1 — 正在合并重复页面...');
           if (duplicates.length > 0) {
             const { merged, results } = await runDuplicateMerges(ctx, signal, duplicates);
             duplicatesMerged = merged;
             if (merged > 0) {
-              allResults.push(`## Merge Duplicate Pages\n${results.join('\n')}`);
+              allResults.push(`## 合并重复页面\n${results.join('\n')}`);
               console.debug(`Smart fix: Merged ${merged} duplicates, dead links and orphans may be auto-resolved`);
             }
           }
@@ -802,12 +802,12 @@ export async function runLintWiki(
           // → Links to deleted source pages were already rewritten during merge
           // → This phase fixes any remaining dead links (pointing to non-existent pages)
           // → Dead link fallback uses aliases to find existing pages (avoiding stub creation)
-          fixAllNotice.setMessage('Smart fix: Phase 2 — Fixing dead links...');
+          fixAllNotice.setMessage('智能修复：阶段 2 — 正在修复断链...');
           if (deadLinks.length > 0) {
             const { fixed, results } = await runDeadLinkFixes(ctx, signal, deadLinks);
             deadLinksFixed = fixed;
             if (fixed > 0) {
-              allResults.push(`## Fix Dead Links\n${results.join('\n')}`);
+              allResults.push(`## 修复断链\n${results.join('\n')}`);
               console.debug(`Smart fix: Fixed ${fixed} dead links`);
             }
           }
@@ -815,23 +815,23 @@ export async function runLintWiki(
           // Phase 3: Link remaining orphan pages
           // → Some orphans may be auto-resolved after duplicate merge (source page deleted, target page now has incoming links)
           // → This phase links any remaining orphan pages
-          fixAllNotice.setMessage('Smart fix: Phase 3 — Linking orphan pages...');
+          fixAllNotice.setMessage('智能修复：阶段 3 — 正在链接孤立页面...');
           if (orphans.length > 0) {
             const { linked, results } = await runOrphanFixes(ctx, signal, orphans);
             orphansLinked = linked;
             if (linked > 0) {
-              allResults.push(`## Link Orphan Pages\n${results.join('\n')}`);
+              allResults.push(`## 链接孤立页面\n${results.join('\n')}`);
               console.debug(`Smart fix: Linked ${linked} orphan pages`);
             }
           }
 
           // Phase 4: Expand empty pages (last, independent of other issues)
-          fixAllNotice.setMessage('Smart fix: Phase 4 — Expanding empty pages...');
+          fixAllNotice.setMessage('智能修复：阶段 4 — 正在扩充空洞页面...');
           if (emptyPages.length > 0) {
             const { filled, results } = await runEmptyPageFixes(ctx, signal, emptyPages);
             emptyPagesFilled = filled;
             if (filled > 0) {
-              allResults.push(`## Expand Empty Pages\n${results.join('\n')}`);
+              allResults.push(`## 扩充空洞页面\n${results.join('\n')}`);
               console.debug(`Smart fix: Expanded ${filled} empty pages`);
             }
           }
@@ -840,12 +840,12 @@ export async function runLintWiki(
           // LLMs may invent types that don't match the active
           // vocabulary; this phase asks the LLM to re-emit valid
           // tags using only values from the active vocabulary.
-          fixAllNotice.setMessage('Smart fix: Phase 5 — Retagging out-of-vocabulary tag pages...');
+          fixAllNotice.setMessage('智能修复：阶段 5 — 正在重打标签越界页面...');
           if (tagViolations.length > 0) {
             const { fixed, results } = await runRetagViolations(ctx, signal, tagViolations);
             tagsRetagged = fixed;
             if (fixed > 0) {
-              allResults.push(`## Retag Tag Violations\n${results.join('\n')}`);
+              allResults.push(`## 重打标签越界页面\n${results.join('\n')}`);
               console.debug(`Smart fix: Retagged ${fixed} tag violations`);
             }
           }

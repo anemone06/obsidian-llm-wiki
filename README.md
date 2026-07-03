@@ -1,12 +1,12 @@
 ![llm_wiki_banner](/docs/assets/llm_wiki_banner.webp)
 
-# 🧠 Karpathy LLM Wiki Plugin for Obsidian
+# 🧠 YJY LLM Wiki Plugin for Obsidian
 
 > AI-powered structured knowledge base that ingests your notes and generates a connected Wiki — based on [Andrej Karpathy's LLM Wiki concept](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f).
 >
 > **Obsidian official score 95/100** | Native support for 10 languages | Actively maintained, continuously evolving
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/green-dalii/obsidian-llm-wiki) [![Release Obsidian plugin](https://github.com/green-dalii/obsidian-llm-wiki/actions/workflows/release.yml/badge.svg)](https://github.com/green-dalii/obsidian-llm-wiki/actions/workflows/release.yml) ![Version](https://img.shields.io/github/v/release/green-dalii/obsidian-llm-wiki?style=flat-square) ![Author](https://img.shields.io/badge/author-Greener--Dalii-blue?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) ![Maintenance](https://img.shields.io/badge/maintenance-actively%20maintained-brightgreen?style=flat-square) ![Build Status](https://img.shields.io/github/actions/workflow/status/green-dalii/obsidian-llm-wiki/release.yml?style=flat-square) ![Obsidian Compatibility](https://img.shields.io/badge/obsidian-1.11.0%2B-purple?style=flat-square) ![GitHub Stars](https://img.shields.io/github/stars/green-dalii/obsidian-llm-wiki?style=flat-square) ![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=483699&label=downloads&query=$[karpathywiki].downloads&url=https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugin-stats.json&style=flat-square) ![Languages](https://img.shields.io/badge/languages-10-informational?style=flat-square) ![Providers](https://img.shields.io/badge/providers-12%2B-cyan?style=flat-square)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/green-dalii/obsidian-llm-wiki) [![Release Obsidian plugin](https://github.com/green-dalii/obsidian-llm-wiki/actions/workflows/release.yml/badge.svg)](https://github.com/green-dalii/obsidian-llm-wiki/actions/workflows/release.yml) ![Version](https://img.shields.io/github/v/release/green-dalii/obsidian-llm-wiki?style=flat-square) ![Author](https://img.shields.io/badge/author-Greener--Dalii-blue?style=flat-square) ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square) ![Maintenance](https://img.shields.io/badge/maintenance-actively%20maintained-brightgreen?style=flat-square) ![Build Status](https://img.shields.io/github/actions/workflow/status/green-dalii/obsidian-llm-wiki/release.yml?style=flat-square) ![Obsidian Compatibility](https://img.shields.io/badge/obsidian-1.11.0%2B-purple?style=flat-square) ![GitHub Stars](https://img.shields.io/github/stars/green-dalii/obsidian-llm-wiki?style=flat-square) ![Downloads](https://img.shields.io/badge/dynamic/json?logo=obsidian&color=483699&label=downloads&query=$[yjy-llm-wiki].downloads&url=https://raw.githubusercontent.com/obsidianmd/obsidian-releases/master/community-plugin-stats.json&style=flat-square) ![Languages](https://img.shields.io/badge/languages-10-informational?style=flat-square) ![Providers](https://img.shields.io/badge/providers-12%2B-cyan?style=flat-square)
 
 **English** | [简体中文](docs/README_CN.md) | [繁體中文](docs/README_ZH-Hant.md) | [日本語](docs/README_JA.md) | [한국어](docs/README_KO.md) | [Deutsch](docs/README_DE.md) | [Français](docs/README_FR.md) | [Español](docs/README_ES.md) | [Português](docs/README_PT.md) | [Italiano](docs/README_IT.md)
 
@@ -20,7 +20,7 @@
 
 ## 📑 Contents
 
-- [🧠 Karpathy LLM Wiki Plugin for Obsidian](#-karpathy-llm-wiki-plugin-for-obsidian)
+- [🧠 YJY LLM Wiki Plugin for Obsidian](#-yjy-llm-wiki-plugin-for-obsidian)
   - [📑 Contents](#-contents)
   - [💡 What is LLM-Wiki?](#-what-is-llm-wiki)
   - [⚡ Why Obsidian + LLM-Wiki?](#-why-obsidian--llm-wiki)
@@ -94,17 +94,17 @@ LLM-Wiki flips that. Instead of you building the graph by hand, the AI grows it 
 **🌟 Recommended — Obsidian Community Plugin Market:**
 
 1. In Obsidian, go to **Settings → Community plugins**
-2. Click **Browse** and search for "Karpathy LLM Wiki"
+2. Click **Browse** and search for "YJY LLM Wiki"
 3. Click **Install**, then **Enable**
 
-**🌐 Or from the Community Plugin website —** visit [community.obsidian.md/plugins/karpathywiki](https://community.obsidian.md/plugins/karpathywiki) and click **Add to Obsidian** to install directly.
+**🌐 Or from the Community Plugin website —** visit [community.obsidian.md/plugins/yjy-llm-wiki](https://community.obsidian.md/plugins/yjy-llm-wiki) and click **Add to Obsidian** to install directly.
 
 **⚙️ Manual (alternative):**
 
 1. Download `main.js`, `manifest.json`, `styles.css` from [Releases](https://github.com/green-dalii/obsidian-llm-wiki/releases)
 2. In Obsidian, go to Settings → Community plugins. On the **Installed plugins** tab, click the folder icon to open your plugins directory
-3. Create a folder named `karpathywiki`, drop the three files inside
-4. Back in Obsidian, click the refresh icon — **Karpathy LLM Wiki** will appear under Installed plugins
+3. Create a folder named `yjy-llm-wiki`, drop the three files inside
+4. Back in Obsidian, click the refresh icon — **YJY LLM Wiki** will appear under Installed plugins
 5. Toggle it on to enable
 
 **🔨 Development:** `git clone`, `pnpm install`, `pnpm build`.
@@ -116,7 +116,7 @@ This project evolves rapidly — new features, bug fixes, and improvements are s
 **Option A — Manual update (recommended):**
 1. Go to **Settings → Community plugins**
 2. Click **Check for updates**
-3. Find **Karpathy LLM Wiki** in the list and click **Update**
+3. Find **YJY LLM Wiki** in the list and click **Update**
 
 **Option B — Enable auto-update:**
 1. Go to **Settings → Community plugins**
@@ -127,7 +127,7 @@ This project evolves rapidly — new features, bug fixes, and improvements are s
 
 ### 🔑 Configure an LLM Provider
 
-1. Open Settings → Karpathy LLM Wiki
+1. Open Settings → YJY LLM Wiki
 2. Pick a provider from the dropdown (Anthropic, Anthropic Compatible, Google Gemini, OpenAI, DeepSeek, Kimi, GLM, MiniMax, LM Studio, Ollama, OpenRouter, Codex CLI, or custom)
 3. Enter your API key (not needed for Ollama, LM Studio, or Codex CLI)
 4. Click **Fetch Models** to populate the model dropdown, or type a model name manually
@@ -159,7 +159,7 @@ Re-ingesting the same source does incremental updates on entity/concept pages (n
 
 **💡 Smart Batch Skip:** When ingesting a folder, the plugin automatically detects already-processed files and skips them to save time and API costs. The batch report shows skipped count.
 
-![Command palette — search "karpa" to see all Karpathy LLM Wiki commands](docs/assets/command-panel.png)
+![Command palette — search "yjy" to see all YJY LLM Wiki commands](docs/assets/command-panel.png)
 
 ### ⚠️ Upgrading from an Older Version?
 
@@ -540,7 +540,7 @@ Upgrade to v1.7.17+ — Lint now yields to Obsidian's UI thread every 50 pages, 
 ### 🔍 Troubleshooting
 
 **Why can't I use ingest/lint/query after installing?**
-The plugin requires a successful connection test before core features unlock. Go to **Settings → Karpathy LLM Wiki** → pick a provider → enter your API key → click **Fetch Models** → select a model → click **Test Connection**. Once you see the green "LLM Ready" indicator, all features are available. This prevents silent failures from misconfigured providers.
+The plugin requires a successful connection test before core features unlock. Go to **Settings → YJY LLM Wiki** → pick a provider → enter your API key → click **Fetch Models** → select a model → click **Test Connection**. Once you see the green "LLM Ready" indicator, all features are available. This prevents silent failures from misconfigured providers.
 
 **How do I cancel a running ingestion or lint?**
 Click the status bar text during an operation (it shows "Ingesting... click to cancel"), or use `Ctrl+P` → "Cancel current ingestion". The operation stops cleanly at the next batch boundary, preserving all completed work.

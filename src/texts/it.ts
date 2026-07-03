@@ -1,6 +1,6 @@
 export const IT_TEXTS = {
     // Informazioni Plugin
-    pluginTitle: 'Impostazioni Karpathy LLM Wiki',
+    pluginTitle: 'Impostazioni YJY LLM Wiki',
     pluginIntro: "Questo plugin implementa il concetto di {{link}} per Obsidian. Legge le tue note, usa l'IA per estrarre entità e concetti, e costruisce una Wiki strutturata e interconnessa nel tuo vault.",
     karpathyLinkText: 'LLM Wiki di Andrej Karpathy',
 
@@ -129,7 +129,7 @@ export const IT_TEXTS = {
 
     // Errori
     errorNoApiKey: 'Configura prima la chiave API',
-    llmNotReady: 'LLM non configurato. Vai su Impostazioni → Karpathy LLM Wiki per configurare il tuo provider, recuperare i modelli disponibili e superare il test di connessione.',
+    llmNotReady: 'LLM non configurato. Vai su Impostazioni → YJY LLM Wiki per configurare il tuo provider, recuperare i modelli disponibili e superare il test di connessione.',
     errorFetchFailed: 'Fallito: {}',
 
     // Impostazioni Query
@@ -672,8 +672,8 @@ export const IT_TEXTS = {
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
     // Welcome content (5 sections + 14 keys) is LLM-dynamically translated at write time per D8.
     // Only plugin UI surfaces are localized; no hardcoded 10-language template.
-    welcomeNoteTierANotice: 'Karpathy Wiki: il vault è vuoto. Crea la tua prima nota-sorgente ed esegui Ingest per iniziare.',
-    welcomeNoteTierBNotice: 'Karpathy Wiki: nota Welcome creata. Aprila per dichiarare i tuoi domini e scegliere 2-3 note-sorgente per seminare il grafo dei collegamenti.',
+    welcomeNoteTierANotice: 'YJY Wiki: il vault è vuoto. Crea la tua prima nota-sorgente ed esegui Ingest per iniziare.',
+    welcomeNoteTierBNotice: 'YJY Wiki: nota Welcome creata. Aprila per dichiarare i tuoi domini e scegliere 2-3 note-sorgente per seminare il grafo dei collegamenti.',
     welcomeNoteRecreateCommand: 'Ricrea la nota Welcome Wiki',
     welcomeNoteRecreateCommandTooltip: 'Ricrea la nota Welcome in <wikiFolder>/Welcome.md con i semi di dominio attuali e il test di configurazione LLM. Il file esistente viene sovrascritto.',
     welcomeNoteSettingsToggle: 'Crea la nota Welcome Wiki al primo avvio',
@@ -684,7 +684,7 @@ export const IT_TEXTS = {
     welcomeNoteGenerating: 'Nota Welcome Wiki: generazione in background — apparirà un avviso al termine.',
     welcomeNoteGenerationFailed: 'Generazione della nota Welcome Wiki non riuscita: {error}',
     startupCheckWelcomePending: 'Nota Welcome: generazione in background (apparirà un avviso al termine).',
-    welcomeNoteFileName: 'Benvenuto in Karpathy LLM Wiki',
+    welcomeNoteFileName: 'Benvenuto in YJY LLM Wiki',
     startupCheckWelcomeCreated: 'Nota Welcome creata in {path}',
     // v1.23.0 Phase 5.1.5: pulsante "Annulla tutto" del modale di selezione multipla.
     // Annulla tutti i lavori in attesa e in esecuzione nella coda.

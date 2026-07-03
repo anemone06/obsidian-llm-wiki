@@ -1,8 +1,8 @@
 {
-  "name": "karpathywiki",
+  "name": "yjy-llm-wiki",
   "version": "1.23.1",
   "packageManager": "pnpm@10.14.0",
-  "description": "Karpathy's LLM Wiki implementation - multi-page knowledge generation with conversational query",
+  "description": "Personal LLM Wiki for Obsidian with Codex CLI and custom gateway support",
   "main": "main.js",
   "scripts": {
     "dev": "node esbuild.config.mjs",

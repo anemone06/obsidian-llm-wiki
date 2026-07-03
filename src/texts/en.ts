@@ -1,6 +1,6 @@
 export const EN_TEXTS = {
     // Plugin Info
-    pluginTitle: 'Karpathy LLM Wiki Settings',
+    pluginTitle: 'YJY LLM Wiki Settings',
     pluginIntro: 'This plugin implements {{link}} concept for Obsidian. It reads your notes, uses AI to extract entities and concepts, and builds a structured, interlinked Wiki in your vault.',
     karpathyLinkText: "Andrej Karpathy's LLM Wiki",
 
@@ -129,7 +129,7 @@ export const EN_TEXTS = {
 
     // Errors
     errorNoApiKey: 'Please configure API Key first',
-    llmNotReady: 'LLM is not configured. Please go to Settings → Karpathy LLM Wiki to configure your provider, fetch available models, and pass the connection test.',
+    llmNotReady: 'LLM is not configured. Please go to Settings → YJY LLM Wiki to configure your provider, fetch available models, and pass the connection test.',
     errorFetchFailed: 'Failed: {}',
 
     // Query Settings
@@ -678,8 +678,8 @@ export const EN_TEXTS = {
     historyCustomRangeApply: 'Apply',
     historyCustomRangeClear: 'Clear',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki: vault is empty. Create your first source note and run Ingest to get started.',
-    welcomeNoteTierBNotice: 'Karpathy Wiki: created a Welcome note. Open it to declare your domains and pick 2-3 source notes to seed the link graph.',
+    welcomeNoteTierANotice: 'YJY Wiki: vault is empty. Create your first source note and run Ingest to get started.',
+    welcomeNoteTierBNotice: 'YJY Wiki: created a Welcome note. Open it to declare your domains and pick 2-3 source notes to seed the link graph.',
     welcomeNoteRecreateCommand: 'Recreate Wiki Welcome Note',
     welcomeNoteRecreateCommandTooltip: 'Re-create the Welcome note at <wikiFolder>/Welcome.md with current domain seeds and LLM configuration test. Existing file is overwritten.',
     welcomeNoteSettingsToggle: 'Create Wiki Welcome Note on first run',
@@ -689,7 +689,7 @@ export const EN_TEXTS = {
     welcomeNoteNotRecreated: 'Welcome note was not recreated. Check LLM configuration.',
     welcomeNoteGenerating: 'Wiki Welcome note: generating in background — you will get a Notice when it finishes.',
     welcomeNoteGenerationFailed: 'Wiki Welcome note generation failed: {error}',
-    welcomeNoteFileName: 'Welcome to Karpathy LLM Wiki',
+    welcomeNoteFileName: 'Welcome to YJY LLM Wiki',
     startupCheckWelcomePending: 'Welcome note: generating in background (you will get a Notice when it finishes).',
     startupCheckWelcomeCreated: 'Welcome note created at {path}',
     // v1.23.0 Phase 5.1.5: Multi-File Suggest modal (cmdIngestMultipleFiles).

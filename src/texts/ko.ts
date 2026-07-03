@@ -1,6 +1,6 @@
 export const KO_TEXTS = {
     // Plugin Info
-    pluginTitle: 'Karpathy LLM Wiki 설정',
+    pluginTitle: 'YJY LLM Wiki 설정',
     pluginIntro: '이 플러그인은 Obsidian에 {{link}} 개념을 구현합니다. 노트를 읽고 AI로 엔티티와 컨셉을 추출하여 볼트에 구조화된 위키를 구축합니다.',
     karpathyLinkText: 'Andrej Karpathy의 LLM Wiki',
 
@@ -118,7 +118,7 @@ export const KO_TEXTS = {
 
     // Errors
     errorNoApiKey: 'API 키를 먼저 설정하세요',
-    llmNotReady: 'LLM이 구성되지 않았습니다. 설정 → Karpathy LLM Wiki에서 제공자를 구성하고 모델을 가져온 후 연결 테스트를 통과하세요.',
+    llmNotReady: 'LLM이 구성되지 않았습니다. 설정 → YJY LLM Wiki에서 제공자를 구성하고 모델을 가져온 후 연결 테스트를 통과하세요.',
     errorFetchFailed: '실패: {}',
 
     // Query Settings
@@ -660,8 +660,8 @@ export const KO_TEXTS = {
     historyCustomRangeApply: '적용',
     historyCustomRangeClear: '지우기',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki: vault가 비어 있습니다. 첫 번째 소스 노트를 만들고 Ingest를 실행하여 시작하세요.',
-    welcomeNoteTierBNotice: 'Karpathy Wiki: Welcome 노트를 만들었습니다. 열어 도메인을 선언하고 링크 그래프의 시드로 사용할 2-3 개 소스 노트를 선택하세요.',
+    welcomeNoteTierANotice: 'YJY Wiki: vault가 비어 있습니다. 첫 번째 소스 노트를 만들고 Ingest를 실행하여 시작하세요.',
+    welcomeNoteTierBNotice: 'YJY Wiki: Welcome 노트를 만들었습니다. 열어 도메인을 선언하고 링크 그래프의 시드로 사용할 2-3 개 소스 노트를 선택하세요.',
     welcomeNoteRecreateCommand: 'Wiki Welcome 노트 재생성',
     welcomeNoteRecreateCommandTooltip: '현재 도메인 시드와 LLM 구성 테스트로 <wikiFolder>/Welcome.md에 Welcome 노트를 재생성합니다. 기존 파일은 덮어씁니다.',
     welcomeNoteSettingsToggle: '첫 실행 시 Wiki Welcome 노트 생성',
@@ -672,7 +672,7 @@ export const KO_TEXTS = {
     welcomeNoteGenerating: 'Wiki Welcome 노트를 백그라운드에서 생성 중 — 완료 시 알림이 표시됩니다.',
     welcomeNoteGenerationFailed: 'Wiki Welcome 노트 생성 실패: {error}',
     startupCheckWelcomePending: 'Welcome 노트: 백그라운드에서 생성 중(완료 시 알림이 표시됩니다).',
-    welcomeNoteFileName: 'Karpathy LLM Wiki에 오신 것을 환영합니다',
+    welcomeNoteFileName: 'YJY LLM Wiki에 오신 것을 환영합니다',
     startupCheckWelcomeCreated: '{path}에 Welcome 노트가 생성되었습니다',
     // v1.23.0 Phase 5.1.5: 다중 파일 수집 모달의 "모두 취소" 버튼.
     // 대기열의 모든 pending + running 작업을 한 번에 취소합니다.

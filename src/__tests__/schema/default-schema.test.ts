@@ -18,38 +18,38 @@ describe('buildDefaultSchemaBody', () => {
   const body = buildDefaultSchemaBody();
 
   it('includes all required page templates', () => {
-    expect(body).toContain('## Entity Page Template');
-    expect(body).toContain('## Concept Page Template');
-    expect(body).toContain('## Source Page Template');
+    expect(body).toContain('## 实体页面模板');
+    expect(body).toContain('## 概念页面模板');
+    expect(body).toContain('## 来源页面模板');
   });
 
   it('Source Page Template documents the tags inheritance rule (Issue #90)', () => {
     // The source page tags MUST be inherited from the source note frontmatter,
     // not LLM-derived. This preserves the user's tag vocabulary.
-    expect(body).toMatch(/## Source Page Template[\s\S]*?tags.*inherit/i);
-    expect(body).toMatch(/do NOT use LLM-derived/i);
+    expect(body).toMatch(/## 来源页面模板[\s\S]*?tags.*继承/);
+    expect(body).toMatch(/不要使用 LLM 提取出的概念名/);
   });
 
   it('Date Fields section documents that created/updated are programmatic, not LLM-generated', () => {
-    expect(body).toContain('## Date Fields');
+    expect(body).toContain('## 日期字段');
     // The rule: dates are filled by the system, not by the LLM
-    expect(body).toMatch(/created.*updated.*programmatic/i);
-    expect(body).toMatch(/never LLM-generated|not LLM-generated|system.*override/i);
+    expect(body).toMatch(/created[\s\S]*updated[\s\S]*系统自动填写/);
+    expect(body).toMatch(/绝不由 LLM 生成|系统会在写入后覆盖/);
   });
 
   it('Mentions section uses academic-footnote style format', () => {
     // Expect: "Verbatim quote" — [[source-name|display-name]]
-    expect(body).toMatch(/## Mentions Format/);
+    expect(body).toMatch(/## 原文提及格式/);
     expect(body).toMatch(/-\s+"[^"]+"\s*—\s*\[\[/);
   });
 
   it('preserves all original section headings for backward compatibility', () => {
-    expect(body).toContain('## Wiki Structure');
-    expect(body).toContain('## Naming Conventions');
-    expect(body).toContain('## Content Rules');
-    expect(body).toContain('## Classification Rules');
-    expect(body).toContain('## Multi-Source Merge Rules');
-    expect(body).toContain('## Maintenance Policies');
+    expect(body).toContain('## Wiki 结构');
+    expect(body).toContain('## 命名规范');
+    expect(body).toContain('## 内容规则');
+    expect(body).toContain('## 分类规则');
+    expect(body).toContain('## 多来源合并规则');
+    expect(body).toContain('## 维护策略');
   });
 
   it('preserves entity and concept subtype valid lists', () => {
@@ -83,7 +83,7 @@ describe('buildDefaultSchemaBody(settings) — dynamic tag injection (v1.22.0 Ph
     // The custom tag is present in the entity tag list
     expect(body).toContain('Medical_Arzneimittel');
     // And in the Classification Rules section as well (consistency)
-    expect(body).toMatch(/## Classification Rules[\s\S]*?Medical_Arzneimittel/);
+    expect(body).toMatch(/## 分类规则[\s\S]*?Medical_Arzneimittel/);
   });
 
   it('uses custom concept tags when tagVocabularyMode="custom" and customConceptTags is set', () => {
@@ -95,7 +95,7 @@ describe('buildDefaultSchemaBody(settings) — dynamic tag injection (v1.22.0 Ph
     expect(body).toContain('Kardiologie');
     expect(body).toContain('Arzneimittel/Neurologie');
     // Slash-bearing tag must round-trip — getActiveConceptTags preserves '/'
-    expect(body).toMatch(/## Concept Page Template[\s\S]*?Arzneimittel\/Neurologie/);
+    expect(body).toMatch(/## 概念页面模板[\s\S]*?Arzneimittel\/Neurologie/);
   });
 
   it('falls back to hardcoded defaults when settings are not provided (backward compat)', () => {
@@ -116,8 +116,8 @@ describe('buildDefaultSchemaBody(settings) — dynamic tag injection (v1.22.0 Ph
       customEntityTags: 'Medical_Arzneimittel', // should be IGNORED
     });
     const body = buildDefaultSchemaBody(settings);
-    expect(body).not.toMatch(/## Entity Page Template[\s\S]*?Medical_Arzneimittel/);
-    expect(body).toMatch(/## Entity Page Template[\s\S]*?person/);
+    expect(body).not.toMatch(/## 实体页面模板[\s\S]*?Medical_Arzneimittel/);
+    expect(body).toMatch(/## 实体页面模板[\s\S]*?person/);
   });
 
   it('Classification Rules entity subtypes list reflects the active entity tags', () => {
@@ -132,7 +132,7 @@ describe('buildDefaultSchemaBody(settings) — dynamic tag injection (v1.22.0 Ph
     const body = buildDefaultSchemaBody(custom);
     // Extract the Classification Rules section and check it contains the
     // custom tag (not the old hardcoded list).
-    const classMatch = body.match(/## Classification Rules[\s\S]*?(?=\n## |\s*$)/);
+    const classMatch = body.match(/## 分类规则[\s\S]*?(?=\n## |\s*$)/);
     expect(classMatch).not.toBeNull();
     expect(classMatch![0]).toContain('Medical_Arzneimittel');
   });

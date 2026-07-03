@@ -288,42 +288,43 @@ reviewed: true
 
 ---`,
 
-  suggestSchemaUpdate: `You are a Wiki Schema advisor. Review the current schema and the latest ingestion analysis.
+  suggestSchemaUpdate: `你是 Wiki Schema 顾问。请审阅当前 Schema 和最近一次摄入/维护分析。
 
-Current Schema:
+当前 Schema：
 {{schema_content}}
 
-Analysis Context:
+分析上下文：
 {{analysis_context}}
 
-Task: Determine if the schema needs updating to better accommodate recent content.
-Consider:
-1. Are there new entity types that should be added to the classification rules?
-2. Are there new concept types that should be added?
-3. Should naming conventions be adjusted?
-4. Should page templates be updated (missing sections, better structure)?
-5. Should maintenance policies be revised (stale thresholds, severity levels)?
+任务：判断 Schema 是否需要更新，以便更好地适配最近的内容。
+请考虑：
+1. 是否有新的实体类型需要加入分类规则？
+2. 是否有新的概念类型需要加入？
+3. 命名规范是否需要调整？
+4. 页面模板是否需要更新（缺少章节、结构更合理等）？
+5. 维护策略是否需要修订（过期阈值、严重度级别等）？
 
-Output JSON format:
+输出 JSON 格式：
 {
   "changes_needed": true,
-  "new_schema_body": "The COMPLETE updated schema body in markdown, starting with the H1 title. Include all sections that should exist after the update (you may keep unchanged sections exactly as-is).",
-  "suggestions": "Markdown description of suggested schema changes with reasoning (1-3 sentences)"
+  "new_schema_body": "完整的更新后 Schema 正文，使用 Markdown，从 H1 标题开始。包含更新后应存在的所有章节；无需修改的章节可以原样保留。",
+  "suggestions": "用 Markdown 简要说明建议变更和原因（1-3 句）"
 }
 
-If no changes are needed:
+如果不需要变更：
 {
   "changes_needed": false,
-  "suggestions": "Short explanation of why no changes are needed"
+  "suggestions": "简短说明为什么无需变更"
 }
 
-CRITICAL:
-- The "suggestions" field must be written in the user's UI language below (after this CRITICAL block). Do NOT default to English unless the user's UI language is English.
-- new_schema_body is the COMPLETE schema after your changes — not a diff, not a patch. The apply path replaces the current body with new_schema_body verbatim.
-- DO NOT include YAML frontmatter (--- ... ---) in new_schema_body. Start directly with the H1 title (e.g. "# Wiki Schema Configuration").
-- DO NOT wrap new_schema_body in markdown code fences (\`\`\`). The parser strips them, but cleaner output reduces parse risk on small models.
-- Preserve all existing sections that are still relevant. Only change what the analysis actually warrants.
-- Output ONLY the JSON, no other text.
+重要要求：
+- "suggestions" 字段必须使用下方用户界面语言。除非用户界面语言是 English，否则不要默认使用英文。
+- new_schema_body 是变更后的完整 Schema，不是 diff，也不是 patch。应用路径会用 new_schema_body 原样替换当前正文。
+- new_schema_body 必须保持中文说明和中文章节标题；保留路径、frontmatter key、type/tag 枚举等机器可读标识为英文。
+- 不要在 new_schema_body 中包含 YAML frontmatter（--- ... ---）。请直接从 H1 标题开始，例如 "# Wiki Schema 配置"。
+- 不要用 markdown 代码块包裹 new_schema_body（\`\`\`）。解析器会尝试剥离代码块，但干净输出更可靠。
+- 保留仍然相关的现有章节。只修改分析真正需要修改的部分。
+- 只输出 JSON，不要输出其他文字。
 
 User UI language: {{user_language}}`,
 };

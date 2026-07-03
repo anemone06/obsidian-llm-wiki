@@ -164,7 +164,7 @@ export class SchemaDiffModal extends Modal {
     // contain en. The cast is safe: TEXTS always includes 'en' (see
     // texts.ts barrel) and we have a complete-coverage test in
     // i18n-parity.test.ts.
-    const t = (TEXTS as unknown as Record<string, Record<string, string>>)[this.options.language ?? 'en']
+    const t = (TEXTS as unknown as Record<string, Record<string, string>>)[this.options.language ?? 'zh']
       ?? TEXTS.en as unknown as Record<string, string>;
     const { modalEl, contentEl } = this;
     applyDiffModalClasses(modalEl, contentEl); // v1.22.1: width on outer .modal (was :has() selector)

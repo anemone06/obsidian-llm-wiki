@@ -17,16 +17,16 @@ export type SchemaTask = 'analyze' | 'summary' | 'entity' | 'concept' | 'related
 export { VALID_ENTITY_TAGS, VALID_CONCEPT_TAGS, DEFAULT_ENTITY_TAG, DEFAULT_CONCEPT_TAG };
 
 const TASK_SECTIONS: Record<SchemaTask, string[]> = {
-  analyze: ['Wiki Structure', 'Classification Rules', 'Naming Conventions'],
-  summary: ['Wiki Structure', 'Classification Rules'],
-  entity: ['Entity Page Template', 'Naming Conventions', 'Classification Rules'],
-  concept: ['Concept Page Template', 'Naming Conventions', 'Classification Rules'],
-  related: ['Naming Conventions', 'Classification Rules'],
-  conversation: ['Wiki Structure', 'Entity Page Template', 'Concept Page Template', 'Naming Conventions', 'Classification Rules'],
-  index: ['Wiki Structure'],
-  lint: ['Maintenance Policies'],
-  merge: ['Entity Page Template', 'Concept Page Template', 'Naming Conventions', 'Classification Rules'],
-  full: ['Wiki Structure', 'Entity Page Template', 'Concept Page Template', 'Naming Conventions', 'Classification Rules', 'Maintenance Policies'],
+  analyze: ['Wiki 结构', '分类规则', '命名规范'],
+  summary: ['Wiki 结构', '分类规则'],
+  entity: ['实体页面模板', '命名规范', '分类规则'],
+  concept: ['概念页面模板', '命名规范', '分类规则'],
+  related: ['命名规范', '分类规则'],
+  conversation: ['Wiki 结构', '实体页面模板', '概念页面模板', '命名规范', '分类规则'],
+  index: ['Wiki 结构'],
+  lint: ['维护策略'],
+  merge: ['实体页面模板', '概念页面模板', '命名规范', '分类规则'],
+  full: ['Wiki 结构', '实体页面模板', '概念页面模板', '命名规范', '分类规则', '维护策略'],
 };
 
 export function buildDefaultSchemaBody(settings?: LLMWikiSettings): string {
@@ -41,114 +41,114 @@ export function buildDefaultSchemaBody(settings?: LLMWikiSettings): string {
   const conceptTags = settings ? getActiveConceptTags(settings) : [...VALID_CONCEPT_TAGS];
   const entityList = entityTags.join(', ');
   const conceptList = conceptTags.join(', ');
-  return `# Wiki Schema Configuration
+  return `# Wiki Schema 配置
 
-This file governs how the LLM builds and maintains your Wiki. Edit it freely.
+这个文件控制 LLM 如何创建和维护你的 Wiki。你可以按自己的工作流自由编辑。
 
-## Wiki Structure
-- Entity pages: \`entities/\` (${entityList})
-- Concept pages: \`concepts/\` (${conceptList})
-- Source pages: \`sources/\`
-- Index: \`index.md\`
-- Log: \`log.md\`
+## Wiki 结构
+- 实体页面：\`entities/\`（${entityList}）
+- 概念页面：\`concepts/\`（${conceptList}）
+- 来源页面：\`sources/\`
+- 索引：\`index.md\`
+- 日志：\`log.md\`
 
-## Entity Page Template
-Pages in \`entities/\` MUST follow this structure:
+## 实体页面模板
+\`entities/\` 中的页面必须遵循以下结构：
 
-**Frontmatter fields:**
-- \`type: entity\` — page category (MUST be exactly "entity")
-- \`created:\` — ISO date of first creation
-- \`sources:\` — array of source file wiki-links
-- \`tags:\` — entity subtype, MUST be one of: ${entityList}
-- \`aliases:\` (optional) — alternative names (translations, abbreviations)
-- \`reviewed:\` (optional) — if true, page is human-verified and protected
+**Frontmatter 字段：**
+- \`type: entity\` — 页面类别，必须精确为 "entity"
+- \`created:\` — 首次创建日期，使用 ISO 格式
+- \`sources:\` — 来源文件 wiki-link 数组
+- \`tags:\` — 实体子类型，必须是以下之一：${entityList}
+- \`aliases:\`（可选）— 其他名称，例如翻译、简称、缩写
+- \`reviewed:\`（可选）— 若为 true，表示页面已由人工确认并受到保护
 
-**Sections:**
-1. **Basic Information**: Type, source file link
-2. **Description**: 3-6 sentences with concrete facts, bidirectional links
-3. **Related Entities**: Links to related entities using [[entities/...]]
-4. **Related Concepts**: Links to related concepts using [[concepts/...]]
-5. **Mentions in Source**: Verbatim quotes with source attribution — see [Mentions Format](#mentions-format) below
+**章节：**
+1. **基础信息**：类型、来源文件链接
+2. **描述**：3-6 句具体事实说明，并包含双向链接
+3. **相关实体**：使用 [[entities/...]] 链接到相关实体
+4. **相关概念**：使用 [[concepts/...]] 链接到相关概念
+5. **原文提及**：带来源归属的原文引用，见下方[原文提及格式](#原文提及格式)
 
-## Concept Page Template
-Pages in \`concepts/\` MUST follow this structure:
+## 概念页面模板
+\`concepts/\` 中的页面必须遵循以下结构：
 
-**Frontmatter fields:**
-- \`type: concept\` — page category (MUST be exactly "concept")
-- \`created:\` — ISO date of first creation
-- \`sources:\` — array of source file wiki-links
-- \`tags:\` — concept subtype, MUST be one of: ${conceptList}
-- \`aliases:\` (optional) — alternative names (translations, abbreviations)
-- \`reviewed:\` (optional) — if true, page is human-verified and protected
+**Frontmatter 字段：**
+- \`type: concept\` — 页面类别，必须精确为 "concept"
+- \`created:\` — 首次创建日期，使用 ISO 格式
+- \`sources:\` — 来源文件 wiki-link 数组
+- \`tags:\` — 概念子类型，必须是以下之一：${conceptList}
+- \`aliases:\`（可选）— 其他名称，例如翻译、简称、缩写
+- \`reviewed:\`（可选）— 若为 true，表示页面已由人工确认并受到保护
 
-**Sections:**
-1. **Definition**: Clear, concise definition
-2. **Key Characteristics**: Bullet list of defining traits
-3. **Applications**: Real-world usage scenarios
-4. **Related Concepts**: Links using [[concepts/...]]
-5. **Related Entities**: Links using [[entities/...]]
-6. **Mentions in Source**: Verbatim quotes with source attribution — see [Mentions Format](#mentions-format) below
+**章节：**
+1. **定义**：清晰、简洁的定义
+2. **关键特征**：用列表说明决定性特征
+3. **应用场景**：真实使用场景
+4. **相关概念**：使用 [[concepts/...]] 链接
+5. **相关实体**：使用 [[entities/...]] 链接
+6. **原文提及**：带来源归属的原文引用，见下方[原文提及格式](#原文提及格式)
 
-## Naming Conventions
-- Filenames: lowercase-with-hyphens (slugified)
-- Entity/concept names: Preserve original language from source, NEVER translate
-- Wiki-links: Use full paths [[entities/page-name|Display Name]] or [[concepts/page-name|Display Name]]
+## 命名规范
+- 文件名：使用 slug 格式，默认小写并用连字符连接
+- 实体/概念名称：保留源文件中的原始语言，不要翻译名称本身
+- Wiki 链接：使用完整路径，例如 [[entities/page-name|Display Name]] 或 [[concepts/page-name|Display Name]]
 
-## Source Page Template
-Pages in \`sources/\` MUST follow this structure:
+## 来源页面模板
+\`sources/\` 中的页面必须遵循以下结构：
 
-**Frontmatter fields:**
-- \`type: source\` — page category (MUST be exactly "source")
-- \`tags:\` — INHERITED from the source note's frontmatter (do NOT use LLM-derived concept names). The system programmatically populates this from the source file; the LLM must not overwrite it with extracted concept names. This preserves the user's existing tag vocabulary and prevents pollution from LLM hallucinations.
-- \`sources:\` — array of related wiki page links created from this source
-- \`created:\` / \`updated:\` — set by the system, see Date Fields below
+**Frontmatter 字段：**
+- \`type: source\` — 页面类别，必须精确为 "source"
+- \`tags:\` — 继承自源笔记 frontmatter，不要使用 LLM 提取出的概念名。系统会从源文件自动填充该字段，LLM 不得用抽取概念覆盖它。这样可以保留用户已有标签词表，并避免 LLM 幻觉污染标签。
+- \`sources:\` — 从该来源创建的相关 Wiki 页面链接数组
+- \`created:\` / \`updated:\` — 由系统设置，见下方日期字段
 
-**Sections:**
-1. **Summary**: Brief description of the source content (2-4 sentences)
-2. **Key Points**: Bullet list of main insights
-3. **Mentioned Pages**: List of [[entities/...]] and [[concepts/...]] pages created from this source
+**章节：**
+1. **摘要**：对来源内容做简要说明（2-4 句）
+2. **关键要点**：用列表列出主要洞察
+3. **提及页面**：列出由该来源创建的 [[entities/...]] 和 [[concepts/...]] 页面
 
-## Date Fields
-- \`created:\` and \`updated:\` are filled by the system programmatically — NEVER LLM-generated
-- The LLM may produce wrong dates during extraction; the system overrides them post-write to ensure correctness
-- \`created:\` is preserved on merge (older value kept); \`updated:\` is always set to the current date
-- \`source_note:\` (optional) — wiki-link to the original source file
+## 日期字段
+- \`created:\` 和 \`updated:\` 由系统自动填写，绝不由 LLM 生成
+- LLM 在抽取时可能生成错误日期；系统会在写入后覆盖它们以保证正确
+- 合并页面时保留较早的 \`created:\`；\`updated:\` 始终设置为当前日期
+- \`source_note:\`（可选）— 指向原始源文件的 wiki-link
 
-## Mentions Format
-"Mentions in Source" entries use academic-footnote style with source attribution. The format is:
-- "Verbatim quote in original language (optional translation)" — [[source-name|display-name]]
+## 原文提及格式
+“原文提及”条目使用类似学术脚注的来源归属格式：
+- "原始语言中的逐字引用（可选翻译）" — [[source-name|display-name]]
 
-Rules:
-- Quotes must be VERBATIM — never paraphrase, summarize, or translate away the original
-- The source wiki-link is required so future page merges can trace each quote to its origin
-- Multiple quotes from the same source go in the same block, separated by newlines
+规则：
+- 引用必须逐字保留，不要改写、概括或用翻译替代原文
+- 必须包含来源 wiki-link，方便后续合并页面时追溯每条引用
+- 来自同一来源的多条引用放在同一块中，并用换行分隔
 
-## Content Rules
-- mentions_in_source MUST be VERBATIM quotes — never paraphrase or translate
-- Summaries/descriptions should use the wiki output language
-- Entity/concept names must match the source file's original language exactly
-- All pages must include bidirectional links where relevant
+## 内容规则
+- \`mentions_in_source\` 必须是逐字引用，不要改写或翻译
+- 摘要和描述应使用 Wiki 输出语言
+- 实体/概念名称必须与源文件中的原始语言完全一致
+- 所有页面都应在相关位置加入双向链接
 
-## Classification Rules
-- **type field:** entity | concept | source — the page category
-- **tags field:** stores the subtype (entity_type or concept_type)
-- Entity subtypes (valid tags for type=entity): ${entityList}
-- Concept subtypes (valid tags for type=concept): ${conceptList}
-- Source types: document, conversation, note
-- **Rule:** tags MUST only contain values from the corresponding subtype list above. A tag not in the valid list will be removed by the system.
+## 分类规则
+- **type 字段：** entity | concept | source — 页面类别
+- **tags 字段：** 存储子类型（entity_type 或 concept_type）
+- 实体子类型（type=entity 的合法 tags）：${entityList}
+- 概念子类型（type=concept 的合法 tags）：${conceptList}
+- 来源类型：document, conversation, note
+- **规则：** tags 只能包含上方对应子类型列表中的值。不在合法列表里的 tag 会被系统移除。
 
-## Multi-Source Merge Rules
-- Sources array: Append new sources, never overwrite
-- Aliases: Append alternative names (translations, abbreviations) without overwriting existing ones
-- reviewed flag: If true, preserve all existing content, only append genuinely new info
-- Contradictions: Preserve both sides with attribution, add to ## Contradictions section
-- NO_NEW_CONTENT: Return this signal if source adds nothing new
+## 多来源合并规则
+- Sources 数组：追加新来源，绝不覆盖旧来源
+- Aliases：追加其他名称（翻译、简称、缩写），不要覆盖已有别名
+- reviewed 标记：若为 true，保留所有已有内容，只追加确实新增的信息
+- 矛盾：保留双方说法并标注来源，加入 ## 矛盾 区块
+- NO_NEW_CONTENT：如果来源没有带来新内容，返回该信号
 
-## Maintenance Policies
-- Stale threshold: 90 days without updates
-- Contradiction severity: warning, conflict, error
-- Orphan page: no inbound links from other wiki pages
-- Missing page: referenced by [[link]] but does not exist
+## 维护策略
+- 过期阈值：90 天没有更新
+- 矛盾严重度：warning, conflict, error
+- 孤立页面：没有其他 Wiki 页面链接到它
+- 缺失页面：被 [[link]] 引用但实际不存在
 `;
 }
 
@@ -203,12 +203,12 @@ export class SchemaManager {
 
     if (!selectedBody.trim()) return '';
 
-    return `You are operating with the following Wiki Schema configuration.
-Follow these rules when creating, updating, or analyzing Wiki pages.
+    return `你正在使用以下 Wiki Schema 配置。
+创建、更新或分析 Wiki 页面时，请遵循这些规则。
 
---- BEGIN SCHEMA ---
+--- SCHEMA 开始 ---
 ${selectedBody}
---- END SCHEMA ---`;
+--- SCHEMA 结束 ---`;
   }
 
   private selectSections(body: string, task: SchemaTask): string {
@@ -345,7 +345,7 @@ ${body}`;
     // de, fr, es, pt, it, zh-Hant) and returns the language's native name
     // (e.g. "中文" for zh, "繁體中文" for zh-Hant). Falling back to
     // 'English' keeps v1.21.x behaviour for unrecognised language codes.
-    const userLanguage = WIKI_LANGUAGES[this.settings.language] ?? 'English';
+    const userLanguage = WIKI_LANGUAGES[this.settings.language] ?? 'Chinese';
 
     const prompt = PROMPTS.suggestSchemaUpdate
       .replace('{{schema_content}}', schemaContent)

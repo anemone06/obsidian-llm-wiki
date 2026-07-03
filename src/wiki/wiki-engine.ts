@@ -1235,7 +1235,7 @@ export class WikiEngine {
     concepts: TFile[],
     sources: TFile[]
   ): Promise<void> {
-    const lang = this.settings.wikiLanguage || 'en';
+    const lang = this.settings.wikiLanguage || 'zh';
     type LangKey = keyof typeof TEXTS.en.indexLabels;
     const langKey: LangKey = (lang in TEXTS.en.indexLabels) ? lang as LangKey : 'en';
     const labels = TEXTS.en.indexLabels[langKey];
@@ -1294,7 +1294,7 @@ export class WikiEngine {
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toTimeString().slice(0, 5); // HH:MM
-    const lang = this.settings.wikiLanguage || 'en';
+    const lang = this.settings.wikiLanguage || 'zh';
     type LogLangKey = keyof typeof TEXTS.en.logLabels;
     const langKey: LogLangKey = (lang in TEXTS.en.logLabels) ? lang as LogLangKey : 'en';
     const labels = TEXTS.en.logLabels[langKey];
@@ -1356,7 +1356,7 @@ export class WikiEngine {
     const now = new Date();
     const date = now.toISOString().split('T')[0];
     const time = now.toTimeString().slice(0, 5); // HH:MM
-    const lang = this.settings.wikiLanguage || 'en';
+    const lang = this.settings.wikiLanguage || 'zh';
     const entry = `\n\n## [${date} ${time}] ${operation}\n\n${details}\n`;
     try {
       let existingLog = await this.tryReadFile(logPath);

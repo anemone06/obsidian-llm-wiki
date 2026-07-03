@@ -32,17 +32,17 @@ export interface SchemaContext {
 
 /** Set of section headings that ship with buildDefaultSchemaBody(). */
 const DEFAULT_SCHEMA_SECTIONS: ReadonlySet<string> = new Set([
-  'Wiki Structure',
-  'Entity Page Template',
-  'Concept Page Template',
-  'Naming Conventions',
-  'Source Page Template',
-  'Date Fields',
-  'Mentions Format',
-  'Content Rules',
-  'Classification Rules',
-  'Multi-Source Merge Rules',
-  'Maintenance Policies',
+  'Wiki 结构',
+  '实体页面模板',
+  '概念页面模板',
+  '命名规范',
+  '来源页面模板',
+  '日期字段',
+  '原文提及格式',
+  '内容规则',
+  '分类规则',
+  '多来源合并规则',
+  '维护策略',
 ]);
 
 /**
@@ -117,44 +117,44 @@ export { buildDefaultSchemaBody };
  *  explicit section list. */
 const CANONICAL_SECTIONS: Record<string, string[]> = {
   entity: [
-    'Basic Information',
-    'Description',
-    'Related Entities',
-    'Related Concepts',
-    'Mentions in Source',
+    '基础信息',
+    '描述',
+    '相关实体',
+    '相关概念',
+    '原文提及',
   ],
   concept: [
-    'Definition',
-    'Key Characteristics',
-    'Applications',
-    'Related Concepts',
-    'Related Entities',
-    'Mentions in Source',
+    '定义',
+    '关键特征',
+    '应用场景',
+    '相关概念',
+    '相关实体',
+    '原文提及',
   ],
   source: [
-    'Summary',
-    'Key Points',
-    'Mentioned Pages',
+    '摘要',
+    '关键要点',
+    '提及页面',
   ],
 };
 
 const TEMPLATE_HEADINGS: Record<string, string[]> = {
-  entity: ['Entity Page Template'],
-  concept: ['Concept Page Template'],
-  source: ['Source Page Template'],
+  entity: ['实体页面模板'],
+  concept: ['概念页面模板'],
+  source: ['来源页面模板'],
 };
 
 /**
  * Build the section template for a given page type from a parsed SchemaContext.
  *
  * Strategy:
- * 1. Find the page-type template section in the schema (e.g. "Entity Page Template")
+ * 1. Find the page-type template section in the schema (e.g. "实体页面模板")
  * 2. Look for a `**Sections:**` numbered list under it
  * 3. Extract the section names from that list
  * 4. If no explicit list found, fall back to canonical defaults
  *
  * Returns a markdown string with each section as a `## Heading` placeholder.
- * For example: `## Basic Information\n[content]\n\n## Description\n[content]`
+ * For example: `## 基础信息\n[content]\n\n## 描述\n[content]`
  */
 export function buildSchemaSectionTemplate(ctx: SchemaContext, pageType: string): string {
   const fallbackSections = CANONICAL_SECTIONS[pageType] ?? [];

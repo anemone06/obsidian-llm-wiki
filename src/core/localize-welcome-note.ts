@@ -1,10 +1,10 @@
 // localize-welcome-note.ts — D8 Welcome note LLM dynamic translation
 //
-// v1.23.0 design (D8, user-locked 2026-06-23):
-//   - Welcome content = 1 English template (no 10-locale hardcoded i18n)
+// v1.23.0 design (D8, user-locked 2026-06-23), adapted for this fork:
+//   - Welcome content = 1 Simplified Chinese template.
 //   - At write time, the plugin LLM-translates the body into the user's
-//     `wikiLanguage` if the LLM is configured and reachable.
-//   - On LLM failure, fall back to writing the English template (so the
+//     `wikiLanguage` if the target is not Simplified Chinese and the LLM is reachable.
+//   - On LLM failure, fall back to writing the Chinese template (so the
 //     user always gets a usable note) and surface the error so the caller
 //     can show a "Run Configuration Test" Notice.
 //
@@ -16,9 +16,9 @@
 //     helper without going through the tier-detection path.
 //
 // Fallback chain (in this order):
-//   1. targetLanguage === 'en' → return English body, no LLM call
+//   1. targetLanguage === 'zh' → return Chinese body, no LLM call
 //   2. LLM call succeeds + returns parseable JSON with `translated` → use it
-//   3. LLM throws OR returns invalid/empty → fall back to English body +
+//   3. LLM throws OR returns invalid/empty → fall back to Chinese body +
 //      populate `error` field so the caller can surface a Notice
 
 import type { LLMClient } from '../types';
@@ -46,11 +46,11 @@ import { TOKENS_PAGE_GENERATION } from '../constants';
 const TRANSLATION_MAX_TOKENS = TOKENS_PAGE_GENERATION;
 
 export interface LocalizeArgs {
-  /** English body produced by buildWelcomeNote. Will be translated if targetLanguage ≠ 'en'. */
+  /** Chinese body produced by buildWelcomeNote. Will be translated if targetLanguage is not zh. */
   englishBody: string;
   /**
    * Target language code. Standard codes ('en', 'zh', 'ja', ...) or a
-   * custom string (user's wikiLanguage setting). 'en' short-circuits
+   * custom string (user's wikiLanguage setting). 'zh' short-circuits
    * the LLM call entirely.
    */
   targetLanguage: string;
@@ -63,16 +63,16 @@ export interface LocalizeArgs {
 }
 
 export interface LocalizeResult {
-  /** True if we got a usable translated body. False on LLM failure (English fallback used). */
+  /** True if we got a usable translated body. False on LLM failure (Chinese fallback used). */
   ok: boolean;
   /**
    * The final body to write to the vault. Either the LLM-translated
-   * body (ok=true) or the original English body (ok=false).
+   * body (ok=true) or the original Chinese body (ok=false).
    */
   body: string;
   /**
    * True if `body` is the LLM-translated content. False if it's the
-   * English fallback. Useful for the caller's "Run Configuration Test"
+   * Chinese fallback. Useful for the caller's "Run Configuration Test"
    * Notice decision.
    */
   localized: boolean;
@@ -102,8 +102,8 @@ const LANGUAGE_NAMES: Record<string, string> = {
 };
 
 /**
- * Translate an English Welcome note body into the user's wikiLanguage.
- * Falls back to the English body on any LLM failure (so the user always
+ * Translate a Chinese Welcome note body into the user's wikiLanguage.
+ * Falls back to the Chinese body on any LLM failure (so the user always
  * gets a usable note).
  *
  * NEVER throws. All errors are caught and converted to LocalizeResult.
@@ -111,15 +111,15 @@ const LANGUAGE_NAMES: Record<string, string> = {
 export async function localizeWelcomeNote(args: LocalizeArgs): Promise<LocalizeResult> {
   const { englishBody, targetLanguage, llmClient, model, signal } = args;
 
-  // Short-circuit: English is the source. Skip the LLM call entirely.
-  if (!targetLanguage || targetLanguage === 'en') {
+  // Short-circuit: Simplified Chinese is the source. Skip the LLM call entirely.
+  if (!targetLanguage || targetLanguage === 'zh') {
     return { ok: true, body: englishBody, localized: false };
   }
 
   const languageName = LANGUAGE_NAMES[targetLanguage] ?? targetLanguage;
   const system = [
     'You are a translation engine for a personal knowledge-management wiki plugin.',
-    `Translate the user's Markdown document into ${languageName}.`,
+    `Translate the user's Simplified Chinese Markdown document into ${languageName}.`,
     'Preserve all Markdown syntax verbatim: headings (##, ###), bullet lists, checkboxes (- [ ] / - [x]), blockquotes (>),',
     'horizontal rules (---), inline code (`...`), fenced code blocks (```...```), and HTML comments (<!-- ... -->).',
     'Preserve all [[wiki-links]] exactly as written (do not translate the target path).',

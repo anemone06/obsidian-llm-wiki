@@ -71,12 +71,12 @@ describe('runPreparationPhase', () => {
   });
 
   it('skips Welcome notes (frontmatter type=welcome) — v1.23.0 P0-2 follow-up', async () => {
-    // Welcome filename is localized (e.g. "欢迎使用 Karpathy LLM Wiki.md"
+    // Welcome filename is localized (e.g. "欢迎使用 YJY LLM Wiki.md"
     // for Chinese), so we cannot filter by filename. The only robust
     // signal is `type: welcome` in the frontmatter.
     const files = {
       'wiki/Welcome.md': '---\ntype: welcome\ncreated: 2026-06-29\n---\n\n# Welcome\n\nSee [[Other Page]] for details.',
-      'wiki/欢迎使用 Karpathy LLM Wiki.md': '---\ntype: welcome\ncreated: 2026-06-29\n---\n\n# 欢迎\n\nSee [[Other Page]].',
+      'wiki/欢迎使用 YJY LLM Wiki.md': '---\ntype: welcome\ncreated: 2026-06-29\n---\n\n# 欢迎\n\nSee [[Other Page]].',
       'wiki/entities/Keep.md': '# Keep\n\nSee [[Other Page]].',
     };
     const ctx = makeContext(files);
@@ -86,7 +86,7 @@ describe('runPreparationPhase', () => {
     expect(result.wikiFiles).toHaveLength(1);
     expect(result.wikiFiles[0].path).toBe('wiki/entities/Keep.md');
     expect(result.pageMap.has('wiki/Welcome.md')).toBe(false);
-    expect(result.pageMap.has('wiki/欢迎使用 Karpathy LLM Wiki.md')).toBe(false);
+    expect(result.pageMap.has('wiki/欢迎使用 YJY LLM Wiki.md')).toBe(false);
     expect(result.pageMap.has('wiki/entities/Keep.md')).toBe(true);
   });
 

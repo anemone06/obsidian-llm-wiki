@@ -1000,7 +1000,7 @@ export class QueryView extends ItemView {
 
       if (!indexContent) {
         console.debug('[Step 1] Wiki is empty, returning hint');
-        const lang = this.plugin.settings.wikiLanguage || 'en';
+        const lang = this.plugin.settings.wikiLanguage || 'zh';
         const langName = WIKI_LANGUAGES[lang] || lang;
         return `IMPORTANT: You MUST write ALL responses in ${langName}.\n\nYou are a Wiki assistant. The Wiki is empty. Please answer based on your knowledge and suggest the user ingest sources first.`;
       }
@@ -1094,7 +1094,7 @@ export class QueryView extends ItemView {
       // Phase: Context ready, about to generate
       onProgress?.(texts.queryPhaseContextReady);
 
-      const lang = this.plugin.settings.wikiLanguage || 'en';
+      const lang = this.plugin.settings.wikiLanguage || 'zh';
       const langName = WIKI_LANGUAGES[lang] || lang;
       const langDirective = `IMPORTANT: You MUST write ALL responses in ${langName}. Every answer, explanation, and label must be in ${langName}.`;
 
@@ -1148,7 +1148,7 @@ Respond in ${langName}`;
       return wikiContext;
     } catch (error) {
       console.error('[Error] buildWikiContext failed:', error);
-      const lang2 = this.plugin.settings.wikiLanguage || 'en';
+      const lang2 = this.plugin.settings.wikiLanguage || 'zh';
       const langName2 = WIKI_LANGUAGES[lang2] || lang2;
       return `IMPORTANT: You MUST write ALL responses in ${langName2}.\n\nYou are a Wiki assistant. Failed to load Wiki context. Please answer based on your knowledge.`;
     }

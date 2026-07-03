@@ -24,7 +24,7 @@ export async function getExistingWikiPages(
 
     // v1.23.0 P0-2 follow-up: skip Welcome notes. They have
     // `type: welcome` frontmatter and a localized filename
-    // (e.g. "欢迎使用 Karpathy LLM Wiki.md" in Chinese), so we
+    // (e.g. "欢迎使用 YJY LLM Wiki.md" in Chinese), so we
     // cannot filter by filename. The frontmatter is the only
     // robust signal.
     //

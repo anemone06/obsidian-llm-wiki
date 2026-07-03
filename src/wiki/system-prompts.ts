@@ -5,7 +5,7 @@ import { LLMWikiSettings, WIKI_LANGUAGES, ExtractionGranularity } from '../types
 import { getActiveEntityTags, getActiveConceptTags } from '../core/tag-vocab';
 
 export function buildWikiLanguageDirective(settings: LLMWikiSettings): string {
-  const lang = settings.wikiLanguage || 'en';
+  const lang = settings.wikiLanguage || 'zh';
   const langName = WIKI_LANGUAGES[lang] || lang;
   return `IMPORTANT: You MUST write ALL content in ${langName}. Every page title, summary, description, and label must be in ${langName}. Do NOT output any content in other languages.`;
 }
@@ -135,7 +135,7 @@ export const SECTION_LABELS: Record<string, Record<string, string>> = {
 };
 
 export function getSectionLabels(settings: LLMWikiSettings): Record<string, string> {
-  const lang = settings.wikiLanguage || 'en';
+  const lang = settings.wikiLanguage || 'zh';
   return SECTION_LABELS[lang] || SECTION_LABELS.en;
 }
 

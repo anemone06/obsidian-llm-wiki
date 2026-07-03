@@ -1,6 +1,6 @@
 export const ES_TEXTS = {
     // Plugin Info
-    pluginTitle: 'Karpathy LLM Wiki Configuración',
+    pluginTitle: 'YJY LLM Wiki Configuración',
     pluginIntro: 'Este plugin implementa el concepto de {{link}} para Obsidian. Lee tus notas, usa IA para extraer entidades, conceptos y relaciones, y construye una Wiki estructurada e interconectada en tu vault.',
     karpathyLinkText: 'Wiki LLM de Andrej Karpathy',
 
@@ -118,7 +118,7 @@ export const ES_TEXTS = {
 
     // Errors
     errorNoApiKey: 'Configura primero la API Key',
-    llmNotReady: 'LLM no está configurado. Vaya a Configuración → Karpathy LLM Wiki para configurar su proveedor y pasar la prueba de conexión.',
+    llmNotReady: 'LLM no está configurado. Vaya a Configuración → YJY LLM Wiki para configurar su proveedor y pasar la prueba de conexión.',
     errorFetchFailed: 'Error: {}',
 
     // Query Settings
@@ -659,8 +659,8 @@ export const ES_TEXTS = {
     historyCustomRangeApply: 'Aplicar',
     historyCustomRangeClear: 'Limpiar',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki: el vault está vacío. Crea tu primera nota fuente y ejecuta Ingest para empezar.',
-    welcomeNoteTierBNotice: 'Karpathy Wiki: se creó una nota Welcome. Ábrela para declarar tus dominios y elegir 2-3 notas fuente para sembrar el grafo de enlaces.',
+    welcomeNoteTierANotice: 'YJY Wiki: el vault está vacío. Crea tu primera nota fuente y ejecuta Ingest para empezar.',
+    welcomeNoteTierBNotice: 'YJY Wiki: se creó una nota Welcome. Ábrela para declarar tus dominios y elegir 2-3 notas fuente para sembrar el grafo de enlaces.',
     welcomeNoteRecreateCommand: 'Recrear nota Welcome Wiki',
     welcomeNoteRecreateCommandTooltip: 'Recrea la nota Welcome en <wikiFolder>/Welcome.md con los dominios actuales y la prueba de configuración LLM. El archivo existente se sobrescribe.',
     welcomeNoteSettingsToggle: 'Crear nota Welcome Wiki en el primer inicio',
@@ -671,7 +671,7 @@ export const ES_TEXTS = {
     welcomeNoteGenerating: 'Nota Welcome Wiki: generándose en segundo plano — aparecerá un aviso al terminar.',
     welcomeNoteGenerationFailed: 'Falló la generación de la nota Welcome Wiki: {error}',
     startupCheckWelcomePending: 'Nota Welcome: generándose en segundo plano (aparecerá un aviso al terminar).',
-    welcomeNoteFileName: 'Bienvenido a Karpathy LLM Wiki',
+    welcomeNoteFileName: 'Bienvenido a YJY LLM Wiki',
     startupCheckWelcomeCreated: 'Nota Welcome creada en {path}',
     // v1.23.0 Phase 5.1.5: botón "Cancelar todo" del modal de selección múltiple.
     // Cancela todos los trabajos pendientes y en ejecución en la cola.

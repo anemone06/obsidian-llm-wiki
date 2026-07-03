@@ -118,7 +118,7 @@ export const DE_TEXTS = {
 
     // Errors
     errorNoApiKey: 'Bitte zunächst API-Schlüssel konfigurieren',
-    llmNotReady: 'LLM ist nicht konfiguriert. Gehen Sie zu Einstellungen → Karpathy LLM Wiki, um Ihren Anbieter zu konfigurieren und den Verbindungstest zu bestehen.',
+    llmNotReady: 'LLM ist nicht konfiguriert. Gehen Sie zu Einstellungen → YJY LLM Wiki, um Ihren Anbieter zu konfigurieren und den Verbindungstest zu bestehen.',
     errorFetchFailed: 'Fehlgeschlagen: {}',
 
     // Query Settings
@@ -659,8 +659,8 @@ export const DE_TEXTS = {
     historyCustomRangeApply: 'Anwenden',
     historyCustomRangeClear: 'Zurücksetzen',
     // v1.23.0 — first-run welcome note (Phase 5.1.5)
-    welcomeNoteTierANotice: 'Karpathy Wiki: Vault ist leer. Erstelle deine erste Quellennotiz und führe Ingest aus, um zu beginnen.',
-    welcomeNoteTierBNotice: 'Karpathy Wiki: Eine Welcome-Notiz wurde erstellt. Öffne sie, um deine Themenbereiche zu deklarieren und 2-3 Quellnotizen als Seed für den Link-Graphen auszuwählen.',
+    welcomeNoteTierANotice: 'YJY Wiki: Vault ist leer. Erstelle deine erste Quellennotiz und führe Ingest aus, um zu beginnen.',
+    welcomeNoteTierBNotice: 'YJY Wiki: Eine Welcome-Notiz wurde erstellt. Öffne sie, um deine Themenbereiche zu deklarieren und 2-3 Quellnotizen als Seed für den Link-Graphen auszuwählen.',
     welcomeNoteRecreateCommand: 'Wiki-Willkommen-Notiz neu erstellen',
     welcomeNoteRecreateCommandTooltip: 'Erstellt die Welcome-Notiz unter <wikiFolder>/Welcome.md mit aktuellen Themen-Seeds und LLM-Konfigurationstest neu. Existierende Datei wird überschrieben.',
     welcomeNoteSettingsToggle: 'Wiki-Willkommen-Notiz beim ersten Start erstellen',
@@ -671,7 +671,7 @@ export const DE_TEXTS = {
     welcomeNoteGenerating: 'Wiki-Willkommen-Notiz wird im Hintergrund erstellt — Benachrichtigung erscheint, wenn fertig.',
     welcomeNoteGenerationFailed: 'Wiki-Willkommen-Notiz-Erstellung fehlgeschlagen: {error}',
     startupCheckWelcomePending: 'Willkommen-Notiz: wird im Hintergrund erstellt (Benachrichtigung erscheint, wenn fertig).',
-    welcomeNoteFileName: 'Willkommen bei Karpathy LLM Wiki',
+    welcomeNoteFileName: 'Willkommen bei YJY LLM Wiki',
     startupCheckWelcomeCreated: 'Willkommen-Notiz erstellt unter {path}',
     // v1.23.0 Phase 5.1.5: Schaltfläche "Alle abbrechen" im Multi-Datei-Auswahl-Modal.
     // Bricht alle ausstehenden und laufenden Jobs in der Warteschlange ab.

@@ -332,13 +332,13 @@ export default class LLMWikiPlugin extends Plugin {
     // runStartupCheck() above. The standalone runOnboarding() method
     // is gone — single owner = single source of truth.
 
-    console.debug('LLM Wiki Plugin loaded - Karpathy implementation');
+    console.debug('YJY LLM Wiki Plugin loaded');
   }
 
   onunload() {
     this.disposeLLMClient();
     this.autoMaintainManager?.stop();
-    console.debug('LLM Wiki Plugin unloaded');
+    console.debug('YJY LLM Wiki Plugin unloaded');
   }
 
   async loadSettings() {

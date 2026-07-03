@@ -222,7 +222,7 @@ export class SourceAnalyzer {
         .replace('{{granularity_instruction}}', granularityInstruction)
         .replace(/{{batch_size}}/g, String(currentBatchSize));
 
-      const langHint = `\n\nCRITICAL LANGUAGE REQUIREMENT: Summaries, descriptions, source_title, and key_points in your JSON output MUST be written in ${WIKI_LANGUAGES[this.ctx.settings.wikiLanguage || 'en'] || this.ctx.settings.wikiLanguage || 'English'}. HOWEVER: entity names and concept names MUST be preserved in their original source language — NEVER translate names. mentions_in_source MUST be verbatim quotes from the source (preserve original language).`;
+      const langHint = `\n\nCRITICAL LANGUAGE REQUIREMENT: Summaries, descriptions, source_title, and key_points in your JSON output MUST be written in ${WIKI_LANGUAGES[this.ctx.settings.wikiLanguage || 'zh'] || this.ctx.settings.wikiLanguage || 'Chinese'}. HOWEVER: entity names and concept names MUST be preserved in their original source language — NEVER translate names. mentions_in_source MUST be verbatim quotes from the source (preserve original language).`;
       // Issue #85 v6: inject the active tag vocabulary so the LLM emits
       // type values that match the user's custom vocabulary (or the
       // hardcoded defaults). Without this, the LLM invents its own types

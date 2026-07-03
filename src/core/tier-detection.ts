@@ -57,9 +57,9 @@ export interface OnboardingAction {
 const CANDIDATE_LIMIT_CAP = 10;
 
 const NOTICE_TIER_A =
-  'Karpathy Wiki: vault is empty. Create your first source note and run Ingest to get started.';
+  'YJY Wiki: vault is empty. Create your first source note and run Ingest to get started.';
 const NOTICE_TIER_B =
-  'Karpathy Wiki: created a Welcome note. Open it to declare your domains and pick 2-3 source notes to seed the link graph.';
+  'YJY Wiki: created a Welcome note. Open it to declare your domains and pick 2-3 source notes to seed the link graph.';
 
 export function decideOnboardingAction(
   probe: VaultProbe,
